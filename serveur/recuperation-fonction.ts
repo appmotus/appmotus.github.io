@@ -184,6 +184,55 @@ async function confirme(identifiant: string, code: string, motDePasse: string) {
   return rep(200, { cle_secours: l.cle_secours });
 }
 
+// Effacer ses données : le code prouve l'accès à la boîte mail. L'effacement lui-même se fait sur l'appareil.
+// Partage le code en cours et les limites du mot de passe oublié, mais un code ne vaut jamais pour l'autre usage.
+async function effacerDemande(req: Request, email: string) {
+  const id = await utilisateur(req);
+  if (!id) return rep(401, { code: "session", message: "Session invalide" });
+  const l = await ligneRecup(id);
+  if (!l?.email_empreinte || l.email_empreinte !== (await empreinte(`${id}|${email}`))) {
+    return rep(400, { code: "adresse", message: "Adresse incorrecte" });
+  }
+  if (l.derniere_demande && Date.now() - new Date(l.derniere_demande).getTime() < 60_000) {
+    return rep(429, { code: "patience", message: "Attendez une minute avant un nouvel envoi" });
+  }
+  const neuf = !l.demandes_depuis || Date.now() - new Date(l.demandes_depuis).getTime() > 24 * 3600_000;
+  const nb = neuf ? 0 : l.demandes_nb;
+  if (nb >= 5) return rep(429, { code: "limite", message: "Trop de demandes aujourd'hui" });
+  const code = nouveauCode();
+  await db(`recuperation?profil=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      code_empreinte: await empreinte(`effacer|${id}|${code}`),
+      code_expire: new Date(Date.now() + 15 * 60_000).toISOString(),
+      essais: 0,
+      derniere_demande: new Date().toISOString(),
+      demandes_nb: nb + 1,
+      demandes_depuis: neuf ? new Date().toISOString() : l.demandes_depuis,
+    }),
+  });
+  const ok = await envoyer(email, "Votre code pour effacer vos données",
+    `Votre code pour effacer vos données Motus : ${code}\n\nIl est valable 15 minutes. Le saisir efface définitivement les notes de votre téléphone. Si vous n'avez rien demandé, ne le communiquez à personne et changez votre mot de passe.`);
+  return ok ? rep(200, { ok: true }) : rep(502, { code: "envoi", message: "E-mail non envoyé" });
+}
+
+async function effacerConfirme(req: Request, code: string) {
+  const id = await utilisateur(req);
+  if (!id) return rep(401, { code: "session", message: "Session invalide" });
+  const invalide = rep(400, { code: "code_invalide", message: "Code incorrect ou expiré" });
+  const l = await ligneRecup(id);
+  if (!l?.code_empreinte || !l.code_expire || new Date(l.code_expire).getTime() < Date.now() || l.essais >= 5) return invalide;
+  if (l.code_empreinte !== (await empreinte(`effacer|${id}|${code}`))) {
+    await db(`recuperation?profil=eq.${id}`, { method: "PATCH", body: JSON.stringify({ essais: l.essais + 1 }) });
+    return invalide;
+  }
+  await db(`recuperation?profil=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ code_empreinte: null, code_expire: null, essais: 0 }),
+  });
+  return rep(200, { ok: true });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return rep(405, { code: "methode", message: "POST uniquement" });
@@ -192,6 +241,8 @@ Deno.serve(async (req) => {
     if (b.action === "quota_envoi") return await quotaEnvoi(req);
     if (b.action === "definir") return await definir(req, norm(b.email));
     if (b.action === "confirmer") return await confirmer(req, String(b.code ?? "").trim());
+    if (b.action === "effacer_demande") return await effacerDemande(req, norm(b.email));
+    if (b.action === "effacer_confirme") return await effacerConfirme(req, String(b.code ?? "").trim());
     if (b.action === "demande") return await demande(norm(b.identifiant), norm(b.email));
     if (b.action === "confirme") return await confirme(norm(b.identifiant), String(b.code ?? "").trim(), String(b.mot_de_passe ?? ""));
     return rep(400, { code: "action", message: "Action inconnue" });

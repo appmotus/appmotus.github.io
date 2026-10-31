@@ -30,7 +30,8 @@ Web app (PWA) pour les personnes suivies par un thérapeute : noter ses émotion
 
 L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec un lien pour créer un compte.
 
-- **Adresse de récupération (facultative)** : confirmée par un code à 6 chiffres reçu par e-mail (renvoi possible après 1 minute), elle permet de recevoir un code à 6 chiffres si le mot de passe est oublié (5 demandes par 24 heures, 5 essais par code, validité 15 minutes). Le serveur n'en garde qu'une empreinte illisible : elle n'apparaît ni dans la page admin ni dans Supabase, et l'utilisateur la retape à l'identique en cas d'oubli. Le service d'envoi (Brevo) voit l'adresse au moment de l'envoi. Sans adresse enregistrée, un mot de passe perdu ne peut pas être réinitialisé.
+- **Mail de récupération (obligatoire)** : demandé à l'inscription, et à l'ouverture de l'app pour les comptes plus anciens tant qu'il n'est pas confirmé. Sans internet, si l'envoi échoue ou si rien n'arrive au bout de 2 minutes, le journal reste accessible et un bandeau le redemande. Confirmé par un code à 6 chiffres reçu par e-mail (renvoi possible après 1 minute), il peut être changé dans les Réglages mais pas retiré. Il permet de recevoir un code à 6 chiffres si le mot de passe est oublié (5 demandes par 24 heures, 5 essais par code, validité 15 minutes). Le serveur n'en garde qu'une empreinte illisible : elle n'apparaît ni dans la page admin ni dans Supabase, et l'utilisateur la retape à l'identique en cas d'oubli. Le service d'envoi (Brevo) voit l'adresse au moment de l'envoi. Sans adresse enregistrée, un mot de passe perdu ne peut pas être réinitialisé.
+- **Effacer ses données** : avec une adresse confirmée, l'utilisateur la retape et saisit un code à 6 chiffres reçu par e-mail (fonction `recuperation`, actions `effacer_demande` et `effacer_confirme`) ; tant que le mail n'est pas confirmé, il confirme avec son mot de passe. L'effacement se fait sur l'appareil et le compte reste actif.
 - **Reprise des notes** : le serveur garde une clé de secours, et l'appareil la clé du journal chiffrée par cette clé de secours. Aucun des deux, seul, n'ouvre les notes ; une personne ayant à la fois le téléphone et l'accès à la boîte mail le pourrait. Sur un nouvel appareil, seul le compte est récupéré : les notes reviennent avec une sauvegarde.
 - **Déconnexion automatique** : réglable, jusqu'à « Jamais ». Le journal s'ouvre alors sans mot de passe sur cet appareil, même après fermeture de l'app, jusqu'à « Se déconnecter ».
 
@@ -69,7 +70,7 @@ L'app doit être servie en **HTTPS** (le chiffrement du navigateur l'exige). N'i
 
 Ensuite, sur le téléphone : ouvrir l'adresse puis l'ajouter à l'écran d'accueil (iPhone : Partager → « Sur l'écran d'accueil » ; Android : menu ⋮ → « Installer l'application »).
 
-À savoir : sur iPhone, Safari peut effacer les données d'un site non installé après 7 jours sans visite. Installer l'app sur l'écran d'accueil évite ce problème. Il est conseillé de faire régulièrement une sauvegarde depuis les Réglages.
+À savoir : sur iPhone, Safari et l'app de l'écran d'accueil ont chacun leur stockage, et les notes de l'un n'apparaissent pas dans l'autre. L'app affiche un avertissement quand elle est ouverte dans Safari. Pour restaurer une sauvegarde, installer d'abord l'app, puis restaurer depuis l'icône. Safari peut aussi effacer les données d'un site non installé après 7 jours sans visite. Installer l'app sur l'écran d'accueil évite ce problème. Il est conseillé de faire régulièrement une sauvegarde depuis les Réglages.
 
 ## Avant chaque mise à jour : ne perdre aucune note
 

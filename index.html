@@ -215,6 +215,8 @@ a{color:var(--accent)}
 .banner{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--lav) 35%,var(--surface));border-radius:var(--r);padding:12px 14px;margin:0 0 14px;font-size:.9rem}
 .banner span{flex:1}
 .banner-actions{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+.safari-avis{text-align:left}
+.lockcard .safari-avis{margin:14px 0 0}
 .maj-banner{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:12px;right:12px;margin:0;z-index:30;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .clientbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
 .clientbar .who{font-weight:800;color:var(--brand);text-align:right}
@@ -347,7 +349,7 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 17; // même numéro que CACHE dans sw.js
+const APP_VERSION = 18;// même numéro que CACHE dans sw.js
 let toastTimer;
 function toast(msg) {
   document.querySelector('.toast')?.remove();
@@ -448,7 +450,7 @@ function supabaseApi() {
       const c = j?.error_code || j?.code || '';
       const banni = /banned/i.test(j?.msg || j?.message || '');
       throw apiErr(banni ? 'desactive' : {invalid_credentials:'identifiants', user_banned:'desactive', user_already_exists:'pris', email_exists:'pris', weak_password:'faible',
-        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi',
+        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi', adresse:'adresse', limite:'limite',
         refresh_token_not_found:'session', refresh_token_already_used:'session', session_not_found:'session', session_expired:'session', user_not_found:'session'}[c] || 'serveur', j?.msg || j?.message);
     }
     return j;
@@ -546,6 +548,14 @@ function demoApi() {
         c.email = c.attente; delete c.attente;
       } else if (b.action === 'demande') {
         if (l?.email && l.email === e) l.code = '123456';
+      } else if (b.action === 'effacer_demande') {
+        const c = x.recup[session.id];
+        if (!c?.email || c.email !== e) throw apiErr('adresse');
+        c.effacer = '123456';
+      } else if (b.action === 'effacer_confirme') {
+        const c = x.recup[session.id];
+        if (!c?.effacer || c.effacer !== b.code) throw apiErr('code');
+        delete c.effacer;
       } else {
         if (!l?.code || l.code !== b.code) throw apiErr('code');
         x.comptes[id].mdp = await hash(b.mot_de_passe); delete l.code; put(x);
@@ -639,7 +649,7 @@ function showLock(mode = 'login') {
       <h1>Motus</h1>
       <p class="tagline">Éclairer ce qui se passe en soi</p>
       <p class="muted">Connectez-vous pour ouvrir votre journal.</p>
-      ${inv}
+      ${inv}${safariAvis()}
       <form id="loginForm">
         <label class="label" for="lId">Identifiant</label>
         <input type="text" id="lId" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(localStorage.getItem(LAST_ID) || '')}">
@@ -660,7 +670,7 @@ function showLock(mode = 'login') {
         <li>Le serveur ne connaît que votre identifiant, votre nom et votre type de compte.</li>
         <li>Vous choisissez ce que vous partagez : envoi chiffré à votre thérapeute, export Excel.</li>
       </ul>
-      ${inv}
+      ${inv}${safariAvis()}
       <form id="signupForm">
         <p class="label">Je suis…</p>
         <div class="roles">
@@ -678,12 +688,11 @@ function showLock(mode = 'login') {
         <input type="password" id="sPw" autocomplete="new-password">
         <label class="label" for="sPw2">Confirmez le mot de passe</label>
         <input type="password" id="sPw2" autocomplete="new-password">
-        <label class="label" for="sMail">Adresse de récupération (facultative)</label>
+        <label class="label" for="sMail">Mail de récupération</label>
         <input type="email" id="sMail" autocomplete="email" autocapitalize="none">
-        <div class="small muted" style="margin-top:4px">Pour recevoir un code si vous oubliez votre mot de passe. Un code vous sera envoyé pour la confirmer. Personne ne peut la lire, pas même l’administrateur ; vous devrez la retaper à l’identique.</div>
-        <label class="label" for="sMail2">Confirmez l’adresse</label>
+        <div class="small muted" style="margin-top:4px">Pour recevoir un code si vous oubliez votre mot de passe ou si vous effacez vos données. Un code vous sera envoyé pour le confirmer. Personne ne peut le lire, pas même l’administrateur ; vous devrez le retaper à l’identique.</div>
+        <label class="label" for="sMail2">Confirmez le mail</label>
         <input type="email" id="sMail2" autocomplete="off" autocapitalize="none">
-        <div class="warn">Important : sans adresse de récupération, un mot de passe oublié ne peut pas être réinitialisé. Notez-le en lieu sûr.</div>
         <div class="err" id="lockErr"></div>
         <button class="btn primary block" id="signupBtn">Créer mon compte</button>
       </form>
@@ -733,8 +742,8 @@ async function onSignup(e) {
   if (f.password.length < 8) return err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
   if (f.password !== $('#sPw2').value) return err.textContent = 'Les deux mots de passe ne correspondent pas.';
   const mail = v('#sMail').toLowerCase();
-  if (mail && !EMAIL_RE.test(mail)) return err.textContent = 'Adresse de récupération invalide.';
-  if (mail !== v('#sMail2').toLowerCase()) return err.textContent = 'Les deux adresses de récupération ne correspondent pas.';
+  if (!EMAIL_RE.test(mail)) return err.textContent = 'Indiquez un mail de récupération valide.';
+  if (mail !== v('#sMail2').toLowerCase()) return err.textContent = 'Les deux mails de récupération ne correspondent pas.';
   btn.disabled = true; btn.textContent = 'Création…'; err.textContent = '';
   try { await API.signUp({...f, nom:f.role === 'therapeute' ? f.nom : initiale(f.nom)}); profil = await API.rpc('ouvrir_session'); }
   catch (x) {
@@ -746,8 +755,11 @@ async function onSignup(e) {
       confirmation: 'Le serveur demande une confirmation par e-mail : désactivez-la dans Supabase (Authentication › Email).',
     }[x.code] || 'Création impossible pour le moment. Réessayez plus tard.';
   }
-  await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}});
-  if (mail) await setRecovery(mail, f.password);
+  differeMail = true;   // le mail vient d'être saisi : rien à redemander
+  try {
+    await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}});
+    if (await setRecovery(mail, f.password, true) !== true) { mailPasse = true; majRappelRecup(); }
+  } finally { differeMail = false; }
 }
 
 /* Ouvre (ou crée) le journal chiffré de ce compte sur cet appareil */
@@ -776,7 +788,7 @@ async function openJournal(id, pw, init) {
   if (data.settings.autolock === -1) { await rememberKey().catch(() => {}); rememberSession(); }
   if (data.role === 'therapeute') await ensureKeys(); else await saveNow();
   navigator.storage?.persist?.();
-  showApp(); pushProfile(); flushStats(); ensureSecours(pw);
+  showApp(); pushProfile(); flushStats(); ensureSecours(pw).then(ok => ok && exigerMail());
 }
 
 function applyProfil() {
@@ -816,6 +828,7 @@ async function ensureSecours(pw) {
     save();
     if (view === 'set' && !src) render(true);
     else majRappelRecup();
+    return true;
   } catch (x) { console.warn('Récupération indisponible', x.code); }
 }
 /* Après un mot de passe oublié : rouvre le journal de l'appareil avec la clé de secours et le rechiffre */
@@ -832,13 +845,29 @@ async function rescueJournal(id, cle, newPw) {
     return true;
   } catch (x) { console.warn('Journal non repris', x); return false; }
 }
-function askRecovery() {
+/* Mail de récupération obligatoire : il est demandé à l'ouverture tant qu'il n'est pas confirmé.
+   Sans internet ou si l'envoi échoue, le journal reste accessible : un compte ne perd jamais l'accès à ses notes pour cette raison. */
+let differeMail = false, mailPasse = false;
+function exigerMail() {
+  if (differeMail || mailPasse || !session || !data?.account || $('dialog[open]')) return;
+  if (data.account.recup === 'attente') openRecupCode(true);
+  else if (!data.account.recup) demanderMail(true);
+}
+async function demanderMail(oblig) {
+  const r = await askRecovery(oblig);
+  if (!r) { if (oblig) await lock(); return; }
+  const res = await setRecovery(r.email, r.pw, oblig);
+  if (res === true || !oblig) return;
+  if (res === 'patience') return demanderMail(true);
+  mailPasse = true; majRappelRecup();
+}
+function askRecovery(oblig) {
   return new Promise(resolve => {
     const D = $('#codeDlg');
     D.innerHTML = `<form method="dialog" id="recForm">
-      <div class="dlg-h"><h2>Adresse de récupération</h2></div>
+      <div class="dlg-h"><h2>${data.account?.recup ? 'Changer de mail de récupération' : 'Ajouter un mail de récupération'}</h2></div>
       <div class="dlg-b">
-        <p class="small muted">Elle sert uniquement à recevoir un code si vous oubliez votre mot de passe. Vous recevrez un code pour la confirmer. Seule une empreinte illisible est conservée : personne ne peut la lire, pas même l’administrateur. Vous devrez la retaper à l’identique en cas d’oubli.</p>
+        <p class="small muted">${oblig ? 'Il est obligatoire pour continuer. ' : ''}Il sert uniquement à recevoir un code si vous oubliez votre mot de passe ou si vous effacez vos données. Vous recevrez un code pour le confirmer. Seule une empreinte illisible est conservée : personne ne peut le lire, pas même l’administrateur. Vous devrez le retaper à l’identique en cas de besoin.</p>
         <label class="label" for="rMail">Adresse e-mail</label>
         <input type="email" id="rMail" autocomplete="email" autocapitalize="none">
         <label class="label" for="rMail2">Confirmez l’adresse</label>
@@ -847,11 +876,11 @@ function askRecovery() {
         <input type="password" id="rPw" autocomplete="current-password">
         <div class="err" id="rErr"></div>
       </div>
-      <div class="dlg-f"><button type="button" class="btn" id="rCancel">Annuler</button><button class="btn primary">Enregistrer</button></div>
+      <div class="dlg-f"><button type="button" class="btn" id="rCancel">${oblig ? 'Se déconnecter' : 'Annuler'}</button><button class="btn primary">Enregistrer</button></div>
     </form>`;
     const done = v => { D.close(); resolve(v); };
     $('#rCancel').onclick = () => done(null);
-    D.oncancel = () => resolve(null);
+    D.oncancel = e => { if (oblig) e.preventDefault(); else resolve(null); };
     $('#recForm').onsubmit = async e => {
       e.preventDefault();
       const m = $('#rMail').value.trim().toLowerCase(), pw = $('#rPw').value, err = $('#rErr');
@@ -864,19 +893,19 @@ function askRecovery() {
     D.showModal();
   });
 }
-async function setRecovery(email, pw) {
+async function setRecovery(email, pw, oblig) {
   try {
     await API.recup({action:'definir', email});
     // gardée dans le journal chiffré de l'appareil, le temps de pouvoir renvoyer le code
     data.recupMail = email; data.recupEnvoi = new Date().toISOString();
     await saveNow();
     await ensureSecours(pw);
-    openRecupCode();
+    openRecupCode(oblig);
     return true;
   } catch (x) {
-    toast(ENVOI_ERR[x.code] || 'Adresse non enregistrée : réessayez dans les Réglages.');
+    toast(ENVOI_ERR[x.code] || 'Mail non enregistré : réessayez plus tard.');
     await ensureSecours(pw);
-    return false;
+    return x.code || false;
   }
 }
 const ENVOI_ERR = {reseau:'Pas de connexion internet.', patience:'Attendez une minute avant un nouvel envoi.', envoi:'L’e-mail n’a pas pu être envoyé : réessayez dans un instant.'};
@@ -885,18 +914,20 @@ const attenteRenvoi = () => data?.recupEnvoi ? Math.max(0, 60 - Math.floor((Date
 
 /* Rappel permanent tant que l'adresse n'est pas confirmée : sans confirmation, aucun code de récupération ne peut partir */
 function recupReminder() {
-  if (!session || !recupAConfirmer()) return '';
+  if (!session) return '';
+  if (!data.account?.recup) return `<div class="banner recup-rappel"><span>Ajoutez votre mail de récupération : il est obligatoire pour récupérer votre compte et pour effacer vos données.</span>
+    <button class="btn primary" data-act="addRecovery">Ajouter</button></div>`;
+  if (!recupAConfirmer()) return '';
   return `<div class="banner recup-rappel"><span>${data.account.recupChange ? 'Votre nouvelle adresse de récupération' : 'Votre adresse de récupération'} n’est pas encore confirmée. Entrez le code reçu par e-mail, et pensez à regarder dans vos courriers indésirables.</span>
     <button class="btn primary" data-act="confirmRecovery">Confirmer</button></div>`;
 }
 function majRappelRecup() {
   if (!data) return;
-  const b = $('.recup-rappel');
-  if (!recupAConfirmer()) return b?.remove();
-  if (!b && !src && (view === 'day' || view === 'clients')) $('#view').insertAdjacentHTML('afterbegin', recupReminder());
+  $('.recup-rappel')?.remove();
+  if (!src && (view === 'day' || view === 'clients')) $('#view').insertAdjacentHTML('afterbegin', recupReminder());
 }
 let recupTimer;
-function openRecupCode() {
+function openRecupCode(oblig) {
   const D = $('#codeDlg'), mail = data.recupMail;
   D.innerHTML = `<form method="dialog" id="rcForm">
     <div class="dlg-h"><h2>Confirmez votre adresse</h2></div>
@@ -906,20 +937,30 @@ function openRecupCode() {
       <input type="text" id="rcCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
       <div class="err" id="rcErr"></div>
       <button type="button" class="btn block" id="rcResend"></button>
+      ${oblig ? `<button type="button" class="link small" id="rcFix" style="display:block;margin-top:8px">Corriger l’adresse</button>
+      <button type="button" class="link small" id="rcSkip" hidden style="display:block">Je n’ai rien reçu : continuer pour l’instant</button>` : ''}
     </div>
-    <div class="dlg-f"><button type="button" class="btn" id="rcLater">Plus tard</button><button class="btn primary">Confirmer</button></div>
+    <div class="dlg-f"><button type="button" class="btn" id="rcLater">${oblig ? 'Se déconnecter' : 'Plus tard'}</button><button class="btn primary">Confirmer</button></div>
   </form>`;
   const maj = () => {
     const b = $('#rcResend'); if (!b) return clearInterval(recupTimer);
     const s = attenteRenvoi();
     b.disabled = !!mail && s > 0;
     b.textContent = !mail ? 'Saisir de nouveau l’adresse' : s ? `Renvoyer le code dans ${s} s` : 'Renvoyer le code';
+    // Un mail qui n'arrive jamais ne doit pas priver de ses notes
+    const skip = $('#rcSkip');
+    if (skip) skip.hidden = !!data.recupEnvoi && Date.now() - new Date(data.recupEnvoi) < 120000;
   };
   clearInterval(recupTimer); recupTimer = setInterval(maj, 1000); maj();
-  const fermer = () => { clearInterval(recupTimer); D.close(); };
-  $('#rcLater').onclick = fermer;
+  const fermer = () => { busy = false; clearInterval(recupTimer); D.close(); };
+  D.oncancel = e => { if (oblig) e.preventDefault(); else { busy = false; clearInterval(recupTimer); } };
+  $('#rcLater').onclick = async () => { fermer(); if (oblig) await lock(); };
+  if (oblig) {
+    $('#rcFix').onclick = () => { fermer(); demanderMail(true); };
+    $('#rcSkip').onclick = () => { mailPasse = true; fermer(); majRappelRecup(); };
+  }
   $('#rcResend').onclick = async () => {
-    if (!mail) { fermer(); return ACT.addRecovery(); }
+    if (!mail) { fermer(); return oblig ? demanderMail(true) : ACT.addRecovery(); }
     const err = $('#rcErr'); err.textContent = '';
     try { await API.recup({action:'definir', email:mail}); data.recupEnvoi = new Date().toISOString(); save(); maj(); toast('Nouveau code envoyé'); }
     catch (x) { err.textContent = ENVOI_ERR[x.code] || 'Envoi impossible pour le moment.'; }
@@ -932,8 +973,85 @@ function openRecupCode() {
     try { await API.recup({action:'confirmer', code}); fermer(); await ensureSecours(); toast('Votre adresse de récupération est confirmée'); }
     catch (x) { err.textContent = x.code === 'code' ? 'Code incorrect ou expiré. Vous pouvez en demander un nouveau.' : x.code === 'reseau' ? 'Pas de connexion internet.' : 'Confirmation impossible pour le moment.'; }
   };
+  busy = true;   // le temps d'aller chercher le code dans la boîte mail, sans que l'app se verrouille
   D.showModal();
   $('#rcCode').focus();
+}
+/* Effacer ses données : code reçu par e-mail si une adresse est confirmée, sinon mot de passe.
+   L'adresse n'est connue du serveur que par son empreinte : l'utilisateur la retape pour recevoir le code. */
+const EFFACER_ERR = {reseau:'Pas de connexion internet.', patience:'Attendez une minute avant un nouvel envoi.', envoi:'L’e-mail n’a pas pu être envoyé : réessayez dans un instant.',
+  adresse:'Cette adresse n’est pas votre adresse de récupération confirmée.', limite:'Trop de demandes aujourd’hui : réessayez demain.', code:'Code incorrect ou expiré. Vous pouvez en demander un nouveau.'};
+function effacerParCode() {
+  return new Promise(resolve => {
+    const dlg = $('#codeDlg');
+    let mail = '', envoi = 0, enCours = false, minuteur;
+    dlg.innerHTML = `<form method="dialog" id="efForm">
+      <div class="dlg-h"><h2>Confirmer l’effacement</h2></div>
+      <div class="dlg-b">
+        <p class="small muted" id="efInfo">Pour vérifier que c’est bien vous, entrez votre adresse de récupération : un code à 6 chiffres vous sera envoyé.</p>
+        <div id="efMailBloc"><label class="label" for="efMail">Adresse de récupération</label><input type="email" id="efMail" autocomplete="email" autocapitalize="none"></div>
+        <div id="efCodeBloc" hidden>
+          <label class="label" for="efCode">Code reçu par e-mail</label>
+          <input type="text" id="efCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+          <button type="button" class="btn block" id="efResend"></button>
+        </div>
+        <div class="err" id="efErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="efCancel">Annuler</button><button class="btn primary" id="efOk">Recevoir un code</button></div>
+    </form>`;
+    const fin = ok => { busy = false; clearInterval(minuteur); dlg.onclose = null; if (dlg.open) dlg.close(); resolve(ok); };
+    const err = m => $('#efErr').textContent = m;
+    const maj = () => {
+      const b = $('#efResend'), s = Math.max(0, 60 - Math.floor((Date.now() - envoi) / 1000));
+      if (b) { b.disabled = s > 0; b.textContent = s ? `Renvoyer le code dans ${s} s` : 'Renvoyer le code'; }
+    };
+    const demander = () => API.recup({action:'effacer_demande', email:mail}).then(() => { envoi = Date.now(); maj(); });
+    $('#efCancel').onclick = () => fin(false);
+    dlg.onclose = () => fin(false);   // touche Échap
+    $('#efResend').onclick = async () => {
+      err('');
+      try { await demander(); toast('Nouveau code envoyé'); } catch (x) { err(EFFACER_ERR[x.code] || 'Envoi impossible pour le moment.'); }
+    };
+    $('#efForm').onsubmit = async e => {
+      e.preventDefault();
+      if (enCours) return;
+      err(''); enCours = true;
+      try {
+        if (!mail) {
+          const m = $('#efMail').value.trim().toLowerCase();
+          if (!EMAIL_RE.test(m)) return err('Indiquez votre adresse de récupération.');
+          mail = m;
+          try { await demander(); } catch (x) { mail = ''; throw x; }
+          $('#efMailBloc').hidden = true; $('#efCodeBloc').hidden = false;
+          $('#efInfo').innerHTML = `Un code à 6 chiffres a été envoyé à <b>${esc(mail)}</b>. Il est valable 15 minutes. <b>Pensez à regarder dans vos courriers indésirables.</b><br>Saisir ce code effacera définitivement vos notes de ce téléphone.`;
+          $('#efOk').textContent = 'Effacer définitivement'; $('#efOk').className = 'btn danger';
+          minuteur = setInterval(maj, 1000);
+          return;
+        }
+        const code = $('#efCode').value.trim();
+        if (!/^\d{6}$/.test(code)) return err('Entrez les 6 chiffres du code.');
+        await API.recup({action:'effacer_confirme', code});
+        fin(true);
+      } catch (x) { err(EFFACER_ERR[x.code] || 'Action impossible pour le moment.'); }
+      finally { enCours = false; }
+    };
+    busy = true;   // le temps d'aller chercher le code dans la boîte mail, sans que l'app se verrouille
+    dlg.showModal();
+    $('#efMail').focus();
+  });
+}
+async function confirmerEffacement() {
+  let confirmee = !!data.account.recup && data.account.recup !== 'attente';
+  if (session) { try { confirmee = !!(await API.rpc('ma_recuperation_etat'))?.confirmee; } catch {} }
+  if (confirmee) {
+    if (session) return effacerParCode();
+    toast('Connexion internet nécessaire pour recevoir le code.');
+    return false;
+  }
+  const pw = await askCode('Confirmer l’effacement', {label:'Mot de passe', hint:'Votre mail de récupération n’est pas encore confirmé : entrez votre mot de passe pour effacer définitivement vos notes de ce téléphone.'});
+  if (pw == null) return false;
+  try { await saveNow(); await openVault(JSON.parse(localStorage.getItem(VKEY)), pw); return true; }
+  catch { toast('Mot de passe incorrect : rien n’a été effacé.'); return false; }
 }
 let recupId = '';
 async function onForgot(e) {
@@ -1026,7 +1144,7 @@ async function syncSession() {
       const rappel = !src && (view === 'day' || view === 'clients') && !$('.admin-rappel') ? adminReminder() : '';
       if (rappel) $('#view').insertAdjacentHTML('afterbegin', rappel);
     }
-    pushProfile(); flushStats(); ensureSecours();
+    pushProfile(); flushStats(); ensureSecours().then(ok => ok && exigerMail());
   } catch (x) {
     if (!data) return;
     if (x.code === 'desactive') lock(LOGIN_ERR.desactive);
@@ -1113,7 +1231,7 @@ async function lock(msg) {
   if (!key) return;
   await flushStats();
   delete data.resume; await forgetKey(); await saveNow();
-  API.signOut(); profil = null;
+  API.signOut(); profil = null; mailPasse = false;
   key = null; salt = null; data = null; src = null; VKEY = null; adm = admInit();
   document.querySelectorAll('dialog[open]').forEach(d => d.close());
   $('#view').innerHTML = '';
@@ -1183,7 +1301,7 @@ function vDay() {
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
   const fs = famSummary(ents), ro = !!src;
   return `
-  ${clientBar()}${ro ? '' : legacyReminder() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
+  ${clientBar()}${ro ? '' : safariAvis() + legacyReminder() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
     <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
     <div class="dayhead-t">
@@ -1210,7 +1328,7 @@ function vDay() {
     <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
     ${ns.length ? `<ul class="entries">${ns.map(n => `
       <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
-        <div class="meta">${esc(n.time)}</div>
+        <div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</div>
         <p class="note-txt">${esc(n.text)}</p>
       </button></li>`).join('')}</ul>` : ''}
     <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
@@ -1275,7 +1393,7 @@ function vCal() {
   <section class="card">
     <h2>Afficher</h2>
     <div class="chips" style="margin-top:10px">
-      <button class="chip ${!filtre ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="" aria-pressed="${!filtre}">${calMode === 'list' ? 'Tout' : 'Couleurs du jour'}</button>
+      <button class="chip ${!filtre ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
       ${src ? '' : `<button class="chip ${notesOnly ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>`}
       ${FAM.map(f => `<button class="chip ${calF === f.k ? 'on' : ''}" style="--fc:${f.c}" data-act="calFilter" data-f="${f.k}" aria-pressed="${calF === f.k}">${f.n}</button>`).join('')}
     </div>
@@ -1301,7 +1419,7 @@ function vCal() {
     <h2>Notes personnelles · ${MOIS[calM]}</h2>
     <p class="small muted" style="margin:6px 0 4px">${occN.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occN.length} note${occN.length > 1 ? 's' : ''}` : 'Aucune note personnelle ce mois-ci.'}</p>
     ${occN.map(({k, n}) => `<button class="occ" data-act="openDay" data-k="${k}">
-      <div class="meta">${dayName(k)} · ${esc(n.time)}</div>
+      <div class="meta">${dayName(k)} · ${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</div>
       <div class="txt note-txt">${esc(n.text)}</div>
     </button>`).join('')}
   </section>`;
@@ -1314,7 +1432,7 @@ function vCal() {
       const ents = (d.entries || []).filter(e => !fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW)));
       const lignes = [
         ...(notesOnly ? [] : ents.map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`}))),
-        ...(fam ? [] : dayNotes(d).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)} · Note personnelle</div><div class="txt note-txt">${esc(n.text)}</div>`}))),
+        ...(fam ? [] : dayNotes(d).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''} · Note personnelle</div><div class="txt note-txt">${esc(n.text)}</div>`}))),
       ].sort((a, b) => a.time.localeCompare(b.time));
       const synth = !filtre && d.synth?.trim();
       if (!lignes.length && !synth && (filtre || !d.color)) continue;
@@ -1389,6 +1507,8 @@ function vSetClient() {
   return `
   <div style="margin:4px 0 16px"><h1>Réglages</h1></div>
 
+  ${securityCard()}
+
   <section class="card">
     <h2>Partager ma semaine</h2>
     <p class="small muted" style="margin:6px 0 0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (plus bas) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
@@ -1433,7 +1553,6 @@ function vSetClient() {
   </section>
 
   ${geoCard()}
-  ${securityCard()}
   ${commonCards('Si vous changez de téléphone ou effacez les données du navigateur, vos notes sont perdues. Faites régulièrement une sauvegarde : le fichier reste chiffré avec votre code.')}`;
 }
 
@@ -1441,6 +1560,8 @@ function vSetThera() {
   const p = data.profile, t = data.thera;
   return `
   <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Réglages</h1></div>
+
+  ${securityCard()}
 
   <section class="card">
     <h2>Mon lien d’invitation</h2>
@@ -1470,7 +1591,6 @@ function vSetThera() {
     <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}">
   </section>
 
-  ${securityCard()}
   ${commonCards('Votre clé de déchiffrement et les données reçues de vos clients sont dans cette sauvegarde. Sans elle, un nouvel appareil ne pourra plus ouvrir les fichiers de vos clients.')}`;
 }
 
@@ -1491,16 +1611,15 @@ function securityCard() {
   const a = data.account || {};
   return `<section class="card">
     <h2>Mon compte</h2>
+    <div class="stat"><span class="muted">Prénom</span><b>${esc(data.profile.prenom || '—')}</b></div>
+    <div class="stat"><span class="muted">Nom</span><b>${esc(data.profile.nom || '—')}</b></div>
     <div class="stat"><span class="muted">Identifiant</span><b>${esc(a.identifiant || '—')}</b></div>
     <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
     <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
-    <div class="stat"><span class="muted">Adresse de récupération</span><b>${a.recup === 'attente' ? 'À confirmer' : a.recup ? 'Confirmée' : 'Aucune'}</b></div>
+    <div class="stat"><span class="muted">Mail de récupération</span><b>${a.recup === 'attente' ? 'À confirmer' : a.recup ? 'Confirmé' : 'À ajouter'}</b></div>
     ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
     <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
-    <div class="row" style="margin-top:6px">
-      <button class="btn" data-act="addRecovery">${a.recup ? 'Changer l’adresse' : 'Ajouter une adresse'}</button>
-      ${a.recup ? '<button class="btn" data-act="removeRecovery">Retirer</button>' : ''}
-    </div>
+    ${a.recup ? '<button class="btn block" data-act="addRecovery">Changer de mail de récupération</button>' : ''}
     ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
     <p class="small muted" style="margin:12px 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
     <div class="setrow">
@@ -1534,13 +1653,14 @@ function commonCards(backupNote) {
   <section class="card">
     <h2>Installer sur l’écran d’accueil</h2>
     <p class="small muted" style="margin:6px 0 0">Recommandé : l’app s’ouvre en plein écran, fonctionne hors connexion et vos données sont mieux conservées.<br>
-    <b>iPhone</b> : bouton Partager de Safari → « Sur l’écran d’accueil ».<br>
+    <b>iPhone</b> : bouton Partager de Safari → « Sur l’écran d’accueil ». Notez ensuite uniquement depuis l’icône : Safari et l’app ne partagent pas leurs notes.<br>
     <b>Android</b> : menu ⋮ de Chrome → « Installer l’application ».</p>
     ${installEvt ? '<button class="btn primary block" data-act="install">Installer l’application</button>' : ''}
   </section>
 
   <section class="card">
     <h2>Zone sensible</h2>
+    <p class="small muted" style="margin:6px 0 0">Un code reçu par e-mail vous sera demandé.</p>
     <button class="btn danger block" data-act="wipe">Effacer toutes mes données</button>
   </section>
   <p class="small muted" style="text-align:center">Motus, version ${APP_VERSION}</p>`;
@@ -1979,7 +2099,7 @@ let ed = null;
 /* Valeurs déjà saisies pour un champ (lieu, ville), les plus récentes d'abord */
 function recent(field) {
   const seen = new Map();
-  Object.keys(data.days).sort().reverse().forEach(k => [...data.days[k].entries].sort((a,b) => b.time.localeCompare(a.time)).forEach(e => {
+  Object.keys(data.days).sort().reverse().forEach(k => [...data.days[k].entries, ...dayNotes(data.days[k])].sort((a,b) => b.time.localeCompare(a.time)).forEach(e => {
     const l = (e[field] || '').trim(); if (l && !seen.has(l.toLowerCase())) seen.set(l.toLowerCase(), l);
   }));
   return [...seen.values()].slice(0, 20);
@@ -2005,6 +2125,9 @@ async function nearestCity(lat, lon) {
 }
 /* Le réglage de l'app ne suffit pas : le téléphone et le navigateur doivent aussi donner la position à Motus */
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+/* Sur iPhone, Safari et l'app de l'écran d'accueil ont chacun leur stockage : les notes de l'un n'apparaissent pas dans l'autre */
+const safariAvis = () => IOS && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches
+  ? '<div class="banner safari-avis"><span>Installez Motus avec le bouton Partager › « Sur l’écran d’accueil », puis notez uniquement depuis l’icône : les notes de Safari et celles de l’app ne sont pas partagées.</span></div>' : '';
 async function geoRefus() {
   if (IOS) return 'L’iPhone ne donne pas la position à Motus. Dans les Réglages de l’iPhone, vérifiez : Confidentialité et sécurité › Service de localisation (activé, et autorisé pour les sites Safari), puis Safari › Localisation.';
   let etat = '';
@@ -2034,10 +2157,29 @@ function locate(force) {
   }, msg => status(force ? `${msg} Vous pouvez aussi saisir la ville.` : 'Ville non détectée. Touchez l’épingle pour en savoir plus, ou saisissez-la.'));
 }
 
+/* Option désactivée : la case reste vide (les villes déjà saisies restent proposées pendant la frappe) */
+const villeParDefaut = () => data.settings.geoloc ? recent('ville')[0] || '' : '';
+
+/* Heure, ville et lieu : communs à la saisie d'une émotion et à celle d'une note personnelle */
+function lieuFields(time, ville, lieu) {
+  const villes = recent('ville');
+  return `
+      <div class="row">
+        <div style="flex:0 0 116px"><label class="label" for="eTime">Heure</label><input type="time" id="eTime" value="${esc(time)}"></div>
+        <div><label class="label" for="eVille">Ville</label>
+          <div class="withbtn"><input type="text" id="eVille" list="villesList" value="${esc(ville || '')}" placeholder="Ville" autocomplete="off">
+            <button type="button" class="geo-btn" data-act="locate" aria-label="Trouver ma ville"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg></button></div>
+          <datalist id="villesList">${villes.map(l => `<option value="${esc(l)}">`).join('')}</datalist></div>
+      </div>
+      <div class="geo-st small muted" id="geoSt" aria-live="polite"></div>
+      <label class="label" for="eLieu" style="margin-top:4px">Lieu (précision)</label>
+      <input type="text" id="eLieu" list="lieuxList" value="${esc(lieu)}" placeholder="Maison, travail, voiture…" autocomplete="off">
+      <datalist id="lieuxList">${recent('lieu').map(l => `<option value="${esc(l)}">`).join('')}</datalist>`;
+}
+
 function openEntry(id) {
   const e = id ? getDay(cur).entries.find(x => x.id === id) : null;
-  const villes = recent('ville');
-  ed = e ? structuredClone(e) : {id:null, time: cur === today() ? nowTime() : '12:00', ville: villes[0] || '', lieu:'', emos:[], car:''};
+  ed = e ? structuredClone(e) : {id:null, time: cur === today() ? nowTime() : '12:00', ville: villeParDefaut(), lieu:'', emos:[], car:''};
   ed.fam = ed.emos[0]?.f || 'peur';
   ed.int = ed.emos[0]?.i || 'l';
   const D = $('#entryDlg');
@@ -2045,17 +2187,7 @@ function openEntry(id) {
   <form method="dialog" id="entryForm">
     <div class="dlg-h"><h2 id="entryTitle">${e ? 'Modifier' : 'Noter une émotion'}</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
     <div class="dlg-b">
-      <div class="row">
-        <div style="flex:0 0 116px"><label class="label" for="eTime">Heure</label><input type="time" id="eTime" value="${esc(ed.time)}"></div>
-        <div><label class="label" for="eVille">Ville</label>
-          <div class="withbtn"><input type="text" id="eVille" list="villesList" value="${esc(ed.ville || '')}" placeholder="Ville" autocomplete="off">
-            <button type="button" class="geo-btn" data-act="locate" aria-label="Trouver ma ville"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg></button></div>
-          <datalist id="villesList">${villes.map(l => `<option value="${esc(l)}">`).join('')}</datalist></div>
-      </div>
-      <div class="geo-st small muted" id="geoSt" aria-live="polite"></div>
-      <label class="label" for="eLieu" style="margin-top:4px">Lieu (précision)</label>
-      <input type="text" id="eLieu" list="lieuxList" value="${esc(ed.lieu)}" placeholder="Maison, travail, voiture…" autocomplete="off">
-      <datalist id="lieuxList">${recent('lieu').map(l => `<option value="${esc(l)}">`).join('')}</datalist>
+      ${lieuFields(ed.time, ed.ville, ed.lieu)}
       <p class="label">Je me sens…</p>
       <div class="famgrid">${FAM.map(f => `<button type="button" class="fam" style="--fc:${f.c}" data-act="pickFam" data-f="${f.k}">${f.n}</button>`).join('')}</div>
       <div id="picker"></div>
@@ -2081,13 +2213,13 @@ let noteId = null;
 function openNote(id) {
   const n = id ? dayNotes(getDay(cur)).find(x => x.id === id) : null;
   noteId = n?.id || null;
+  ed = {};   // suit la ville pendant la recherche GPS, comme pour une émotion
   const dlg = $('#entryDlg');
   dlg.innerHTML = `
   <form method="dialog">
     <div class="dlg-h"><h2 id="entryTitle">${n ? 'Modifier la note' : 'Note personnelle'}</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
     <div class="dlg-b">
-      <label class="label" for="nTime">Heure</label>
-      <input type="time" id="nTime" value="${esc(n?.time || (cur === today() ? nowTime() : '12:00'))}" style="max-width:140px">
+      ${lieuFields(n?.time || (cur === today() ? nowTime() : '12:00'), n ? n.ville : villeParDefaut(), n?.lieu)}
       <label class="label" for="nText">Ma note</label>
       <textarea id="nText" rows="6" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier…">${esc(n?.text || '')}</textarea>
       <p class="small muted" style="margin:6px 0 0">Ni envoyée à votre thérapeute, ni incluse dans le fichier Excel.</p>
@@ -2100,6 +2232,7 @@ function openNote(id) {
   </form>`;
   dlg.showModal();
   dlg.scrollTop = 0;
+  if (!n && cur === today() && data.settings.geoloc) locate(false);
 }
 function renderPicker() {
   const f = FAMK[ed.fam];
@@ -2443,11 +2576,11 @@ const ACT = {
   newNote: () => openNote(null),
   editNote: t => openNote(t.dataset.id),
   saveNote: () => {
-    const text = $('#nText').value.trim(), time = $('#nTime').value || nowTime();
+    const text = $('#nText').value.trim(), champs = {text, time:$('#eTime').value || nowTime(), ville:$('#eVille').value.trim(), lieu:$('#eLieu').value.trim()};
     if (!text) return $('#nErr').textContent = 'Écrivez quelque chose avant d’enregistrer.';
     const d = ensureDay(cur); d.notes ||= [];
     const n = d.notes.find(x => x.id === noteId);
-    if (n) Object.assign(n, {text, time}); else d.notes.push({id:uid(), time, text});
+    if (n) Object.assign(n, champs); else d.notes.push({id:uid(), ...champs});
     save(); $('#entryDlg').close(); render(); toast('Note enregistrée');
   },
   delNote: () => {
@@ -2512,8 +2645,9 @@ const ACT = {
   install: () => { if (installEvt) { installEvt.prompt(); installEvt = null; } },
   wipe: async () => {
     if (!confirm('Effacer définitivement toutes vos notes de ce téléphone ?\n\nVotre compte reste actif.')) return;
-    if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
+    if (!await confirmerEffacement()) return;
     const vk = VKEY, sk = secoursKey(data.account.identifiant); await lock(); localStorage.removeItem(vk); localStorage.removeItem(sk);
+    toast('Vos notes ont été effacées de ce téléphone');
   },
   addRecovery: async () => {
     if (!session) return toast('Connexion internet nécessaire.');
@@ -2526,12 +2660,6 @@ const ACT = {
     if (!confirm('Supprimer définitivement l’ancien journal de cet appareil ?\n\nSes notes seront perdues.')) return;
     if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
     localStorage.removeItem(LEGACY_VKEY); render(); toast('Ancien journal supprimé');
-  },
-  removeRecovery: async () => {
-    if (!session) return toast('Connexion internet nécessaire.');
-    if (!confirm('Retirer l’adresse de récupération ?\n\nEn cas d’oubli du mot de passe, le compte ne pourra plus être récupéré.')) return;
-    try { await API.rpc('retirer_recuperation'); await ensureSecours(); toast('Adresse retirée'); }
-    catch { toast('Action impossible pour le moment.'); }
   },
   /* connexion, inscription */
   goSignup: () => showLock('signup'),
@@ -2566,7 +2694,6 @@ document.addEventListener('input', e => {
   } else if (t.id === 'eCar') updatePreview();
   else if (t.id === 'eVille') ed.villeTouched = true;
   else if (t.id === 'xFrom' || t.id === 'xTo') $('#' + t.id + 'Wd').textContent = weekday(t.value);
-  else if (t.id === 'geoloc') { data.settings.geoloc = t.checked; save(); }
   else if (t.id === 'cliSearch') {
     const q = t.value.trim().toLowerCase();
     document.querySelectorAll('.clientrow').forEach(r => r.hidden = !!q && !r.dataset.name.includes(q));
@@ -2580,6 +2707,7 @@ document.addEventListener('input', e => {
   else if (t.dataset.label) { data.labels[t.dataset.label] = t.value.trim() || DEF_LABELS[t.dataset.label]; save(); }
   else if (t.id === 'autolock') setAutolock(t);
 });
+document.addEventListener('change', e => { if (e.target.id === 'geoloc' && data) { data.settings.geoloc = e.target.checked; save(); } });
 $('#entryDlg').addEventListener('click', e => { if (e.target === e.currentTarget && !$('#nText')) e.currentTarget.close(); });   // une note en cours ne se perd pas d'un appui à côté
 
 $('#restoreFile').addEventListener('change', async e => {
