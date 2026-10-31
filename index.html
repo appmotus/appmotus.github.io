@@ -1,0 +1,2624 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'self' https://*.supabase.co https://api.github.com; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F9F6F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1E1915" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Motus">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Motus</title>
+<style>
+:root{
+  --bg:#F9F6F0;--surface:#FFFFFF;--surface2:#F3ECE2;--text:#3A2E26;--muted:#85766A;
+  --brand:#8C5E3C;--accent:#C27B42;--lav:#C3B2D6;--border:#E7DCCD;
+  --vert:#3FA35B;--vert-bg:#D4EDDA;--vert-fg:#155724;
+  --jaune:#E3B21F;--jaune-bg:#FFF3CD;--jaune-fg:#856404;
+  --rouge:#D9534F;--rouge-bg:#F8D7DA;--rouge-fg:#721C24;
+  --shadow:0 1px 2px rgba(58,46,38,.06),0 4px 14px rgba(58,46,38,.06);
+  --r:16px;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#1E1915;--surface:#2A231D;--surface2:#342B24;--text:#F1E8DE;--muted:#B3A393;
+  --brand:#E3AC7E;--accent:#D98E52;--lav:#9F8CB8;--border:#43382E;
+  --vert-bg:#1F3A27;--vert-fg:#A6DDB3;--jaune-bg:#3D3418;--jaune-fg:#F1D27A;--rouge-bg:#45232A;--rouge-fg:#F2B1B8;
+  --shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;min-height:100dvh}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{margin:0;color:var(--brand);line-height:1.2}
+h1{font-size:1.35rem}
+h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+[hidden]{display:none!important}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 96px)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.count{background:var(--surface2);color:var(--muted);border-radius:99px;padding:1px 9px;font-size:.8rem;font-weight:700}
+.eyebrow{font-size:.78rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.label{display:block;font-size:.85rem;font-weight:700;color:var(--muted);margin:14px 0 6px}
+input[type=text],input[type=password],input[type=email],input[type=search],input[type=time],input[type=date],textarea,select{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 12px;outline:none}
+input[type=time],input[type=date]{display:block;min-width:0;max-width:100%}
+/* iPhone : sans cela, les champs date et heure gardent leur largeur native et débordent de leur case */
+@supports (-webkit-touch-callout:none){
+  input[type=time],input[type=date]{-webkit-appearance:none;appearance:none;min-height:46px}
+  input::-webkit-date-and-time-value{text-align:left}
+}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+textarea{resize:vertical;min-height:84px}
+.btn{border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:11px 16px;font-weight:700}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{background:transparent;border-color:var(--rouge);color:var(--rouge)}
+.btn.block{display:block;width:100%;margin-top:12px}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+.link{background:none;border:0;color:var(--accent);font-weight:700;padding:4px 0}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-size:1.5rem;line-height:1;display:grid;place-items:center;flex:none}
+.icon-btn:disabled{opacity:.3}
+
+/* En-tête du jour */
+.dayhead{display:flex;align-items:center;gap:10px;margin:4px 0 16px}
+.dayhead-t{flex:1;text-align:center;min-width:0}
+.dayhead h1{font-size:1.2rem}
+
+/* Ville automatique */
+.withbtn{position:relative}
+.withbtn input{padding-right:44px}
+.geo-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;background:none;color:var(--accent);display:grid;place-items:center;border-radius:10px}
+.geo-btn svg{width:20px;height:20px}
+.geo-st{min-height:1.2em;margin-top:4px}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none}
+
+/* Export : choix de la semaine */
+.weeknav{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--surface2);border-radius:14px;padding:8px}
+.weeknav .wk{flex:1;text-align:center;font-size:.92rem;line-height:1.35}
+.card:has(#xCustom[open]) .weeknav{opacity:.4}
+.custom summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:.88rem;margin-top:12px}
+.wd-hint{font-size:.8rem;color:var(--muted);margin-top:4px;text-transform:capitalize}
+
+/* Notes */
+.entries{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.entry{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-left:5px solid var(--fc,var(--accent));border-radius:12px;padding:10px 12px}
+.entry .meta{font-size:.8rem;color:var(--muted);font-weight:700}
+.entry p{margin:3px 0 0}
+.entry b,.preview b{color:var(--fc)}
+.empty{color:var(--muted);margin:4px 0 0}
+.note-txt{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Couleurs de journée */
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.colbtn{border:2px solid transparent;border-radius:12px;padding:10px 6px;font-size:.82rem;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.colbtn .dot{width:26px;height:26px;border-radius:50%}
+.colbtn.vert{background:var(--vert-bg);color:var(--vert-fg)}.colbtn.vert .dot{background:var(--vert)}
+.colbtn.jaune{background:var(--jaune-bg);color:var(--jaune-fg)}.colbtn.jaune .dot{background:var(--jaune)}
+.colbtn.rouge{background:var(--rouge-bg);color:var(--rouge-fg)}.colbtn.rouge .dot{background:var(--rouge)}
+.colbtn.on{border-color:currentColor}
+.colbtn.on .dot{box-shadow:0 0 0 3px var(--surface),0 0 0 5px currentColor}
+.saved{font-size:.8rem;color:var(--muted);height:1.2em;margin-top:6px;text-align:right}
+
+/* Pastilles émotions */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid color-mix(in srgb,var(--fc) 45%,transparent);background:color-mix(in srgb,var(--fc) 10%,var(--surface));color:var(--text);border-radius:99px;padding:7px 12px;font-size:.9rem}
+.chip.on{background:var(--fc);border-color:var(--fc);color:#fff;font-weight:700}
+.chip.static{padding:4px 10px;font-size:.8rem}
+.famgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fam{border:2px solid transparent;border-radius:12px;padding:9px 4px;font-weight:800;font-size:.82rem;background:color-mix(in srgb,var(--fc) 13%,var(--surface));color:var(--fc)}
+.fam.on{border-color:var(--fc)}
+@media (prefers-color-scheme: dark){
+  .fam,.rep h3{color:color-mix(in srgb,var(--fc) 55%,#fff)}
+  .entry b,.preview b{color:color-mix(in srgb,var(--fc) 50%,#fff)}
+}
+.besoin{font-size:.85rem;font-style:italic;color:var(--muted);margin:8px 0}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface2);border-radius:12px;padding:3px;margin-bottom:10px}
+.seg button{border:0;background:none;border-radius:9px;padding:8px 4px;font-size:.88rem;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.picked{min-height:38px;padding:8px;border:1px dashed var(--border);border-radius:12px}
+.preview{background:color-mix(in srgb,var(--lav) 28%,var(--surface));border-radius:12px;padding:12px;margin-top:14px;font-size:.95rem}
+.preview .k{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--brand);display:block;margin-bottom:4px}
+
+/* Calendrier */
+.calhead{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
+.calhead h1{flex:1;text-align:center;text-transform:capitalize}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal .wd{text-align:center;font-size:.72rem;font-weight:800;color:var(--muted);padding-bottom:2px}
+.cday{aspect-ratio:1;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:0;font-weight:600;font-size:.9rem;position:relative;display:grid;place-items:center;overflow:hidden}
+.cday.vert{background:var(--vert);border-color:var(--vert);color:#fff}
+.cday.jaune{background:var(--jaune);border-color:var(--jaune);color:#3a2e00}
+.cday.rouge{background:var(--rouge);border-color:var(--rouge);color:#fff}
+.cday.today{outline:2px solid var(--brand);outline-offset:1px}
+.cday.future{opacity:.35}
+.cday .has{position:absolute;bottom:5px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--accent)}
+.cday.vert .has,.cday.rouge .has{background:#fff}.cday.jaune .has{background:#3a2e00}
+/* Coin plié : note personnelle ce jour-là */
+.cday .nt{position:absolute;top:0;right:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--brand) transparent transparent}
+.cday.vert .nt,.cday.rouge .nt{border-right-color:#fff}.cday.jaune .nt{border-right-color:#3a2e00}
+/* Filtre : la couleur du jour reste au centre, encadrée par la couleur du filtre (fin liseré pour séparer deux teintes proches) */
+.cday.hit{border:3px solid var(--fc);box-shadow:inset 0 0 0 2px var(--surface)}
+.cal.filtre .cday.today{outline:0;font-weight:800;text-decoration:underline;text-underline-offset:3px}   /* à ne pas confondre avec un cadre */
+.seg.two{grid-template-columns:1fr 1fr;margin:0 0 14px}
+/* Vue liste */
+.lday{border-left:5px solid var(--dc,var(--border));padding-bottom:8px}
+.lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:0 0 8px;text-align:left;font-weight:800;color:var(--brand)}
+.colpill{flex:none;border-radius:99px;padding:3px 10px;font-size:.75rem;font-weight:700;background:var(--surface2);color:var(--muted)}
+.colpill.vert{background:var(--vert-bg);color:var(--vert-fg)}.colpill.jaune{background:var(--jaune-bg);color:var(--jaune-fg)}.colpill.rouge{background:var(--rouge-bg);color:var(--rouge-fg)}
+.occ{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--border);padding:10px 0}
+.occ:first-of-type{border-top:0}
+.occ .meta{font-size:.8rem;color:var(--muted);font-weight:700}
+.occ .txt{margin-top:2px;font-size:.92rem}
+.occ b{color:var(--fc)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:12px;height:12px;border-radius:4px;display:inline-block}
+.bar{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--surface2);margin:8px 0}
+.bar div{height:100%}
+.stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:.92rem}
+.stat:last-child{border-bottom:0}
+
+/* Répertoire */
+.rep{border-left:5px solid var(--fc)}
+.rep h3{color:var(--fc);font-size:1.05rem}
+.rep .lvl{margin:8px 0 0;font-size:.92rem}
+.rep .lvl b{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;display:block}
+.key{background:color-mix(in srgb,var(--lav) 40%,var(--surface));border-color:transparent}
+
+/* Barre de navigation */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;justify-content:center;padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
+nav.tabs .in{display:flex;max-width:560px;width:100%}
+nav.tabs button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;font-weight:700;color:var(--muted);padding:6px 2px;border-radius:10px}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--accent)}
+
+/* Dialogues */
+dialog{border:0;padding:0;background:var(--surface);color:var(--text);width:100%;max-width:560px;max-height:92dvh;border-radius:20px 20px 0 0;margin:auto auto 0;overflow:auto}
+dialog::backdrop{background:rgba(20,14,10,.45)}
+@media (min-width:600px){dialog{border-radius:20px;margin:auto}}
+.dlg-h{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:1}
+.dlg-b{padding:4px 16px 16px}
+.dlg-f{position:sticky;bottom:0;background:var(--surface);display:flex;gap:10px;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--border)}
+.dlg-f .btn{flex:1}
+.err{color:var(--rouge);font-size:.88rem;min-height:1.3em;margin-top:8px}
+
+/* Verrouillage */
+#lock{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.lockcard{width:100%;max-width:400px;text-align:center}
+.tagline{margin:6px 0 0;color:var(--accent);font-style:italic}
+.lockcard .logo{width:72px;height:72px;border-radius:20px;margin:0 auto 14px;display:block}
+.lockcard form{text-align:left;margin-top:18px}
+.lockcard ul{text-align:left;padding-left:18px;margin:14px 0;font-size:.9rem;color:var(--muted)}
+.warn{background:var(--jaune-bg);color:var(--jaune-fg);border-radius:12px;padding:10px 12px;font-size:.85rem;margin-top:12px;text-align:left}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 86px);transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;font-weight:600;z-index:20;max-width:90vw;text-align:center}
+.setrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0}
+.setrow>label{font-weight:600}
+.setrow select{width:auto}
+a{color:var(--accent)}
+
+/* Profils client / thérapeute */
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.role{display:flex;align-items:center;gap:8px;border:2px solid var(--border);border-radius:12px;padding:12px;font-weight:700;cursor:pointer}
+.role:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.role input{accent-color:var(--accent);width:18px;height:18px;margin:0}
+.fp{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.06em;color:var(--text)}
+.banner{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--lav) 35%,var(--surface));border-radius:var(--r);padding:12px 14px;margin:0 0 14px;font-size:.9rem}
+.banner span{flex:1}
+.banner-actions{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+.maj-banner{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:12px;right:12px;margin:0;z-index:30;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.clientbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
+.clientbar .who{font-weight:800;color:var(--brand);text-align:right}
+.clientrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.clientrow .small{grid-column:1 / -1}
+.strip{display:flex;gap:3px}
+.strip i{width:12px;height:12px;border-radius:3px;background:var(--surface2)}
+.strip i.vert{background:var(--vert)}.strip i.jaune{background:var(--jaune)}.strip i.rouge{background:var(--rouge)}
+.synth-ro{white-space:pre-wrap;margin:0}
+.colors.one{grid-template-columns:1fr}
+#invField{margin-top:8px;font-size:.8rem;word-break:break-all}
+.envois{list-style:none;margin:6px 0 0;padding:0;font-size:.9rem}
+.envois li{padding:7px 0;border-bottom:1px solid var(--border)}
+.envois li:last-child{border-bottom:0}
+
+/* Administration */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 6px}
+.tile{background:var(--surface2);border-radius:12px;padding:10px 6px;text-align:center}
+.tile b{display:block;font-size:1.35rem;color:var(--brand);line-height:1.1}
+.tile span{font-size:.72rem;color:var(--muted)}
+table.stats{width:100%;border-collapse:collapse;margin-top:10px;font-size:.9rem}
+table.stats th,table.stats td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right}
+table.stats th[scope=row],table.stats thead th:first-child{text-align:left;font-weight:600}
+table.stats thead th{font-size:.75rem;color:var(--muted);font-weight:700}
+table.stats td{font-variant-numeric:tabular-nums;font-weight:700}
+table.stats tr:last-child>*{border-bottom:0}
+.lim-g{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}
+.lim-g h3{font-size:.92rem;margin:0}
+.lim{margin-top:10px}
+.lim-h{display:flex;justify-content:space-between;gap:12px;font-size:.9rem}
+.lim-h b{white-space:nowrap}
+.meter{--m:var(--accent);height:8px;border-radius:99px;margin:5px 0 3px;overflow:hidden;background:color-mix(in srgb,var(--m) 20%,var(--surface))}
+.meter i{display:block;height:100%;min-width:4px;border-radius:99px;background:var(--m)}
+.meter.m-warn{--m:var(--jaune)}
+.meter.m-crit{--m:var(--rouge)}
+.lim-alerte{color:var(--text)}
+.urow{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;background:var(--bg)}
+.uhead{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:10px 12px}
+.uhead .ufoot{grid-column:1 / -1}
+.badge{font:700 .75rem/1 ui-monospace,Menlo,Consolas,monospace;padding:5px 7px;border-radius:7px;background:color-mix(in srgb,var(--accent) 15%,var(--surface));color:var(--brand)}
+.badge.th{background:color-mix(in srgb,var(--lav) 45%,var(--surface))}
+b.off{color:var(--rouge)}
+.udetail{padding:0 12px 12px;border-top:1px solid var(--border)}
+.udetail dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:.88rem}
+.udetail dt{color:var(--muted)}
+.udetail dd{margin:0;word-break:break-word}
+</style>
+</head>
+<body>
+
+<section id="lock" hidden></section>
+
+<div id="app" hidden>
+  <main class="wrap" id="view"></main>
+  <nav class="tabs" aria-label="Navigation"><div class="in" id="tabs"></div></nav>
+</div>
+
+<dialog id="entryDlg" aria-labelledby="entryTitle"></dialog>
+<dialog id="codeDlg"></dialog>
+<dialog id="clientDlg" aria-label="Fiche client"></dialog>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+
+/* ───────────── Répertoire des émotions (Liberté pour Aimer) ───────────── */
+const FAM = [
+  {k:'peur', n:'Peur', b:'Besoin de sécurité & de protection', c:'#5B6BB5',
+   l:['Inquiet(e)','Préoccupé(e)','Hésitant(e)','Méfiant(e)','Indécis(e)'],
+   m:['Anxieux(se)','Angoissé(e)','Insécure','Craintif(ve)','Vulnérable','Tendu(e)'],
+   i:['Terrorisé(e)','Paniqué(e)','Effrayé(e)','Sidéré(e)','En détresse']},
+  {k:'colere', n:'Colère', b:'Besoin de limites & de respect', c:'#C2453A',
+   l:['Contrarié(e)','Agacé(e)','Impatient(e)','Irrité(e)','Mécontent(e)'],
+   m:['Frustré(e)','Aigri(e)','Exaspéré(e)','Plein(e) de rancœur','Offensé(e)'],
+   i:['Enragé(e)','Furieux(se)','Indigné(e)','Hors de moi','Hostile']},
+  {k:'tristesse', n:'Tristesse', b:'Besoin de réconfort & de soutien', c:'#3E7CA6',
+   l:['Mélancolique','Nostalgique','Abattu(e)','Déçu(e)','Seul(e)'],
+   m:['Découragé(e)','Désillusionné(e)','Résigné(e)','Blessé(e)'],
+   i:['Désespéré(e)','Anéanti(e)','Dévasté(e)','Abandonné(e)','En deuil']},
+  {k:'joie', n:'Joie', b:'Besoin de partage & de célébration', c:'#B07F12',
+   l:['Serein(e)','Apaisé(e)','Soulagé(e)','Détendu(e)','En paix'],
+   m:['Satisfait(e)','Enthousiaste','Fier(ère)','Confiant(e)','Stimulé(e)'],
+   i:['Euphorique','Ravi(e)','Émerveillé(e)','Reconnaissant(e)','Plein(e) de gratitude']},
+  {k:'degout', n:'Dégoût & rejet', b:'Besoin d’éloignement & d’alignement', c:'#5E8A49',
+   l:['Gêné(e)','Réticent(e)','Mal à l’aise','Refroidi(e)'],
+   m:['Écœuré(e)','Distant(e)','Plein(e) d’antipathie','Méprisant(e)'],
+   i:['Révulsé(e)','Dégoûté(e)','Horrifié(e)','En rejet total']},
+  {k:'surprise', n:'Surprise', b:'Besoin de réorientation & d’intégration', c:'#9B559A',
+   l:['Curieux(se)','Intrigué(e)','Étonné(e)','Perplexe'],
+   m:['Déconcerté(e)','Désorienté(e)','Sous le choc','Ébahi(e)'],
+   i:['Sidéré(e)','Stupéfait(e)','Saisi(e)','Totalement émerveillé(e)']},
+];
+const FAMK = Object.fromEntries(FAM.map(f => [f.k, f]));
+const INT = [['l','Légère'],['m','Modérée'],['i','Intense']];
+const INTN = Object.fromEntries(INT);
+const COL = ['vert','jaune','rouge'];
+const COLNAME = {vert:'Vert', jaune:'Jaune', rouge:'Rouge'};
+const DEF_LABELS = {vert:'Bonne journée', jaune:'Journée mitigée', rouge:'Journée difficile'};
+
+/* ───────────── Utilitaires ───────────── */
+const $ = s => document.querySelector(s);
+const enc = new TextEncoder(), dec = new TextDecoder();
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return ymd(d); };
+const today = () => ymd(new Date());
+const mondayOf = s => { const d = parse(s); d.setDate(d.getDate() - (d.getDay()+6)%7); return ymd(d); };
+const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const fmtLong = s => { const d = parse(s); return `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`; };
+const fmtFR = s => { const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lc = w => w.charAt(0).toLowerCase() + w.slice(1);
+const joinFr = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' et ' + a[a.length-1];
+const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const cleanCar = e => (e.car || '').trim().replace(/[.\s]+$/, '');
+const where = e => [e.ville, e.lieu].filter(Boolean).join(' · ');
+const fmtDay = s => { const d = parse(s); return `${JOURS[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`; };
+const weekday = s => s ? JOURS[parse(s).getDay()].toLowerCase() : '';
+
+function sentence(e) {
+  const car = cleanCar(e);
+  return 'Je me sens ' + joinFr(e.emos.map(x => lc(x.w))) + (car ? ' car ' + car : '') + '.';
+}
+function sentenceHtml(e) {
+  const car = cleanCar(e);
+  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
+}
+
+const APP_VERSION = 17; // même numéro que CACHE dans sw.js
+let toastTimer;
+function toast(msg) {
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg; t.setAttribute('role', 'status');
+  document.body.appendChild(t);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 2600);
+}
+
+/* ───────────── Chiffrement (AES-GCM 256, clé dérivée du code par PBKDF2) ───────────── */
+let VKEY = null;                                  // journal de l'utilisateur connecté sur cet appareil
+const vaultKey = id => 'journal-emotions.vault.' + id;
+const LEGACY_VKEY = 'journal-emotions.vault';     // journal créé avant les comptes
+const ITER = 250000;
+let key = null, salt = null, data = null;
+
+function toB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+function fromB64(s) { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+
+async function deriveKey(code, saltU8, iter = ITER) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:saltU8, iterations:iter, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function sealData(obj, k, saltU8) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, enc.encode(JSON.stringify(obj))));
+  return {app:'journal-emotions', v:1, iter:ITER, salt:toB64(saltU8), iv:toB64(iv), ct:toB64(ct)};
+}
+async function openVault(v, code) {
+  const s = fromB64(v.salt);
+  const k = await deriveKey(code, s, v.iter || ITER);
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(v.iv)}, k, fromB64(v.ct));
+  return {k, s, obj: JSON.parse(dec.decode(pt))};
+}
+
+let saveTimer, savePending = Promise.resolve();
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 300); }
+function saveNow() {
+  clearTimeout(saveTimer);
+  if (!key) return savePending;
+  const snapshot = data, k = key, s = salt, vk = VKEY;
+  savePending = savePending.then(async () => {
+    localStorage.setItem(vk, JSON.stringify(await sealData(snapshot, k, s)));
+  }).catch(err => { console.error(err); toast('Erreur d’enregistrement'); });
+  return savePending;
+}
+
+/* ───────────── Données ───────────── */
+function defaults(d = {}) {
+  d.profile = Object.assign({nom:'', prenom:'', start:today()}, d.profile);
+  d.labels = Object.assign({}, DEF_LABELS, d.labels);
+  d.settings = Object.assign({autolock:1, geoloc:true}, d.settings);
+  d.days = d.days || {};
+  d.role ||= 'client';            // 'client' ou 'therapeute'
+  d.uid ||= rid(8);               // identifiant anonyme, transmis au thérapeute avec les envois
+  d.sent ||= {};                  // client : début de la période envoyée → {to, at}
+  for (const [f, v] of Object.entries(d.sent)) if (typeof v === 'string') d.sent[f] = {to:addDays(f, 6), at:v};
+  d.therapist ??= null;           // client : thérapeute lié (clé publique + coordonnées)
+  d.clients ||= {};               // thérapeute : fiches clients (coordonnées + données reçues)
+  for (const c of Object.values(d.clients)) { if (!('uid' in c)) c.uid = c.id; c.contact ||= {}; c.note ??= ''; }
+  d.thera = Object.assign({type:'', tel:'', email:'', adresse:''}, d.thera);
+  d.pending ||= {notes:0, envois:0};   // compteurs pas encore transmis au serveur (hors connexion)
+  return d;
+}
+const getDay = k => D().days[k] || {color:null, synth:'', entries:[]};
+const ensureDay = k => (data.days[k] ||= {color:null, synth:'', entries:[]});
+const dayUsed = d => !!(d && (d.color || d.synth?.trim() || d.entries?.length));   // partie partageable d'une journée
+const dayNotes = d => d?.notes || [];   // notes personnelles : ni envoyées au thérapeute, ni exportées
+const dayFilled = d => dayUsed(d) || dayNotes(d).length > 0;
+const initiale = s => { const c = [...String(s || '').trim()][0]; return c ? c.toUpperCase() + '.' : ''; };
+
+/* ───────────── Serveur : comptes, compteurs, administration ─────────────
+   Le serveur (Supabase) ne connaît que les comptes et des compteurs, jamais les notes.
+   Tant que SERVER.url est vide, un « mode démonstration » simule le serveur sur cet appareil. */
+const SERVER = {url:'https://bryabqhorqmsermzxuir.supabase.co', anon:'sb_publishable_LOYD3w3UhVbHwg41jqx0kw_Q-_P2WyN'};   // Supabase › Project Settings › API Keys : clé publique (« Publishable key »)
+const ID_DOMAIN = 'comptes.journal-emotions.invalid';   // identifiant → adresse technique (aucun e-mail n'est envoyé)
+const ID_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
+const DEMO = !SERVER.url;
+let session = null;   // connexion au serveur, en mémoire uniquement
+let profil = null;    // profil renvoyé par le serveur : numéro, type de compte, administrateur…
+const apiErr = (code, msg) => Object.assign(new Error(msg || code), {code});
+
+function supabaseApi() {
+  const email = id => `${id}@${ID_DOMAIN}`;
+  async function call(path, body, method = 'POST', retry = true) {
+    const headers = {apikey:SERVER.anon, 'Content-Type':'application/json'};
+    if (session && !path.startsWith('/auth/v1/token')) headers.Authorization = 'Bearer ' + session.access_token;
+    let r;
+    try { r = await fetch(SERVER.url + path, {method, headers, body:JSON.stringify(body ?? {})}); }
+    catch { throw apiErr('reseau'); }
+    if (r.status === 401 && retry && session?.refresh_token && !path.startsWith('/auth/v1/token')) {
+      session = await call('/auth/v1/token?grant_type=refresh_token', {refresh_token:session.refresh_token}, 'POST', false);
+      rememberSession();
+      return call(path, body, method, false);
+    }
+    const j = r.status === 204 ? null : await r.json().catch(() => null);
+    if (!r.ok) {
+      const c = j?.error_code || j?.code || '';
+      const banni = /banned/i.test(j?.msg || j?.message || '');
+      throw apiErr(banni ? 'desactive' : {invalid_credentials:'identifiants', user_banned:'desactive', user_already_exists:'pris', email_exists:'pris', weak_password:'faible',
+        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi',
+        refresh_token_not_found:'session', refresh_token_already_used:'session', session_not_found:'session', session_expired:'session', user_not_found:'session'}[c] || 'serveur', j?.msg || j?.message);
+    }
+    return j;
+  }
+  return {
+    async signUp(f) {
+      const j = await call('/auth/v1/signup', {email:email(f.identifiant), password:f.password, data:{identifiant:f.identifiant, role:f.role, nom:f.nom, prenom:f.prenom}});
+      if (!j?.access_token) throw apiErr('confirmation');
+      session = j;
+    },
+    async signIn(id, pw) { session = await call('/auth/v1/token?grant_type=password', {email:email(id), password:pw}); },
+    async resume(t) { session = await call('/auth/v1/token?grant_type=refresh_token', {refresh_token:t}, 'POST', false); },
+    token: () => session?.refresh_token,
+    rpc: (fn, args) => call('/rest/v1/rpc/' + fn, args),
+    recup: body => call('/functions/v1/recuperation', body),
+    setPassword: pw => call('/auth/v1/user', {password:pw}, 'PUT'),
+    signOut() { if (session) call('/auth/v1/logout', {}).catch(() => {}); session = null; },
+  };
+}
+
+/* Mode démonstration : mêmes fonctions que le serveur, simulées dans ce navigateur (le premier compte créé est administrateur) */
+function demoApi() {
+  const K = 'journal-emotions.serveur-demo';
+  const db = () => JSON.parse(localStorage.getItem(K) || '{"comptes":{},"seq":{"C":0,"T":0},"usage":{}}');
+  const put = x => localStorage.setItem(K, JSON.stringify(x));
+  const hash = async s => toB64(new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('demo|' + s))));
+  const numero = (x, role) => { const p = role === 'therapeute' ? 'T' : 'C'; return `${p}-${String(++x.seq[p]).padStart(4, '0')}`; };
+  const bump = (x, id, champ, n) => { const u = x.usage[id + '|' + today()] ||= {id, jour:today(), connexions:0, notes:0, envois:0}; u[champ] += n; };
+  const moi = x => x.comptes[session?.id]?.profil;
+  const admin = x => { if (!moi(x)?.est_admin) throw apiErr('serveur', 'Réservé à l’administrateur'); };
+  const pasMoi = id => { if (id === session.id) throw apiErr('serveur', 'Impossible sur votre propre compte'); };
+  const RPC = {
+    ouvrir_session(x) { const p = moi(x); if (!p.actif) return {actif:false}; p.derniere_connexion = new Date().toISOString(); p.nb_connexions++; bump(x, p.id, 'connexions', 1); return p; },
+    maj_profil(x, {p}) { const m = moi(x); for (const k of ['nom', 'prenom', 'therapie', 'telephone', 'email_contact', 'adresse']) if (k in p) m[k] = p[k]; },
+    compter(x, {p_notes = 0, p_envois = 0}) { bump(x, session.id, 'notes', p_notes); bump(x, session.id, 'envois', p_envois); },
+    ma_cle_secours(x) { return x.recup?.[session.id]?.cle ?? null; },
+    ma_recuperation_etat(x) { const l = x.recup?.[session.id]; return {confirmee:!!l?.email, attente:!!l?.attente}; },
+    retirer_recuperation(x) { if (x.recup) delete x.recup[session.id]; },
+    admin_ressources(x) {
+      admin(x);
+      return {base_octets:JSON.stringify(x).length, actifs_30j:Object.values(x.comptes).filter(c => c.profil.derniere_connexion && Date.now() - new Date(c.profil.derniere_connexion) < 30 * 864e5).length};
+    },
+    admin_utilisateurs(x) { admin(x); return Object.values(x.comptes).map(c => c.profil); },
+    admin_stats(x) {
+      admin(x);
+      const P = Object.values(x.comptes).map(c => c.profil), U = Object.values(x.usage);
+      const recent = (iso, n) => !!iso && Date.now() - new Date(iso) < n * 864e5;
+      const sum = (f, n) => U.filter(u => !n || u.jour >= addDays(today(), 1 - n)).reduce((a, u) => a + u[f], 0);
+      const act = f => ({j7:sum(f, 7), j30:sum(f, 30), total:sum(f)});
+      const sem = {};
+      U.filter(u => u.jour >= addDays(today(), -55)).forEach(u => {
+        const s = sem[mondayOf(u.jour)] ||= {semaine:mondayOf(u.jour), connexions:0, notes:0, envois:0};
+        s.connexions += u.connexions; s.notes += u.notes; s.envois += u.envois;
+      });
+      return {comptes:P.length, clients:P.filter(p => p.role === 'client').length, therapeutes:P.filter(p => p.role === 'therapeute').length,
+        desactives:P.filter(p => !p.actif).length, inscrits_7j:P.filter(p => recent(p.cree_le, 7)).length, inscrits_30j:P.filter(p => recent(p.cree_le, 30)).length,
+        actifs_7j:P.filter(p => recent(p.derniere_connexion, 7)).length, actifs_30j:P.filter(p => recent(p.derniere_connexion, 30)).length,
+        activite:{connexions:act('connexions'), notes:act('notes'), envois:act('envois')},
+        semaines:Object.values(sem).sort((a, b) => a.semaine.localeCompare(b.semaine))};
+    },
+    admin_activer(x, {p_id, p_actif}) { admin(x); pasMoi(p_id); x.comptes[p_id].profil.actif = p_actif; },
+    admin_type(x, {p_id, p_role}) { admin(x); const p = x.comptes[p_id].profil; if (p.role !== p_role) { p.role = p_role; p.numero = numero(x, p_role); } },
+    admin_supprimer(x, {p_id}) {
+      admin(x); pasMoi(p_id); delete x.comptes[p_id];
+      for (const k of Object.keys(x.usage)) if (x.usage[k].id === p_id) delete x.usage[k];
+    },
+  };
+  return {
+    async signUp(f) {
+      const x = db(); if (x.comptes[f.identifiant]) throw apiErr('pris');
+      x.comptes[f.identifiant] = {mdp:await hash(f.password), profil:{id:f.identifiant, identifiant:f.identifiant, numero:numero(x, f.role), role:f.role,
+        est_admin:!Object.keys(x.comptes).length, actif:true, nom:f.nom, prenom:f.prenom, therapie:'', telephone:'', email_contact:'', adresse:'',
+        cree_le:new Date().toISOString(), derniere_connexion:null, nb_connexions:0}};
+      put(x); session = {id:f.identifiant};
+    },
+    async signIn(id, pw) {
+      const c = db().comptes[id];
+      if (!c || c.mdp !== await hash(pw)) throw apiErr('identifiants');
+      session = {id};
+    },
+    async resume(t) { if (!db().comptes[t]) throw apiErr('session'); session = {id:t}; },
+    token: () => session?.id,
+    async rpc(fn, args = {}) { const x = db(), r = RPC[fn](x, args); put(x); return r === undefined ? null : JSON.parse(JSON.stringify(r)); },
+    /* En démonstration, rien n'est envoyé : les codes sont toujours 123456 */
+    async recup(b) {
+      if (b.action === 'quota_envoi') return {credits:287, type:'free'};
+      const x = db(); x.recup ||= {};
+      const e = String(b.email || '').trim().toLowerCase(), id = String(b.identifiant || '').trim().toLowerCase(), l = x.recup[id];
+      if (b.action === 'definir') {
+        const o = x.recup[session.id];
+        x.recup[session.id] = {...o, attente:e, cle:o?.cle || toB64(crypto.getRandomValues(new Uint8Array(32)))};
+      } else if (b.action === 'confirmer') {
+        const c = x.recup[session.id];
+        if (!c?.attente || b.code !== '123456') throw apiErr('code');
+        c.email = c.attente; delete c.attente;
+      } else if (b.action === 'demande') {
+        if (l?.email && l.email === e) l.code = '123456';
+      } else {
+        if (!l?.code || l.code !== b.code) throw apiErr('code');
+        x.comptes[id].mdp = await hash(b.mot_de_passe); delete l.code; put(x);
+        return {cle_secours:l.cle};
+      }
+      put(x); return {ok:true};
+    },
+    async setPassword(pw) { const x = db(); x.comptes[session.id].mdp = await hash(pw); put(x); },
+    signOut() { session = null; },
+  };
+}
+const API = DEMO ? demoApi() : supabaseApi();
+
+/* Profil et compteurs envoyés au serveur (jamais de contenu) */
+let profTimer;
+function pushProfile() {
+  clearTimeout(profTimer);
+  profTimer = setTimeout(() => {
+    if (!session || !data) return;
+    const p = data.profile, t = data.thera;
+    // client : le nom de famille complet reste sur l'appareil, le serveur n'en reçoit que l'initiale
+    API.rpc('maj_profil', {p:{nom:data.role === 'therapeute' ? p.nom : initiale(p.nom), prenom:p.prenom, therapie:t.type, telephone:t.tel, email_contact:t.email, adresse:t.adresse}}).catch(() => {});
+  }, 800);
+}
+function countStat(champ) { data.pending[champ]++; save(); flushStats(); }
+async function flushStats() {
+  if (!session || !data) return;
+  const {notes, envois} = data.pending;
+  if (!notes && !envois) return;
+  data.pending = {notes:0, envois:0};
+  try { await API.rpc('compter', {p_notes:notes, p_envois:envois}); }
+  catch { data.pending.notes += notes; data.pending.envois += envois; }
+  save();
+}
+
+/* ───────────── Connexion et inscription ───────────── */
+let fails = 0, blockedUntil = 0, busy = false, hiddenAt = 0;
+const LAST_ID = 'journal-emotions.dernier-identifiant';
+
+function showLock(mode = 'login') {
+  $('#app').hidden = true;
+  const L = $('#lock'); L.hidden = false;
+  if (!window.crypto?.subtle) {
+    L.innerHTML = `<div class="lockcard"><h1>Connexion non sécurisée</h1><p class="muted">Cette application doit être ouverte via une adresse <b>https://</b> pour pouvoir chiffrer vos notes.</p></div>`;
+    return;
+  }
+  const demo = DEMO ? '<div class="warn">Mode démonstration : en attendant le serveur, les comptes sont simulés dans ce navigateur.</div>' : '';
+  const inv = pendingInv ? '<div class="warn">Vous avez reçu une invitation de votre thérapeute : connectez-vous ou créez votre compte, elle vous sera proposée juste après.</div>' : '';
+  if (mode === 'forgot' || mode === 'code') {
+    L.innerHTML = mode === 'forgot' ? `
+    <div class="lockcard">
+      <img class="logo" src="icon-192.png" alt="">
+      <h1>Mot de passe oublié</h1>
+      <p class="muted">Entrez votre identifiant et l’adresse de récupération confirmée de votre compte. Si elle correspond, vous recevrez un code à 6 chiffres par e-mail.</p>
+      <form id="forgotForm">
+        <label class="label" for="fId">Identifiant</label>
+        <input type="text" id="fId" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(localStorage.getItem(LAST_ID) || '')}">
+        <label class="label" for="fMail">Adresse de récupération</label>
+        <input type="email" id="fMail" autocomplete="email" autocapitalize="none">
+        <div class="err" id="lockErr"></div>
+        <button class="btn primary block" id="forgotBtn">Recevoir un code</button>
+      </form>
+      <p class="small muted" style="margin-top:18px">Sans adresse de récupération enregistrée, aucun code ne peut être envoyé : demandez à l’administrateur de supprimer le compte, puis créez-en un nouveau. Vos notes ne pourront alors revenir qu’avec une sauvegarde.</p>
+      <p style="margin-top:12px"><button class="link" data-act="goLogin">Retour à la connexion</button></p>
+      ${demo}
+    </div>` : `
+    <div class="lockcard">
+      <img class="logo" src="icon-192.png" alt="">
+      <h1>Entrez le code reçu</h1>
+      <p class="muted">Si l’adresse correspond à ce compte, un code valable 15 minutes vient d’être envoyé. Pensez à regarder dans les courriers indésirables.</p>
+      <form id="resetForm">
+        <label class="label" for="cCode">Code à 6 chiffres reçu par e-mail</label>
+        <input type="text" id="cCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+        <label class="label" for="cPw">Nouveau mot de passe (8 caractères minimum)</label>
+        <input type="password" id="cPw" autocomplete="new-password">
+        <label class="label" for="cPw2">Confirmez le mot de passe</label>
+        <input type="password" id="cPw2" autocomplete="new-password">
+        <div class="err" id="lockErr"></div>
+        <button class="btn primary block" id="codeBtn">Changer mon mot de passe</button>
+      </form>
+      <p style="margin-top:18px"><button class="link" data-act="goLogin">Retour à la connexion</button></p>
+      ${demo}
+    </div>`;
+    $('#forgotForm')?.addEventListener('submit', onForgot);
+    $('#resetForm')?.addEventListener('submit', onResetCode);
+    return;
+  }
+  L.innerHTML = mode === 'login' ? `
+    <div class="lockcard">
+      <img class="logo" src="icon-192.png" alt="">
+      <h1>Motus</h1>
+      <p class="tagline">Éclairer ce qui se passe en soi</p>
+      <p class="muted">Connectez-vous pour ouvrir votre journal.</p>
+      ${inv}
+      <form id="loginForm">
+        <label class="label" for="lId">Identifiant</label>
+        <input type="text" id="lId" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(localStorage.getItem(LAST_ID) || '')}">
+        <label class="label" for="lPw">Mot de passe</label>
+        <input type="password" id="lPw" autocomplete="current-password">
+        <div class="err" id="lockErr"></div>
+        <button class="btn primary block" id="loginBtn">Se connecter</button>
+      </form>
+      <p style="margin-top:20px">Pas encore de compte ? <button class="link" data-act="goSignup">Créer un compte</button></p>
+      <p class="small" style="margin-top:4px"><button class="link small" data-act="forgot">Mot de passe oublié ?</button></p>
+      ${demo}
+    </div>` : `
+    <div class="lockcard">
+      <img class="logo" src="icon-192.png" alt="">
+      <h1>Créer un compte</h1>
+      <ul>
+        <li>Vos notes restent <b>uniquement sur votre téléphone</b>, chiffrées avec votre mot de passe.</li>
+        <li>Le serveur ne connaît que votre identifiant, votre nom et votre type de compte.</li>
+        <li>Vous choisissez ce que vous partagez : envoi chiffré à votre thérapeute, export Excel.</li>
+      </ul>
+      ${inv}
+      <form id="signupForm">
+        <p class="label">Je suis…</p>
+        <div class="roles">
+          <label class="role"><input type="radio" name="role" value="client" checked> Client(e)</label>
+          <label class="role"><input type="radio" name="role" value="therapeute" ${pendingInv ? 'disabled' : ''}> Thérapeute</label>
+        </div>
+        <div class="row">
+          <div><label class="label" for="sPrenom">Prénom</label><input type="text" id="sPrenom" autocomplete="given-name"></div>
+          <div><label class="label" for="sNom">Nom</label><input type="text" id="sNom" autocomplete="family-name"></div>
+        </div>
+        <label class="label" for="sId">Identifiant</label>
+        <input type="text" id="sId" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ex. julie.d">
+        <div class="small muted" style="margin-top:4px">3 à 30 caractères : lettres minuscules, chiffres, point, tiret.</div>
+        <label class="label" for="sPw">Mot de passe (8 caractères minimum)</label>
+        <input type="password" id="sPw" autocomplete="new-password">
+        <label class="label" for="sPw2">Confirmez le mot de passe</label>
+        <input type="password" id="sPw2" autocomplete="new-password">
+        <label class="label" for="sMail">Adresse de récupération (facultative)</label>
+        <input type="email" id="sMail" autocomplete="email" autocapitalize="none">
+        <div class="small muted" style="margin-top:4px">Pour recevoir un code si vous oubliez votre mot de passe. Un code vous sera envoyé pour la confirmer. Personne ne peut la lire, pas même l’administrateur ; vous devrez la retaper à l’identique.</div>
+        <label class="label" for="sMail2">Confirmez l’adresse</label>
+        <input type="email" id="sMail2" autocomplete="off" autocapitalize="none">
+        <div class="warn">Important : sans adresse de récupération, un mot de passe oublié ne peut pas être réinitialisé. Notez-le en lieu sûr.</div>
+        <div class="err" id="lockErr"></div>
+        <button class="btn primary block" id="signupBtn">Créer mon compte</button>
+      </form>
+      <p style="margin-top:20px">Déjà un compte ? <button class="link" data-act="goLogin">Se connecter</button></p>
+      ${demo}
+    </div>`;
+  $('#loginForm')?.addEventListener('submit', onLogin);
+  $('#signupForm')?.addEventListener('submit', onSignup);
+  (mode === 'login' ? ($('#lId').value ? $('#lPw') : $('#lId')) : $('#sPrenom')).focus();
+}
+
+const LOGIN_ERR = {
+  identifiants: 'Identifiant ou mot de passe incorrect.',
+  desactive: 'Ce compte a été désactivé par l’administrateur. Contactez l’administrateur.',
+  reseau: 'Pas de connexion internet : impossible de vérifier votre compte.',
+};
+async function onLogin(e) {
+  e.preventDefault();
+  const id = $('#lId').value.trim().toLowerCase(), pw = $('#lPw').value, err = $('#lockErr'), btn = $('#loginBtn');
+  if (!id || !pw) return err.textContent = 'Indiquez votre identifiant et votre mot de passe.';
+  if (Date.now() < blockedUntil) return err.textContent = `Trop d’essais. Réessayez dans ${Math.ceil((blockedUntil - Date.now()) / 1000)} s.`;
+  const fail = msg => { err.textContent = msg; btn.disabled = false; btn.textContent = 'Se connecter'; };
+  btn.disabled = true; btn.textContent = 'Connexion…'; err.textContent = '';
+  try {
+    await API.signIn(id, pw);
+    profil = await API.rpc('ouvrir_session');
+    if (!profil?.actif) { API.signOut(); profil = null; return fail(LOGIN_ERR.desactive); }
+  } catch (x) {
+    // hors connexion : le journal déjà présent sur cet appareil s'ouvre avec le mot de passe
+    if (x.code === 'reseau' && localStorage.getItem(vaultKey(id))) { session = null; profil = null; }
+    else {
+      if (x.code === 'identifiants' && ++fails >= 5) blockedUntil = Date.now() + 30000 * (fails - 4);
+      return fail(LOGIN_ERR[x.code] || 'Connexion impossible pour le moment. Réessayez plus tard.');
+    }
+  }
+  fails = 0;
+  try { await openJournal(id, pw); }
+  catch (x) { if (x.code !== 'journal') console.error(x); API.signOut(); profil = null; fail(x.code === 'journal' ? x.message : 'Impossible d’ouvrir le journal de cet appareil.'); }
+}
+
+async function onSignup(e) {
+  e.preventDefault();
+  const v = s => $(s).value.trim(), err = $('#lockErr'), btn = $('#signupBtn');
+  const f = {role:document.querySelector('input[name=role]:checked').value, prenom:v('#sPrenom'), nom:v('#sNom'), identifiant:v('#sId').toLowerCase(), password:$('#sPw').value};
+  if (!f.prenom || !f.nom) return err.textContent = 'Indiquez votre prénom et votre nom.';
+  if (!ID_RE.test(f.identifiant)) return err.textContent = 'Identifiant : 3 à 30 caractères, lettres minuscules, chiffres, point ou tiret.';
+  if (f.password.length < 8) return err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
+  if (f.password !== $('#sPw2').value) return err.textContent = 'Les deux mots de passe ne correspondent pas.';
+  const mail = v('#sMail').toLowerCase();
+  if (mail && !EMAIL_RE.test(mail)) return err.textContent = 'Adresse de récupération invalide.';
+  if (mail !== v('#sMail2').toLowerCase()) return err.textContent = 'Les deux adresses de récupération ne correspondent pas.';
+  btn.disabled = true; btn.textContent = 'Création…'; err.textContent = '';
+  try { await API.signUp({...f, nom:f.role === 'therapeute' ? f.nom : initiale(f.nom)}); profil = await API.rpc('ouvrir_session'); }
+  catch (x) {
+    btn.disabled = false; btn.textContent = 'Créer mon compte';
+    return err.textContent = {
+      pris: 'Cet identifiant est déjà utilisé : choisissez-en un autre.',
+      faible: 'Mot de passe trop simple : allongez-le ou ajoutez des chiffres.',
+      reseau: 'Une connexion internet est nécessaire pour créer un compte.',
+      confirmation: 'Le serveur demande une confirmation par e-mail : désactivez-la dans Supabase (Authentication › Email).',
+    }[x.code] || 'Création impossible pour le moment. Réessayez plus tard.';
+  }
+  await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}});
+  if (mail) await setRecovery(mail, f.password);
+}
+
+/* Ouvre (ou crée) le journal chiffré de ce compte sur cet appareil */
+async function openJournal(id, pw, init) {
+  VKEY = vaultKey(id);
+  const raw = localStorage.getItem(VKEY);
+  if (raw) {
+    let r;
+    try { r = await openVault(JSON.parse(raw), pw); }
+    catch {
+      if (!session) throw apiErr('journal', 'Mot de passe incorrect.');   // hors connexion
+      // mot de passe changé depuis un autre appareil : l'ancien rouvre le journal de celui-ci
+      const old = await askCode('Journal de cet appareil', {label:'Ancien mot de passe', hint:'Votre mot de passe a changé depuis votre dernière connexion ici. Entrez l’ancien pour rouvrir le journal de cet appareil.'});
+      if (old == null) throw apiErr('journal', 'Journal de cet appareil non ouvert.');
+      try { r = await openVault(JSON.parse(raw), old); } catch { throw apiErr('journal', 'Ancien mot de passe incorrect.'); }
+      r.s = crypto.getRandomValues(new Uint8Array(16)); r.k = await deriveKey(pw, r.s);
+    }
+    key = r.k; salt = r.s; data = defaults(r.obj);
+  } else {
+    salt = crypto.getRandomValues(new Uint8Array(16)); key = await deriveKey(pw, salt);
+    data = defaults(init || {});
+  }
+  applyProfil();
+  data.account ||= {identifiant:id};
+  localStorage.setItem(LAST_ID, id);
+  if (data.settings.autolock === -1) { await rememberKey().catch(() => {}); rememberSession(); }
+  if (data.role === 'therapeute') await ensureKeys(); else await saveNow();
+  navigator.storage?.persist?.();
+  showApp(); pushProfile(); flushStats(); ensureSecours(pw);
+}
+
+function applyProfil() {
+  if (!profil) return;
+  data.role = profil.role;
+  data.account = {identifiant:profil.identifiant, numero:profil.numero, est_admin:!!profil.est_admin, recup:!!data.account?.recup};
+  if (!data.profile.nom && !data.profile.prenom) Object.assign(data.profile, {nom:profil.nom, prenom:profil.prenom});
+}
+
+/* Récupération par e-mail : le serveur garde une clé de secours et seulement une empreinte de l'adresse.
+   Cet appareil garde la clé du journal chiffrée par la clé de secours : aucun des deux, seul, n'ouvre les notes. */
+const secoursKey = id => 'journal-emotions.secours.' + id;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+async function passwordBits(pw, saltU8) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  return crypto.subtle.deriveBits({name:'PBKDF2', salt:saltU8, iterations:ITER, hash:'SHA-256'}, base, 256);
+}
+/* Met à jour l'état de la récupération ; avec le mot de passe, recrée aussi la copie de secours de la clé */
+async function ensureSecours(pw) {
+  if (!session || !data) return;
+  try {
+    const cle = await API.rpc('ma_cle_secours');
+    if (!data) return;
+    const sk = secoursKey(data.account.identifiant);
+    const etat = cle ? await API.rpc('ma_recuperation_etat') : null;
+    if (!data) return;
+    data.account.recup = etat?.confirmee ? 'confirmee' : etat?.attente ? 'attente' : false;
+    data.account.recupChange = !!(etat?.confirmee && etat.attente);
+    if (data.account.recup !== 'attente' && !data.account.recupChange) { delete data.recupMail; delete data.recupEnvoi; }
+    if (!cle) localStorage.removeItem(sk);
+    else if (pw) {
+      const k = await crypto.subtle.importKey('raw', fromB64(cle), 'AES-GCM', false, ['encrypt']);
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, await passwordBits(pw, salt)));
+      localStorage.setItem(sk, JSON.stringify({iv:toB64(iv), ct:toB64(ct)}));
+    }
+    save();
+    if (view === 'set' && !src) render(true);
+    else majRappelRecup();
+  } catch (x) { console.warn('Récupération indisponible', x.code); }
+}
+/* Après un mot de passe oublié : rouvre le journal de l'appareil avec la clé de secours et le rechiffre */
+async function rescueJournal(id, cle, newPw) {
+  try {
+    const v = JSON.parse(localStorage.getItem(vaultKey(id))), b = JSON.parse(localStorage.getItem(secoursKey(id)));
+    if (!v || !b) return false;
+    const ks = await crypto.subtle.importKey('raw', fromB64(cle), 'AES-GCM', false, ['decrypt']);
+    const bits = await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(b.iv)}, ks, fromB64(b.ct));
+    const old = await crypto.subtle.importKey('raw', bits, 'AES-GCM', false, ['decrypt']);
+    const obj = JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(v.iv)}, old, fromB64(v.ct))));
+    const s = crypto.getRandomValues(new Uint8Array(16));
+    localStorage.setItem(vaultKey(id), JSON.stringify(await sealData(obj, await deriveKey(newPw, s), s)));
+    return true;
+  } catch (x) { console.warn('Journal non repris', x); return false; }
+}
+function askRecovery() {
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="recForm">
+      <div class="dlg-h"><h2>Adresse de récupération</h2></div>
+      <div class="dlg-b">
+        <p class="small muted">Elle sert uniquement à recevoir un code si vous oubliez votre mot de passe. Vous recevrez un code pour la confirmer. Seule une empreinte illisible est conservée : personne ne peut la lire, pas même l’administrateur. Vous devrez la retaper à l’identique en cas d’oubli.</p>
+        <label class="label" for="rMail">Adresse e-mail</label>
+        <input type="email" id="rMail" autocomplete="email" autocapitalize="none">
+        <label class="label" for="rMail2">Confirmez l’adresse</label>
+        <input type="email" id="rMail2" autocomplete="off" autocapitalize="none">
+        <label class="label" for="rPw">Votre mot de passe</label>
+        <input type="password" id="rPw" autocomplete="current-password">
+        <div class="err" id="rErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="rCancel">Annuler</button><button class="btn primary">Enregistrer</button></div>
+    </form>`;
+    const done = v => { D.close(); resolve(v); };
+    $('#rCancel').onclick = () => done(null);
+    D.oncancel = () => resolve(null);
+    $('#recForm').onsubmit = async e => {
+      e.preventDefault();
+      const m = $('#rMail').value.trim().toLowerCase(), pw = $('#rPw').value, err = $('#rErr');
+      if (!EMAIL_RE.test(m)) return err.textContent = 'Adresse e-mail invalide.';
+      if (m !== $('#rMail2').value.trim().toLowerCase()) return err.textContent = 'Les deux adresses ne correspondent pas.';
+      try { await saveNow(); await openVault(JSON.parse(localStorage.getItem(VKEY)), pw); }
+      catch { return err.textContent = 'Mot de passe incorrect.'; }
+      done({email:m, pw});
+    };
+    D.showModal();
+  });
+}
+async function setRecovery(email, pw) {
+  try {
+    await API.recup({action:'definir', email});
+    // gardée dans le journal chiffré de l'appareil, le temps de pouvoir renvoyer le code
+    data.recupMail = email; data.recupEnvoi = new Date().toISOString();
+    await saveNow();
+    await ensureSecours(pw);
+    openRecupCode();
+    return true;
+  } catch (x) {
+    toast(ENVOI_ERR[x.code] || 'Adresse non enregistrée : réessayez dans les Réglages.');
+    await ensureSecours(pw);
+    return false;
+  }
+}
+const ENVOI_ERR = {reseau:'Pas de connexion internet.', patience:'Attendez une minute avant un nouvel envoi.', envoi:'L’e-mail n’a pas pu être envoyé : réessayez dans un instant.'};
+const recupAConfirmer = () => data?.account?.recup === 'attente' || !!data?.account?.recupChange;
+const attenteRenvoi = () => data?.recupEnvoi ? Math.max(0, 60 - Math.floor((Date.now() - new Date(data.recupEnvoi)) / 1000)) : 0;
+
+/* Rappel permanent tant que l'adresse n'est pas confirmée : sans confirmation, aucun code de récupération ne peut partir */
+function recupReminder() {
+  if (!session || !recupAConfirmer()) return '';
+  return `<div class="banner recup-rappel"><span>${data.account.recupChange ? 'Votre nouvelle adresse de récupération' : 'Votre adresse de récupération'} n’est pas encore confirmée. Entrez le code reçu par e-mail, et pensez à regarder dans vos courriers indésirables.</span>
+    <button class="btn primary" data-act="confirmRecovery">Confirmer</button></div>`;
+}
+function majRappelRecup() {
+  if (!data) return;
+  const b = $('.recup-rappel');
+  if (!recupAConfirmer()) return b?.remove();
+  if (!b && !src && (view === 'day' || view === 'clients')) $('#view').insertAdjacentHTML('afterbegin', recupReminder());
+}
+let recupTimer;
+function openRecupCode() {
+  const D = $('#codeDlg'), mail = data.recupMail;
+  D.innerHTML = `<form method="dialog" id="rcForm">
+    <div class="dlg-h"><h2>Confirmez votre adresse</h2></div>
+    <div class="dlg-b">
+      <p class="small muted">${mail ? `Un code à 6 chiffres a été envoyé à <b>${esc(mail)}</b>.` : 'Entrez le code à 6 chiffres reçu par e-mail.'} Il est valable 30 minutes. <b>Pensez à regarder dans vos courriers indésirables.</b></p>
+      <label class="label" for="rcCode">Code de confirmation</label>
+      <input type="text" id="rcCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <div class="err" id="rcErr"></div>
+      <button type="button" class="btn block" id="rcResend"></button>
+    </div>
+    <div class="dlg-f"><button type="button" class="btn" id="rcLater">Plus tard</button><button class="btn primary">Confirmer</button></div>
+  </form>`;
+  const maj = () => {
+    const b = $('#rcResend'); if (!b) return clearInterval(recupTimer);
+    const s = attenteRenvoi();
+    b.disabled = !!mail && s > 0;
+    b.textContent = !mail ? 'Saisir de nouveau l’adresse' : s ? `Renvoyer le code dans ${s} s` : 'Renvoyer le code';
+  };
+  clearInterval(recupTimer); recupTimer = setInterval(maj, 1000); maj();
+  const fermer = () => { clearInterval(recupTimer); D.close(); };
+  $('#rcLater').onclick = fermer;
+  $('#rcResend').onclick = async () => {
+    if (!mail) { fermer(); return ACT.addRecovery(); }
+    const err = $('#rcErr'); err.textContent = '';
+    try { await API.recup({action:'definir', email:mail}); data.recupEnvoi = new Date().toISOString(); save(); maj(); toast('Nouveau code envoyé'); }
+    catch (x) { err.textContent = ENVOI_ERR[x.code] || 'Envoi impossible pour le moment.'; }
+  };
+  $('#rcForm').onsubmit = async e => {
+    e.preventDefault();
+    const code = $('#rcCode').value.trim(), err = $('#rcErr');
+    if (!/^\d{6}$/.test(code)) return err.textContent = 'Entrez les 6 chiffres du code.';
+    err.textContent = '';
+    try { await API.recup({action:'confirmer', code}); fermer(); await ensureSecours(); toast('Votre adresse de récupération est confirmée'); }
+    catch (x) { err.textContent = x.code === 'code' ? 'Code incorrect ou expiré. Vous pouvez en demander un nouveau.' : x.code === 'reseau' ? 'Pas de connexion internet.' : 'Confirmation impossible pour le moment.'; }
+  };
+  D.showModal();
+  $('#rcCode').focus();
+}
+let recupId = '';
+async function onForgot(e) {
+  e.preventDefault();
+  const id = $('#fId').value.trim().toLowerCase(), m = $('#fMail').value.trim().toLowerCase(), err = $('#lockErr'), btn = $('#forgotBtn');
+  if (!id || !EMAIL_RE.test(m)) return err.textContent = 'Indiquez votre identifiant et votre adresse de récupération.';
+  btn.disabled = true; err.textContent = '';
+  try { await API.recup({action:'demande', identifiant:id, email:m}); recupId = id; showLock('code'); }
+  catch (x) { btn.disabled = false; err.textContent = x.code === 'reseau' ? 'Pas de connexion internet.' : 'Envoi impossible pour le moment. Réessayez plus tard.'; }
+}
+async function onResetCode(e) {
+  e.preventDefault();
+  const code = $('#cCode').value.trim(), pw = $('#cPw').value, err = $('#lockErr'), btn = $('#codeBtn');
+  if (!code) return err.textContent = 'Entrez le code reçu par e-mail.';
+  if (pw.length < 8) return err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
+  if (pw !== $('#cPw2').value) return err.textContent = 'Les deux mots de passe ne correspondent pas.';
+  btn.disabled = true; err.textContent = '';
+  try {
+    const r = await API.recup({action:'confirme', identifiant:recupId, code, mot_de_passe:pw});
+    const repris = await rescueJournal(recupId, r.cle_secours, pw);
+    if (!repris && localStorage.getItem(vaultKey(recupId))) toast('Le journal de cet appareil n’a pas pu être repris.');
+    showLock('login');
+    $('#lId').value = recupId; $('#lPw').value = pw;
+    $('#loginForm').requestSubmit();
+  } catch (x) {
+    btn.disabled = false;
+    err.textContent = {code:'Code incorrect ou expiré.', faible:'Mot de passe trop simple.', reseau:'Pas de connexion internet.'}[x.code] || 'Récupération impossible pour le moment.';
+  }
+}
+
+/* « Rester connecté » (déconnexion automatique : Jamais) : la clé du journal, non exportable, reste dans ce
+   navigateur ; le jeton de connexion au serveur est enregistré dans le journal chiffré. */
+function keyDb(mode, fn) {
+  return new Promise((ok, ko) => {
+    const o = indexedDB.open('journal-emotions', 1);
+    o.onupgradeneeded = () => o.result.createObjectStore('cle');
+    o.onerror = () => ko(o.error);
+    o.onsuccess = () => {
+      const t = o.result.transaction('cle', mode), r = fn(t.objectStore('cle'));
+      t.oncomplete = () => { o.result.close(); ok(r.result); };
+      t.onerror = t.onabort = () => { o.result.close(); ko(t.error); };
+    };
+  });
+}
+const rememberKey = () => keyDb('readwrite', s => s.put({id:data.account.identifiant, key}, 'courante'));
+const forgetKey = () => keyDb('readwrite', s => s.delete('courante')).catch(() => {});
+function rememberSession() {
+  if (data?.settings.autolock !== -1) return;
+  const t = API.token();
+  if (t) { data.resume = t; save(); }
+}
+async function setAutolock(t) {
+  const v = +t.value;
+  if (v === -1 && !confirm('Rester connecté sur cet appareil ?\n\nToute personne ayant accès à ce téléphone déverrouillé pourra ouvrir votre journal sans mot de passe. À éviter sur un appareil partagé.')) {
+    t.value = data.settings.autolock; return;
+  }
+  data.settings.autolock = v;
+  try {
+    if (v === -1) { await rememberKey(); rememberSession(); }
+    else { await forgetKey(); delete data.resume; }
+  } catch { data.settings.autolock = 1; t.value = 1; toast('Ce navigateur ne permet pas de rester connecté.'); }
+  save();
+}
+/* À l'ouverture : journal rouvert sans mot de passe si l'utilisateur a choisi de rester connecté */
+async function boot() {
+  const s = await keyDb('readonly', st => st.get('courante')).catch(() => null);
+  if (!s) return showLock();
+  try {
+    const v = JSON.parse(localStorage.getItem(vaultKey(s.id)));
+    const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(v.iv)}, s.key, fromB64(v.ct));
+    VKEY = vaultKey(s.id); key = s.key; salt = fromB64(v.salt); data = defaults(JSON.parse(dec.decode(pt)));
+  } catch { await forgetKey(); return showLock(); }
+  showApp();
+  syncSession();
+}
+/* En arrière-plan : reprend la connexion au serveur. Sans internet, le journal reste simplement ouvert. */
+async function syncSession() {
+  if (!data?.resume) return;
+  try {
+    await API.resume(data.resume);
+    profil = await API.rpc('ouvrir_session');
+    if (!data) return;
+    if (!profil?.actif) return lock(LOGIN_ERR.desactive);
+    const role = data.role;
+    applyProfil(); rememberSession();
+    if (data.role !== role) showApp();
+    else {
+      renderNav(); markTabs();
+      // journal rouvert avant la reprise de la connexion : le rappel n'a pas encore pu s'afficher
+      const rappel = !src && (view === 'day' || view === 'clients') && !$('.admin-rappel') ? adminReminder() : '';
+      if (rappel) $('#view').insertAdjacentHTML('afterbegin', rappel);
+    }
+    pushProfile(); flushStats(); ensureSecours();
+  } catch (x) {
+    if (!data) return;
+    if (x.code === 'desactive') lock(LOGIN_ERR.desactive);
+    else if (x.code === 'session') lock('Votre session a expiré : reconnectez-vous.');
+  }
+}
+
+/* Sauvegarde en un appui : le fichier chiffré est préparé immédiatement, car le menu de partage du téléphone
+   doit s'ouvrir directement après l'appui. Rappel si la dernière sauvegarde date de plus de 7 jours. */
+const SAUVEGARDE_JOURS = 7;
+const aDesDonnees = () => Object.values(data.days).some(dayFilled) || Object.keys(data.clients).length > 0;
+const joursDepuis = iso => Math.floor((Date.now() - new Date(iso)) / 864e5);
+function sauvegardeReminder() {
+  if (!aDesDonnees() || data.backupPlusTard === today()) return '';
+  const premier = Object.keys(data.days).filter(k => dayFilled(data.days[k])).sort()[0];
+  const j = data.backupAt ? joursDepuis(data.backupAt) : premier ? joursDepuis(parse(premier)) : SAUVEGARDE_JOURS + 1;
+  if (j <= SAUVEGARDE_JOURS) return '';
+  return `<div class="banner sauvegarde-rappel"><span>${data.backupAt ? `Dernière sauvegarde il y a ${j} jours.` : 'Aucune sauvegarde pour l’instant.'} Sans sauvegarde, vos notes seraient perdues avec votre téléphone.</span>
+    <div class="banner-actions"><button class="btn primary" data-act="backup">Sauvegarder</button><button class="link small" data-act="backupLater">Plus tard</button></div></div>`;
+}
+async function sauvegarder() {
+  const contenu = localStorage.getItem(VKEY);
+  if (!contenu) return toast('Rien à sauvegarder pour le moment.');
+  const name = `motus-sauvegarde_${today()}.json`, file = new File([contenu], name, {type:'application/json'});
+  busy = true;
+  try {
+    if (navigator.canShare?.({files:[file]})) await navigator.share({files:[file], title:'Sauvegarde Motus'});
+    else download(file, name);
+  } catch (err) {
+    if (err.name === 'AbortError') return;   // annulé par l'utilisateur : le rappel reste affiché
+    download(file, name);
+  } finally { setTimeout(() => busy = false, 1500); }
+  data.backupAt = new Date().toISOString(); delete data.backupPlusTard;
+  await saveNow();
+  $('.sauvegarde-rappel')?.remove();
+  if (view === 'set' && !src) render(true);
+  toast('Sauvegarde créée. Elle s’ouvre avec votre mot de passe actuel.');
+}
+
+/* Journal créé avant les comptes : proposé tant qu'il n'est pas récupéré, et jamais effacé sans demande explicite */
+const hasLegacy = () => !!localStorage.getItem(LEGACY_VKEY);
+function mergeJournal(cur, old) {
+  for (const [k, d] of Object.entries(old.days)) {
+    const c = cur.days[k];
+    if (!c) { cur.days[k] = d; continue; }
+    const ids = new Set(c.entries.map(e => e.id));
+    c.entries.push(...d.entries.filter(e => !ids.has(e.id)));
+    const nids = new Set(dayNotes(c).map(n => n.id)), nouvelles = dayNotes(d).filter(n => !nids.has(n.id));
+    if (nouvelles.length) c.notes = [...dayNotes(c), ...nouvelles];
+    c.color ||= d.color;
+    if (d.synth?.trim() && c.synth !== d.synth) c.synth = c.synth?.trim() ? `${c.synth}\n${d.synth}` : d.synth;
+  }
+  if (!cur.therapist && old.therapist) { cur.therapist = old.therapist; cur.uid = old.uid; }
+  cur.keys ||= old.keys;
+  cur.sent = {...old.sent, ...cur.sent};
+  cur.clients = {...old.clients, ...cur.clients};
+  if (old.profile.start && old.profile.start < cur.profile.start) cur.profile.start = old.profile.start;
+  return cur;
+}
+async function adoptLegacy() {
+  const code = await askCode('Récupérer l’ancien journal', {label:'Code de l’ancien journal', hint:'C’est le code que vous tapiez pour ouvrir l’app avant la création des comptes. Ce n’est ni votre nouveau mot de passe, ni un code reçu par e-mail. Vous pouvez essayer autant de fois que nécessaire.'});
+  if (code == null) return;
+  let r;
+  try { r = await openVault(JSON.parse(localStorage.getItem(LEGACY_VKEY)), code); }
+  catch { return toast('Code incorrect : l’ancien journal reste conservé, vous pourrez réessayer.'); }
+  data = mergeJournal(data, defaults(r.obj));
+  await saveNow();
+  // l'ancien journal n'est retiré qu'après avoir relu et vérifié la nouvelle copie enregistrée
+  try {
+    const v = JSON.parse(localStorage.getItem(VKEY));
+    const relu = JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(v.iv)}, key, fromB64(v.ct))));
+    if (!Object.keys(r.obj.days || {}).every(k => relu.days[k])) throw new Error('copie incomplète');
+    localStorage.removeItem(LEGACY_VKEY);
+  } catch (x) { console.error(x); render(); return toast('Enregistrement à vérifier : l’ancien journal est conservé.'); }
+  render(); toast('Ancien journal récupéré : vos notes ont été ajoutées à ce compte');
+}
+function legacyReminder() {
+  if (!hasLegacy()) return '';
+  return `<div class="banner"><span>Un ancien journal, créé avant les comptes, est conservé sur cet appareil. Pour récupérer ses notes, il vous faut le code que vous utilisiez pour l’ouvrir.</span>
+    <button class="btn primary" data-act="adoptLegacy">Récupérer</button></div>`;
+}
+
+async function lock(msg) {
+  if (!key) return;
+  await flushStats();
+  delete data.resume; await forgetKey(); await saveNow();
+  API.signOut(); profil = null;
+  key = null; salt = null; data = null; src = null; VKEY = null; adm = admInit();
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  $('#view').innerHTML = '';
+  showLock();
+  if (msg) $('#lockErr').textContent = msg;
+}
+
+let swReg = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); if (key) saveNow(); return; }
+  swReg?.update().catch(() => {});   // l'app revient au premier plan : y a-t-il une nouvelle version ?
+  if (key && !busy && data.settings.autolock >= 0 && Date.now() - hiddenAt >= data.settings.autolock * 60000) lock();
+});
+window.addEventListener('pagehide', () => { if (key) saveNow(); });
+
+/* ───────────── Application ───────────── */
+let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid';
+let src = null;               // thérapeute : données d'un client consultées en lecture seule
+let pendingInv = null;        // invitation reçue via un lien (#inv=…), proposée après déverrouillage
+const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
+
+function showApp() {
+  $('#lock').hidden = true; $('#lock').innerHTML = '';
+  $('#app').hidden = false;
+  view = data.role === 'therapeute' ? 'clients' : 'day'; src = null;
+  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calMode = 'grid';
+  const t = new Date(); calY = t.getFullYear(); calM = t.getMonth();
+  renderNav(); render();
+  if (data.role === 'therapeute' && !data.keys) ensureKeys().then(render);
+  if (pendingInv) { const c = pendingInv; pendingInv = null; offerInvite(c); }
+}
+
+const ICONS = {
+  day: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  clients: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  rep: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  set: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  admin: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+};
+const TABN = {day:'Journée', cal:'Calendrier', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Réglages'};
+function renderNav() {
+  const tabs = data.role === 'therapeute' ? ['clients', 'rep', 'set'] : ['day', 'cal', 'rep', 'set'];
+  if (data.account?.est_admin && session) tabs.splice(tabs.length - 1, 0, 'admin');
+  $('#tabs').innerHTML = tabs.map(v => `<button data-act="tab" data-v="${v}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[v]}</svg>${TABN[v]}</button>`).join('');
+}
+
+function markTabs() {
+  const active = src ? 'clients' : view;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === active));
+}
+function render(keepScroll) {
+  markTabs();
+  $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
+  if (!keepScroll) window.scrollTo(0, 0);
+}
+
+/* — Vue Journée — */
+function famSummary(entries) {
+  const c = {};
+  entries.forEach(e => new Set(e.emos.map(x => x.f)).forEach(f => c[f] = (c[f]||0) + 1));
+  return Object.entries(c).sort((a,b) => b[1]-a[1]);
+}
+function vDay() {
+  const d = getDay(cur), isT = cur === today();
+  const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
+  const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
+  const fs = famSummary(ents), ro = !!src;
+  return `
+  ${clientBar()}${ro ? '' : legacyReminder() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
+  <div class="dayhead">
+    <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
+    <div class="dayhead-t">
+      <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : '&nbsp;'}</div>
+      <h1>${JOURS[parse(cur).getDay()]} ${fmtLong(cur)}</h1>
+      ${isT ? '' : '<button class="link small" data-act="goToday">Revenir à aujourd’hui</button>'}
+    </div>
+    <button class="icon-btn" data-act="nextDay" aria-label="Jour suivant" ${isT ? 'disabled' : ''}>›</button>
+  </div>
+
+  <section class="card">
+    <div class="card-h"><h2>${ro ? 'Émotions' : 'Mes émotions'}</h2><span class="count">${ents.length}</span></div>
+    ${ents.length ? `<ul class="entries">${ents.map(e => `
+      <li><${ro ? 'div' : 'button'} class="entry" style="--fc:${FAMK[e.emos[0].f].c}"${ro ? '' : ` data-act="editEntry" data-id="${e.id}"`}>
+        <div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div>
+        <p>${sentenceHtml(e)}</p>
+      </${ro ? 'div' : 'button'}></li>`).join('')}</ul>`
+    : ro ? '<p class="empty">Aucune émotion notée ce jour-là.</p>'
+    : `<p class="empty">Rien de noté ${isT ? 'pour l’instant' : 'ce jour-là'}. Prenez un instant : où êtes-vous, que ressentez-vous ?</p>`}
+    ${ro ? '' : '<button class="btn primary block" data-act="newEntry">+ Noter une émotion</button>'}
+  </section>
+
+  ${ro ? '' : `<section class="card">
+    <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
+    ${ns.length ? `<ul class="entries">${ns.map(n => `
+      <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
+        <div class="meta">${esc(n.time)}</div>
+        <p class="note-txt">${esc(n.text)}</p>
+      </button></li>`).join('')}</ul>` : ''}
+    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
+    <button class="btn block" data-act="newNote">+ Ajouter une note</button>
+  </section>`}
+
+  <section class="card">
+    <h2>Synthèse de la journée</h2>
+    ${fs.length ? `<p class="label">Émotions traversées</p><div class="chips">${fs.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n}${n > 1 ? ' ×' + n : ''}</span>`).join('')}</div>` : ''}
+    ${ro ? `
+    <p class="label">Couleur de la journée</p>
+    ${d.color ? `<div class="colors one"><div class="colbtn ${d.color} on"><span class="dot"></span>${esc(D().labels[d.color])}</div></div>` : '<p class="empty">Pas de couleur choisie.</p>'}
+    <p class="label">Synthèse</p>
+    <p class="synth-ro">${d.synth?.trim() ? esc(d.synth) : '<span class="muted">Pas de synthèse ce jour-là.</span>'}</p>` : `
+    <p class="label">Ma journée était…</p>
+    <div class="colors">${COL.map(c => `
+      <button class="colbtn ${c} ${d.color === c ? 'on' : ''}" data-act="setColor" data-c="${c}" aria-pressed="${d.color === c}">
+        <span class="dot"></span>${esc(D().labels[c])}
+      </button>`).join('')}</div>
+    <label class="label" for="synth">En quelques mots</label>
+    <textarea id="synth" rows="5" placeholder="Ce qui a marqué ma journée, ce que j’ai ressenti, ce que j’ai mis en place…">${esc(d.synth)}</textarea>
+    <div class="saved" id="saved" aria-live="polite"></div>`}
+  </section>`;
+}
+
+/* — Vue Calendrier — */
+function vCal() {
+  const first = new Date(calY, calM, 1), nDays = new Date(calY, calM + 1, 0).getDate();
+  const off = (first.getDay() + 6) % 7, t = today();
+  const now = new Date(), atCurrent = calY === now.getFullYear() && calM === now.getMonth();
+  let cells = ['L','M','M','J','V','S','D'].map(w => `<div class="wd">${w}</div>`).join('');
+  cells += '<div></div>'.repeat(off);
+  const cnt = {vert:0, jaune:0, rouge:0}, words = {}, fams = {};
+  let nEntries = 0, pastDays = 0;
+  const fam = calF && FAMK[calF], notesOnly = calF === 'notes', filtre = fam || notesOnly, occ = [], occN = [], fWords = {};
+  const cadre = fam ? fam.c : 'var(--brand)';
+  let fDays = 0, nNotes = 0;
+  for (let i = 1; i <= nDays; i++) {
+    const k = ymd(new Date(calY, calM, i)), d = D().days[k], fut = k > t, ns = dayNotes(d);
+    if (!fut) pastDays++;
+    nNotes += ns.length;
+    if (notesOnly) ns.forEach(n => occN.push({k, n}));
+    if (d?.color) cnt[d.color]++;
+    let maxI = -1; // intensité la plus forte de l'émotion filtrée ce jour-là
+    (d?.entries || []).forEach(e => {
+      nEntries++;
+      e.emos.forEach(x => { words[x.w] = (words[x.w]||0) + 1; fams[x.f] = (fams[x.f]||0) + 1; if (x.f === calF) fWords[x.w] = (fWords[x.w]||0) + 1; });
+      const hit = fam ? e.emos.filter(x => x.f === calF && (!calW || x.w === calW)) : [];
+      if (hit.length) { occ.push({k, e}); maxI = Math.max(maxI, ...hit.map(x => INT.findIndex(([c]) => c === x.i))); }
+    });
+    const hit = fam ? maxI >= 0 : notesOnly && ns.length > 0;
+    if (hit) fDays++;
+    const lab = (d?.color ? ', ' + esc(D().labels[d.color]) : '') + (maxI >= 0 ? `, ${fam.n} ${INT[maxI][1].toLowerCase()}` : '') + (ns.length ? ', note personnelle' : '');
+    cells += `<button class="cday ${d?.color || ''} ${hit ? 'hit' : ''} ${k === t ? 'today' : ''} ${fut ? 'future' : ''}"${hit ? ` style="--fc:${cadre}"` : ''} data-act="openDay" data-k="${k}" ${fut ? 'disabled' : ''}
+      aria-label="${fmtLong(k)}${lab}">${i}${!filtre && d?.entries?.length ? '<span class="has"></span>' : ''}${!filtre && ns.length ? '<span class="nt"></span>' : ''}</button>`;
+  }
+  occ.sort((a, b) => (a.k + a.e.time).localeCompare(b.k + b.e.time));
+  occN.sort((a, b) => (a.k + a.n.time).localeCompare(b.k + b.n.time));
+  const dayName = k => `${JOURS[parse(k).getDay()]} ${parse(k).getDate()} ${MOIS[calM]}`;
+
+  const filterCard = `
+  <section class="card">
+    <h2>Afficher</h2>
+    <div class="chips" style="margin-top:10px">
+      <button class="chip ${!filtre ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="" aria-pressed="${!filtre}">${calMode === 'list' ? 'Tout' : 'Couleurs du jour'}</button>
+      ${src ? '' : `<button class="chip ${notesOnly ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>`}
+      ${FAM.map(f => `<button class="chip ${calF === f.k ? 'on' : ''}" style="--fc:${f.c}" data-act="calFilter" data-f="${f.k}" aria-pressed="${calF === f.k}">${f.n}</button>`).join('')}
+    </div>
+    ${fam ? `<p class="label">Émotion précise</p><div class="chips">
+      <button class="chip ${!calW ? 'on' : ''}" style="--fc:${fam.c}" data-act="calWord" data-w="" aria-pressed="${!calW}">Toutes</button>
+      ${[...new Set([...Object.keys(fWords), ...(calW ? [calW] : [])])].map(w => `<button class="chip ${calW === w ? 'on' : ''}" style="--fc:${fam.c}" data-act="calWord" data-w="${esc(w)}" aria-pressed="${calW === w}">${esc(w)}${fWords[w] ? ' · ' + fWords[w] : ''}</button>`).join('')}
+    </div>` : ''}
+  </section>`;
+  const legend = COL.map(c => `<span><i style="background:var(--${c})"></i>${esc(D().labels[c])}</span>`).join('')
+    + (filtre ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : 'Note personnelle')}</span>`
+      : '<span><i style="background:var(--accent);width:6px;height:6px;border-radius:50%"></i>émotions notées</span>'
+        + (src ? '' : '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--brand) transparent transparent"></i>note personnelle</span>'));
+  const occCard = fam ? `
+  <section class="card">
+    <h2>${esc(calW || fam.n)} · ${MOIS[calM]}</h2>
+    <p class="small muted" style="margin:6px 0 4px">${occ.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occ.length} note${occ.length > 1 ? 's' : ''}` : 'Aucune note avec cette émotion ce mois-ci.'}</p>
+    ${occ.map(({k, e}) => `<button class="occ" data-act="openDay" data-k="${k}">
+      <div class="meta">${dayName(k)} · ${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div>
+      <div class="txt">${sentenceHtml(e)}</div>
+    </button>`).join('')}
+  </section>` : `
+  <section class="card">
+    <h2>Notes personnelles · ${MOIS[calM]}</h2>
+    <p class="small muted" style="margin:6px 0 4px">${occN.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occN.length} note${occN.length > 1 ? 's' : ''}` : 'Aucune note personnelle ce mois-ci.'}</p>
+    ${occN.map(({k, n}) => `<button class="occ" data-act="openDay" data-k="${k}">
+      <div class="meta">${dayName(k)} · ${esc(n.time)}</div>
+      <div class="txt note-txt">${esc(n.text)}</div>
+    </button>`).join('')}
+  </section>`;
+  /* Vue liste : les journées du mois, de la plus récente à la plus ancienne */
+  function listCards() {
+    const out = [];
+    for (let i = nDays; i >= 1; i--) {
+      const k = ymd(new Date(calY, calM, i)), d = D().days[k];
+      if (!d || k > t) continue;
+      const ents = (d.entries || []).filter(e => !fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW)));
+      const lignes = [
+        ...(notesOnly ? [] : ents.map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`}))),
+        ...(fam ? [] : dayNotes(d).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)} · Note personnelle</div><div class="txt note-txt">${esc(n.text)}</div>`}))),
+      ].sort((a, b) => a.time.localeCompare(b.time));
+      const synth = !filtre && d.synth?.trim();
+      if (!lignes.length && !synth && (filtre || !d.color)) continue;
+      out.push(`<section class="card lday"${d.color ? ` style="--dc:var(--${d.color})"` : ''}>
+        <button class="lhead" data-act="openDay" data-k="${k}"><span>${dayName(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
+        ${lignes.map(l => `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
+        ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${esc(d.synth)}</div></button>` : ''}
+      </section>`);
+    }
+    return out.join('') || `<section class="card"><p class="empty">${filtre ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[calM]}.</p></section>`;
+  }
+  const noted = cnt.vert + cnt.jaune + cnt.rouge;
+  const topW = Object.entries(words).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const famTot = Object.values(fams).reduce((a,b) => a+b, 0);
+  const famS = Object.entries(fams).sort((a,b) => b[1]-a[1]);
+  return `
+  ${clientBar()}${srcImportCard()}
+  <div class="calhead">
+    <button class="icon-btn" data-act="prevMonth" aria-label="Mois précédent">‹</button>
+    <h1>${MOIS[calM]} ${calY}</h1>
+    <button class="icon-btn" data-act="nextMonth" aria-label="Mois suivant" ${atCurrent ? 'disabled' : ''}>›</button>
+  </div>
+  <div class="seg two">
+    <button class="${calMode === 'grid' ? 'on' : ''}" data-act="calMode" data-m="grid" aria-pressed="${calMode === 'grid'}">Calendrier</button>
+    <button class="${calMode === 'list' ? 'on' : ''}" data-act="calMode" data-m="list" aria-pressed="${calMode === 'list'}">Liste</button>
+  </div>
+  ${filterCard}
+  ${calMode === 'list' ? listCards() : `<section class="card">
+    <div class="cal ${filtre ? 'filtre' : ''}">${cells}</div>
+    <div class="legend">${legend}</div>
+  </section>
+  ${filtre ? occCard : `<section class="card">
+    <h2>Bilan du mois</h2>
+    ${noted ? `<div class="bar">${COL.map(c => cnt[c] ? `<div style="width:${cnt[c]/noted*100}%;background:var(--${c})"></div>` : '').join('')}</div>` : ''}
+    ${COL.map(c => `<div class="stat"><span>${esc(D().labels[c])}</span><b>${cnt[c]}</b></div>`).join('')}
+    <div class="stat"><span class="muted">Jours sans couleur</span><b class="muted">${pastDays - noted}</b></div>
+    <div class="stat"><span class="muted">Émotions notées</span><b class="muted">${nEntries}</b></div>
+    ${src ? '' : `<div class="stat"><span class="muted">Notes personnelles</span><b class="muted">${nNotes}</b></div>`}
+  </section>
+  ${famS.length ? `<section class="card">
+    <h2>Émotions du mois</h2>
+    <div class="bar">${famS.map(([f,n]) => `<div title="${FAMK[f].n}" style="width:${n/famTot*100}%;background:${FAMK[f].c}"></div>`).join('')}</div>
+    <div class="chips">${famS.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n} · ${Math.round(n/famTot*100)} %</span>`).join('')}</div>
+    <p class="label">Les plus fréquentes</p>
+    ${topW.map(([w,n]) => `<div class="stat"><span>${esc(w)}</span><b>${n}</b></div>`).join('')}
+  </section>` : ''}`}`}
+  ${srcCard()}`;
+}
+
+/* — Vue Répertoire — */
+function vRep() {
+  return `
+  <div style="margin:4px 0 16px"><div class="eyebrow">Identifier et nommer mon état intérieur</div><h1>Le répertoire des émotions</h1></div>
+  <section class="card key">
+    <h2>Clef de communication émotionnelle</h2>
+    <p style="margin:8px 0 0">« Je me sens <i>[adjectif précis]</i> parce que <i>[explication rationnelle]</i>. »</p>
+  </section>
+  ${FAM.map((f, n) => `
+  <section class="card rep" style="--fc:${f.c}">
+    <h3>${n+1}. ${f.n}</h3>
+    <div class="besoin">« Je me sens… » — ${f.b}</div>
+    ${INT.map(([k, name]) => `<p class="lvl"><b>${name}</b>${f[k].join(', ')}</p>`).join('')}
+  </section>`).join('')}
+  <p class="small muted" style="text-align:center">Source : Liberté pour Aimer — libertepouraimer.com</p>`;
+}
+
+/* — Vue Réglages — */
+function vSet() { return data.role === 'therapeute' ? vSetThera() : vSetClient(); }
+
+function vSetClient() {
+  const p = data.profile, t = today(), th = data.therapist;
+  return `
+  <div style="margin:4px 0 16px"><h1>Réglages</h1></div>
+
+  <section class="card">
+    <h2>Partager ma semaine</h2>
+    <p class="small muted" style="margin:6px 0 0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (plus bas) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
+    <div class="weeknav">
+      <button class="icon-btn" data-act="xPrevWeek" aria-label="7 jours plus tôt">‹</button>
+      <div class="wk" id="wkLabel" aria-live="polite">${weekLabel()}</div>
+      <button class="icon-btn" data-act="xNextWeek" id="xNext" aria-label="7 jours plus tard" ${addDays(xStart, 6) >= t ? 'disabled' : ''}>›</button>
+    </div>
+    <details class="custom" id="xCustom">
+      <summary>Choisir une autre période</summary>
+      <div class="row">
+        <div><label class="label" for="xFrom">Du</label><input type="date" id="xFrom" value="${xStart}"><div class="wd-hint" id="xFromWd">${weekday(xStart)}</div></div>
+        <div><label class="label" for="xTo">Au</label><input type="date" id="xTo" value="${addDays(xStart, 6)}"><div class="wd-hint" id="xToWd">${weekday(addDays(xStart, 6))}</div></div>
+      </div>
+    </details>
+    ${th ? `<button class="btn primary block" data-act="sendWeek">Envoyer à ${esc(th.prenom || 'mon thérapeute')}</button>
+    <div class="small muted" id="sentSt" style="margin-top:6px;text-align:center">${sentStatus()}</div>` : ''}
+    <p class="label">Fichier Excel</p>
+    <div class="row">
+      <button class="btn ${th ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
+      ${navigator.canShare ? '<button class="btn" data-act="shareXlsx">Partager…</button>' : ''}
+    </div>
+  </section>
+
+  ${therapistCard()}
+
+  <section class="card">
+    <h2>Mon profil</h2>
+    <p class="small muted" style="margin:6px 0 0">Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.</p>
+    <div class="row">
+      <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
+      <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
+    </div>
+    <label class="label" for="pStart">Date de début du suivi</label>
+    <input type="date" id="pStart" data-prof="start" value="${esc(p.start)}">
+  </section>
+
+  <section class="card">
+    <h2>Code couleur</h2>
+    ${COL.map(c => `<label class="label" for="lab-${c}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--${c});margin-right:6px"></span>${COLNAME[c]}</label>
+      <input type="text" id="lab-${c}" data-label="${c}" value="${esc(data.labels[c])}" maxlength="40">`).join('')}
+  </section>
+
+  ${geoCard()}
+  ${securityCard()}
+  ${commonCards('Si vous changez de téléphone ou effacez les données du navigateur, vos notes sont perdues. Faites régulièrement une sauvegarde : le fichier reste chiffré avec votre code.')}`;
+}
+
+function vSetThera() {
+  const p = data.profile, t = data.thera;
+  return `
+  <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Réglages</h1></div>
+
+  <section class="card">
+    <h2>Mon lien d’invitation</h2>
+    <p class="small muted" style="margin:6px 0 0">Donnez ce lien à vos clients. Ils le collent dans leur app (Réglages › Mon thérapeute) et peuvent ensuite vous envoyer chaque semaine un fichier chiffré que vous seul(e) pouvez ouvrir.</p>
+    <div class="small" style="margin-top:10px">Code de sécurité à leur confirmer : <span class="fp">${esc(data.keys?.fp || '…')}</span></div>
+    <textarea id="invField" rows="3" readonly aria-label="Lien d’invitation">${data.keys ? esc(inviteLink()) : ''}</textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" data-act="shareInvite">Partager</button>
+      <button class="btn" data-act="copyInvite">Copier</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Mon profil professionnel</h2>
+    <p class="small muted" style="margin:6px 0 0">Ces informations sont incluses dans votre lien d’invitation. Après une modification, renvoyez le lien à vos clients pour mettre à jour vos coordonnées.</p>
+    <div class="row">
+      <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
+      <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
+    </div>
+    <label class="label" for="tType">Type de thérapeute</label>
+    <select id="tType" data-thera="type"><option value="">— Choisir —</option>${THERA_TYPES.map(x => `<option ${t.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
+    <label class="label" for="tTel">Téléphone</label>
+    <input type="text" id="tTel" data-thera="tel" inputmode="tel" value="${esc(t.tel)}">
+    <label class="label" for="tEmail">E-mail</label>
+    <input type="text" id="tEmail" data-thera="email" inputmode="email" value="${esc(t.email)}">
+    <label class="label" for="tAdr">Adresse du cabinet</label>
+    <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}">
+  </section>
+
+  ${securityCard()}
+  ${commonCards('Votre clé de déchiffrement et les données reçues de vos clients sont dans cette sauvegarde. Sans elle, un nouvel appareil ne pourra plus ouvrir les fichiers de vos clients.')}`;
+}
+
+function geoCard() {
+  return `<section class="card">
+    <h2>Localisation</h2>
+    <div class="setrow">
+      <label for="geoloc">Remplir la ville automatiquement (GPS)</label>
+      <input type="checkbox" id="geoloc" ${data.settings.geoloc ? 'checked' : ''}>
+    </div>
+    <p class="small muted" style="margin:0">La position est convertie en nom de ville directement sur le téléphone, grâce à la liste des communes intégrée à l’app. Elle n’est ni envoyée ni enregistrée : seule la ville est notée.</p>
+    <button class="btn block" data-act="geoTest">Tester la localisation</button>
+    <div class="geo-st small muted" id="geoTest" aria-live="polite"></div>
+  </section>`;
+}
+
+function securityCard() {
+  const a = data.account || {};
+  return `<section class="card">
+    <h2>Mon compte</h2>
+    <div class="stat"><span class="muted">Identifiant</span><b>${esc(a.identifiant || '—')}</b></div>
+    <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
+    <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
+    <div class="stat"><span class="muted">Adresse de récupération</span><b>${a.recup === 'attente' ? 'À confirmer' : a.recup ? 'Confirmée' : 'Aucune'}</b></div>
+    ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
+    <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
+    <div class="row" style="margin-top:6px">
+      <button class="btn" data-act="addRecovery">${a.recup ? 'Changer l’adresse' : 'Ajouter une adresse'}</button>
+      ${a.recup ? '<button class="btn" data-act="removeRecovery">Retirer</button>' : ''}
+    </div>
+    ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
+    <p class="small muted" style="margin:12px 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
+    <div class="setrow">
+      <label for="autolock">Déconnexion automatique</label>
+      <select id="autolock">${[[0,'Immédiate'],[1,'Après 1 minute'],[5,'Après 5 minutes'],[15,'Après 15 minutes'],[-1,'Jamais']].map(([v,n]) => `<option value="${v}" ${data.settings.autolock == v ? 'selected' : ''}>${n}</option>`).join('')}</select>
+    </div>
+    <p class="small muted" style="margin:0">Avec « Jamais », le journal s’ouvre sans mot de passe sur cet appareil, même après avoir fermé l’app, jusqu’à ce que vous cliquiez sur « Se déconnecter ».</p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" data-act="changeCode">Changer mon mot de passe</button>
+      <button class="btn" data-act="lockNow">Se déconnecter</button>
+    </div>
+  </section>`;
+}
+
+function commonCards(backupNote) {
+  return `<section class="card">
+    <h2>Sauvegarde</h2>
+    <p class="small muted" style="margin:6px 0 0">${backupNote}</p>
+    <div class="stat" style="margin-top:6px"><span class="muted">Dernière sauvegarde</span><b>${data.backupAt ? fmtFR(ymd(new Date(data.backupAt))) : 'Aucune'}</b></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" data-act="backup">Sauvegarder</button>
+      <button class="btn" data-act="restore">Restaurer</button>
+    </div>
+    ${hasLegacy() ? `<p class="label">Ancien journal (créé avant les comptes)</p>
+    <div class="row">
+      <button class="btn" data-act="adoptLegacy">Récupérer</button>
+      <button class="btn danger" data-act="deleteLegacy">Supprimer</button>
+    </div>` : ''}
+  </section>
+
+  <section class="card">
+    <h2>Installer sur l’écran d’accueil</h2>
+    <p class="small muted" style="margin:6px 0 0">Recommandé : l’app s’ouvre en plein écran, fonctionne hors connexion et vos données sont mieux conservées.<br>
+    <b>iPhone</b> : bouton Partager de Safari → « Sur l’écran d’accueil ».<br>
+    <b>Android</b> : menu ⋮ de Chrome → « Installer l’application ».</p>
+    ${installEvt ? '<button class="btn primary block" data-act="install">Installer l’application</button>' : ''}
+  </section>
+
+  <section class="card">
+    <h2>Zone sensible</h2>
+    <button class="btn danger block" data-act="wipe">Effacer toutes mes données</button>
+  </section>
+  <p class="small muted" style="text-align:center">Motus, version ${APP_VERSION}</p>`;
+}
+
+/* ───────────── Lien client ↔ thérapeute (sans serveur) ─────────────
+   Le thérapeute possède une paire de clés ECDH P-256 ; sa clé publique circule dans le lien d'invitation.
+   Chaque envoi du client est chiffré avec une clé éphémère : seul ce thérapeute peut le déchiffrer. */
+const ECDH = {name:'ECDH', namedCurve:'P-256'};
+const THERA_TYPES = ['Psychologue','Psychiatre','Psychothérapeute','Thérapie brève','Gestalt-thérapie','TCC','Hypnothérapeute','Sophrologue','Autre'];
+const rid = n => [...crypto.getRandomValues(new Uint8Array(n))].map(b => b.toString(16).padStart(2, '0')).join('');
+const b64url = s => s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64url = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); return s + '='.repeat((4 - s.length % 4) % 4); };
+const lastOf = a => a[a.length - 1];
+
+async function fingerprint(pkB64) {
+  const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', fromB64(pkB64)))].slice(0, 4);
+  const x = h.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return x.slice(0, 4) + '-' + x.slice(4);
+}
+async function ensureKeys() {
+  if (data.keys) return;
+  const kp = await crypto.subtle.generateKey(ECDH, true, ['deriveBits']);
+  const pub = toB64(new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey)));
+  data.keys = {pub, priv: await crypto.subtle.exportKey('jwk', kp.privateKey), fp: await fingerprint(pub)};
+  await saveNow();
+}
+async function sharedKey(priv, pub, usage) {
+  const bits = await crypto.subtle.deriveBits({name:'ECDH', public:pub}, priv, 256);
+  const hk = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'HKDF', hash:'SHA-256', salt:enc.encode('journal-emotions'), info:enc.encode('envoi-v1')}, hk, {name:'AES-GCM', length:256}, false, [usage]);
+}
+async function sealFor(th, obj) {
+  const pub = await crypto.subtle.importKey('raw', fromB64(th.pk), ECDH, false, []);
+  const eph = await crypto.subtle.generateKey(ECDH, true, ['deriveBits']);
+  const k = await sharedKey(eph.privateKey, pub, 'encrypt'), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, enc.encode(JSON.stringify(obj))));
+  const epk = toB64(new Uint8Array(await crypto.subtle.exportKey('raw', eph.publicKey)));
+  return {app:'journal-emotions', type:'envoi', v:1, to:th.fp, epk, iv:toB64(iv), ct:toB64(ct)};
+}
+async function openEnvoi(pkg) {
+  const priv = await crypto.subtle.importKey('jwk', data.keys.priv, ECDH, false, ['deriveBits']);
+  const epk = await crypto.subtle.importKey('raw', fromB64(pkg.epk), ECDH, false, []);
+  const k = await sharedKey(priv, epk, 'decrypt');
+  return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(pkg.iv)}, k, fromB64(pkg.ct))));
+}
+
+/* — Invitation : clé publique + coordonnées du thérapeute, dans la partie « # » du lien (jamais envoyée à un serveur) — */
+function inviteCode() {
+  const p = data.profile, t = data.thera;
+  const o = {v:1, pk:data.keys.pub, nom:p.nom, prenom:p.prenom, type:t.type, tel:t.tel, email:t.email, adresse:t.adresse};
+  return b64url(toB64(enc.encode(JSON.stringify(o))));
+}
+const inviteLink = () => `${location.origin}${location.pathname}#inv=${inviteCode()}`;
+const refreshInvite = () => { const f = $('#invField'); if (f && data.keys) f.value = inviteLink(); };
+async function readInvite(text) {
+  const m = String(text).trim().match(/(?:#inv=)?([A-Za-z0-9_-]{40,})\s*$/);
+  if (!m) throw new Error('format');
+  const o = JSON.parse(dec.decode(fromB64(unb64url(m[1]))));
+  if (o.v !== 1 || !o.pk) throw new Error('format');
+  await crypto.subtle.importKey('raw', fromB64(o.pk), ECDH, false, []); // clé valide ?
+  o.fp = await fingerprint(o.pk);
+  return o;
+}
+async function offerInvite(text) {
+  let o;
+  try { o = await readInvite(text); } catch { return toast('Lien d’invitation non reconnu.'); }
+  if (data.role === 'therapeute') return toast('Ce lien est destiné à vos clients.');
+  const who = `${o.prenom || ''} ${o.nom || ''}`.trim() || 'ce thérapeute', old = data.therapist;
+  if (old?.fp === o.fp) { Object.assign(old, o); await saveNow(); render(); return toast('Coordonnées du thérapeute mises à jour'); }
+  if (!confirm(`Ajouter ${who}${o.type ? ' (' + o.type + ')' : ''} comme thérapeute ?\n\nCode de sécurité : ${o.fp}\nVérifiez qu’il correspond à celui que vous a donné votre thérapeute.`
+    + (old ? `\n\n${old.prenom} ${old.nom} ne sera plus votre thérapeute dans l’app.` : ''))) return;
+  data.therapist = {...o, addedAt: new Date().toISOString()};
+  await saveNow(); render(); toast(`${who} est maintenant votre thérapeute`);
+}
+async function shareInvite() {
+  if (!data.keys) return;
+  const url = inviteLink(), p = data.profile;
+  const text = `${p.prenom} ${p.nom} vous invite à relier votre journal Motus. Copiez ce lien dans l’app (Réglages › Mon thérapeute). Code de sécurité : ${data.keys.fp}`;
+  busy = true;
+  try {
+    if (navigator.share) await navigator.share({title:'Invitation — Motus', text, url});
+    else { await navigator.clipboard.writeText(url); toast('Lien copié'); }
+  } catch (err) { if (err.name !== 'AbortError') ACT.copyInvite(); }
+  finally { setTimeout(() => busy = false, 1500); }
+}
+
+/* — Client : carte « Mon thérapeute », envoi de la semaine, rappel — */
+function therapistCard() {
+  const th = data.therapist;
+  return `<section class="card">
+    <h2>Mon thérapeute</h2>
+    ${th ? `
+      <p style="margin:10px 0 2px"><b>${esc(th.prenom)} ${esc(th.nom)}</b>${th.type ? ' · ' + esc(th.type) : ''}</p>
+      ${th.email ? `<div class="small"><a href="mailto:${esc(th.email)}">${esc(th.email)}</a></div>` : ''}
+      ${th.tel ? `<div class="small"><a href="tel:${esc(th.tel.replace(/\s/g, ''))}">${esc(th.tel)}</a></div>` : ''}
+      ${th.adresse ? `<div class="small muted">${esc(th.adresse)}</div>` : ''}
+      <div class="small muted" style="margin-top:8px">Code de sécurité : <span class="fp">${esc(th.fp)}</span></div>
+      <button class="btn danger block" data-act="removeTherapist">Retirer ce thérapeute</button>` : `
+      <p class="small muted" style="margin:6px 0 0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
+      <textarea id="invCode" rows="3" placeholder="Lien ou code d’invitation" style="margin-top:10px"></textarea>
+      <button class="btn primary block" data-act="addTherapist">Ajouter mon thérapeute</button>`}
+  </section>`;
+}
+/* data.sent : début de période → {to, at} */
+const sentAt = iso => { const d = new Date(iso); return `le ${fmtFR(ymd(d)).slice(0, 5)} à ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const lastSent = () => lastOf(Object.entries(data.sent).sort((a, b) => a[1].at.localeCompare(b[1].at)));
+function sentStatus() {
+  const same = data.sent[xStart];
+  if (same && same.to === addDays(xStart, 6)) return `✓ Période déjà envoyée ${sentAt(same.at)}`;
+  const l = lastSent();
+  return l ? `Dernier envoi : du ${fmtFR(l[0]).slice(0, 5)} au ${fmtFR(l[1].to).slice(0, 5)}, ${sentAt(l[1].at)}` : 'Aucun envoi pour l’instant.';
+}
+async function sendWeek() {
+  const x = exportRange(); if (!x) return;
+  const th = data.therapist, p = data.profile;
+  if (!p.prenom.trim() && !p.nom.trim()) return toast('Indiquez d’abord votre nom dans « Mon profil ».');
+  const days = {};
+  for (let k = x.from; k <= x.to; k = addDays(k, 1)) if (dayUsed(data.days[k])) { const {notes, ...partage} = data.days[k]; days[k] = partage; }
+  if (!Object.keys(days).length && !confirm('Aucune note sur cette période. Envoyer quand même ?')) return;
+  const pkg = await sealFor(th, {client:{id:data.uid, nom:p.nom, prenom:p.prenom}, from:x.from, to:x.to, sentAt:new Date().toISOString(), labels:data.labels, days});
+  const name = `motus-envoi_${x.from}.json`, file = new File([JSON.stringify(pkg)], name, {type:'application/json'});
+  busy = true;
+  try {
+    if (navigator.canShare?.({files:[file]})) await navigator.share({files:[file], title:'Motus', text:`Ma semaine du ${fmtFR(x.from)} au ${fmtFR(x.to)} (fichier chiffré, à importer dans Motus).`});
+    else download(file, name);
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    download(file, name);
+  } finally { setTimeout(() => busy = false, 1500); }
+  data.sent[x.from] = {to:x.to, at:new Date().toISOString()}; countStat('envois');
+  const st = $('#sentSt'); if (st) st.textContent = sentStatus();
+  toast(th.email ? `Fichier prêt : à envoyer à ${th.email}` : 'Fichier prêt à envoyer');
+}
+/* Rappel si rien n'a été envoyé depuis 7 jours (ou depuis l'ajout du thérapeute) et qu'il y a des notes non envoyées */
+function sendReminder() {
+  if (!data.therapist) return '';
+  const l = lastSent(), ref = l ? l[1].at : data.therapist.addedAt;
+  const since = Math.floor((Date.now() - new Date(ref)) / 864e5);
+  const coveredTo = Object.values(data.sent).reduce((m, s) => s.to > m ? s.to : m, '');
+  if (since < 7 || !Object.keys(data.days).some(k => k > coveredTo && k <= today() && dayUsed(data.days[k]))) return '';
+  const who = esc(data.therapist.prenom || 'votre thérapeute');
+  return `<div class="banner"><span>${l ? `Votre dernier envoi à ${who} date d’il y a ${since} jours.` : `Vous n’avez encore rien envoyé à ${who}.`}</span>
+    <button class="btn primary" data-act="goSend">Envoyer</button></div>`;
+}
+
+/* — Thérapeute : gestion des clients et fiche client (import, calendrier et journées en lecture seule) —
+   Le thérapeute crée ses fiches ; au premier import, la fiche est liée à l'app du client (c.uid),
+   ce qui permet de repérer un fichier importé dans la mauvaise fiche. */
+const fullName = c => `${c.profile.prenom} ${c.profile.nom}`.trim() || 'Client sans nom';
+let importTarget = null;
+
+function vClients() {
+  const key = c => `${c.profile.nom} ${c.profile.prenom}`;
+  const list = Object.values(data.clients).sort((a, b) => key(a).localeCompare(key(b), 'fr', {sensitivity:'base'}));
+  return `
+  ${legacyReminder()}${sauvegardeReminder()}${recupReminder()}${adminReminder()}
+  <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Mes clients</h1></div>
+  <section class="card">
+    <div class="card-h"><h2>Clients</h2><span class="count">${list.length}</span></div>
+    ${list.length > 5 ? '<input type="search" id="cliSearch" placeholder="Rechercher un client" aria-label="Rechercher un client" style="margin-bottom:10px">' : ''}
+    ${list.length ? list.map(c => { const l = lastOf(c.envois); return `
+      <button class="clientrow" data-act="openClient" data-id="${esc(c.id)}" data-name="${esc(fullName(c).toLowerCase())}">
+        <b>${esc(fullName(c))}</b>
+        <span class="strip" aria-hidden="true">${l ? [0, 1, 2, 3, 4, 5, 6].map(i => `<i class="${c.days[addDays(l.from, i)]?.color || ''}"></i>`).join('') : ''}</span>
+        <span class="small muted">${l ? `Dernier envoi : du ${fmtFR(l.from).slice(0, 5)} au ${fmtFR(l.to).slice(0, 5)} · importé le ${fmtFR(ymd(new Date(l.importedAt))).slice(0, 5)}` : 'Aucune donnée reçue pour l’instant'}</span>
+      </button>`; }).join('') : '<p class="empty">Aucun client pour l’instant. Ajoutez vos clients ici, puis envoyez-leur votre lien d’invitation.</p>'}
+    <button class="btn primary block" data-act="newClient">+ Ajouter un client</button>
+  </section>
+  <section class="card">
+    <h2>Inviter un client</h2>
+    <p class="small muted" style="margin:6px 0 0">Envoyez votre lien d’invitation à votre client : il pourra ensuite vous transmettre ses semaines dans un fichier chiffré. Code de sécurité à lui confirmer : <span class="fp">${esc(data.keys?.fp || '…')}</span></p>
+    <button class="btn block" data-act="shareInvite">Partager mon lien d’invitation</button>
+  </section>`;
+}
+function clientBar() {
+  if (!src) return '';
+  const [act, label] = view === 'day' ? ['clientCal', 'Calendrier'] : ['backClients', 'Mes clients'];
+  return `<div class="clientbar"><button class="link" data-act="${act}">‹ ${label}</button><span class="who">${esc(fullName(src))}</span></div>`;
+}
+/* Haut de la fiche : import (répétable) et historique des envois reçus */
+function srcImportCard() {
+  if (!src) return '';
+  const n = src.envois.length, shown = [...src.envois].reverse().slice(0, 4);
+  return `<section class="card">
+    <div class="card-h"><h2>Envois reçus</h2><span class="count">${n}</span></div>
+    ${n ? `<ul class="envois">${shown.map(e => `<li>Du ${fmtFR(e.from)} au ${fmtFR(e.to)}<span class="muted"> · importé le ${fmtFR(ymd(new Date(e.importedAt)))}</span></li>`).join('')}
+      ${n > 4 ? `<li class="muted">… et ${n - 4} plus ancien${n > 5 ? 's' : ''}</li>` : ''}</ul>`
+    : `<p class="empty">Rien reçu pour l’instant. Quand ${esc(src.profile.prenom || 'votre client')} vous envoie un fichier, enregistrez-le sur cet appareil puis importez-le ici.</p>`}
+    <button class="btn primary block" data-act="importEnvoi">Importer un fichier reçu</button>
+  </section>`;
+}
+/* Bas de la fiche : coordonnées, export, modification, suppression */
+function srcCard() {
+  if (!src) return '';
+  const k = src.contact || {};
+  return `<section class="card">
+    <h2>Fiche client</h2>
+    ${k.email ? `<div class="small" style="margin-top:8px"><a href="mailto:${esc(k.email)}">${esc(k.email)}</a></div>` : ''}
+    ${k.tel ? `<div class="small"><a href="tel:${esc(k.tel.replace(/\s/g, ''))}">${esc(k.tel)}</a></div>` : ''}
+    ${src.note ? `<p class="synth-ro small" style="margin-top:8px">${esc(src.note)}</p>` : ''}
+    ${!k.email && !k.tel && !src.note ? '<p class="small muted" style="margin:6px 0 0">Aucune coordonnée enregistrée.</p>' : ''}
+    <div class="row" style="margin-top:12px">
+      <button class="btn" data-act="editClient">Modifier</button>
+      <button class="btn" data-act="exportClient" ${Object.keys(src.days).length ? '' : 'disabled'}>Exporter en Excel</button>
+    </div>
+    <button class="btn danger block" data-act="removeClient">Supprimer ce client</button>
+  </section>`;
+}
+function openClient(id) {
+  src = data.clients[id]; if (!src) return;
+  const l = lastOf(src.envois), d = parse(l && l.to < today() ? l.to : today());
+  calY = d.getFullYear(); calM = d.getMonth(); calF = calW = null; view = 'cal'; render();
+}
+function openClientForm(id) {
+  const c = id ? data.clients[id] : null, k = c?.contact || {}, D = $('#clientDlg');
+  D.innerHTML = `<form method="dialog" id="clientForm">
+    <div class="dlg-h"><h2>${c ? 'Modifier le client' : 'Nouveau client'}</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-b">
+      <div class="row">
+        <div><label class="label" for="cfPrenom">Prénom</label><input type="text" id="cfPrenom" value="${esc(c?.profile.prenom || '')}" autocomplete="off"></div>
+        <div><label class="label" for="cfNom">Nom</label><input type="text" id="cfNom" value="${esc(c?.profile.nom || '')}" autocomplete="off"></div>
+      </div>
+      <label class="label" for="cfTel">Téléphone</label>
+      <input type="text" id="cfTel" inputmode="tel" value="${esc(k.tel || '')}" autocomplete="off">
+      <label class="label" for="cfEmail">E-mail</label>
+      <input type="text" id="cfEmail" inputmode="email" value="${esc(k.email || '')}" autocomplete="off">
+      <label class="label" for="cfNote">Notes (visibles par vous seul(e))</label>
+      <textarea id="cfNote" rows="3">${esc(c?.note || '')}</textarea>
+      <div class="err" id="cfErr"></div>
+    </div>
+    <div class="dlg-f"><button type="button" class="btn primary" data-act="saveClient" data-id="${c ? esc(c.id) : ''}">Enregistrer</button></div>
+  </form>`;
+  D.showModal();
+}
+async function importEnvoi(f, targetId) {
+  const c = data.clients[targetId]; if (!c) return;
+  let pkg;
+  try { pkg = JSON.parse(await f.text()); if (pkg.app !== 'journal-emotions' || pkg.type !== 'envoi') throw 0; }
+  catch { return toast('Ce fichier n’est pas un envoi du journal.'); }
+  if (pkg.to !== data.keys?.fp) return toast('Ce fichier a été chiffré pour un autre thérapeute.');
+  let o;
+  try { o = await openEnvoi(pkg); } catch { return toast('Impossible d’ouvrir ce fichier (abîmé ou clé différente).'); }
+  const sender = `${o.client.prenom} ${o.client.nom}`.trim() || 'un client sans nom';
+  if (c.uid && c.uid !== o.client.id) {
+    if (!confirm(`Ce fichier vient de l’app de ${sender}, qui n’est pas celle liée à la fiche de ${fullName(c)}.\n\nL’importer quand même dans cette fiche ?`)) return;
+  } else if (!c.uid) {
+    const other = Object.values(data.clients).find(x => x.uid === o.client.id);
+    if (other) {
+      if (!confirm(`Les envois de ${sender} sont déjà importés dans la fiche de ${fullName(other)}.\n\nImporter aussi ce fichier dans la fiche de ${fullName(c)} ?`)) return;
+    } else {
+      if (sender.toLowerCase() !== fullName(c).toLowerCase()
+        && !confirm(`Ce fichier a été envoyé par ${sender}.\n\nLe rattacher à la fiche de ${fullName(c)} ? Les prochains envois de cette personne seront reconnus automatiquement.`)) return;
+      c.uid = o.client.id;
+    }
+  }
+  if (!c.profile.start || o.from < c.profile.start) c.profile.start = o.from;
+  c.labels = {...DEF_LABELS, ...o.labels};
+  for (let k = o.from; k <= o.to; k = addDays(k, 1)) { if (o.days[k]) c.days[k] = o.days[k]; else delete c.days[k]; }
+  c.envois = c.envois.filter(x => !(x.from === o.from && x.to === o.to));
+  c.envois.push({from:o.from, to:o.to, sentAt:o.sentAt, importedAt:new Date().toISOString()});
+  c.envois.sort((a, b) => a.from.localeCompare(b.from));
+  await saveNow();
+  toast(`Période du ${fmtFR(o.from).slice(0, 5)} au ${fmtFR(o.to).slice(0, 5)} importée`);
+  openClient(c.id);
+}
+
+/* ───────────── Administration (compte administrateur uniquement) ─────────────
+   Données venant du serveur : comptes et compteurs, jamais le contenu des journaux. */
+const admInit = () => ({users:null, stats:null, err:'', filtre:'tous', ouvert:null});
+let adm = admInit();
+const ROLE_N = {client:'Client(e)', therapeute:'Thérapeute'};
+const fmtDT = iso => { if (!iso) return 'jamais'; const d = new Date(iso); return `${fmtFR(ymd(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const nomAdmin = u => u.role === 'therapeute' ? u.nom : initiale(u.nom);   // client : initiale seulement
+const who = u => `${u.prenom} ${nomAdmin(u)}`.trim() || u.identifiant;
+
+async function loadAdmin() {
+  try { [adm.users, adm.stats] = await Promise.all([API.rpc('admin_utilisateurs'), API.rpc('admin_stats')]); adm.err = ''; }
+  catch (x) { adm.err = x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Erreur du serveur.'; adm.users ||= []; }
+  if (view === 'admin') render(true);
+}
+function vAdmin() {
+  const head = '<div style="margin:4px 0 16px"><div class="eyebrow">Administration</div><h1>Tableau de bord</h1></div>';
+  if (!session) return head + '<section class="card"><p class="empty">Hors connexion : l’administration nécessite internet.</p></section>';
+  if (!adm.users) { loadAdmin(); return head + '<section class="card"><p class="empty">Chargement…</p></section>'; }
+  if (!adm.limites && !adm.limEnCours) loadLimites();
+  data.adminVu = new Date().toISOString(); save();
+  const s = adm.stats, a = s?.activite;
+  const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
+  const act = (l, o) => `<tr><th scope="row">${l}</th><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
+  const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
+    .sort((x, y) => `${nomAdmin(x)} ${x.prenom}`.localeCompare(`${nomAdmin(y)} ${y.prenom}`, 'fr', {sensitivity:'base'}));
+  return head
+  + (adm.err ? `<div class="banner"><span>${esc(adm.err)}</span><button class="btn" data-act="admReload">Réessayer</button></div>` : '')
+  + (s ? `
+  <section class="card">
+    <h2>Comptes</h2>
+    <div class="tiles">${tile(s.comptes, 'au total')}${tile(s.clients, 'clients')}${tile(s.therapeutes, 'thérapeutes')}${tile(s.desactives, 'désactivés')}</div>
+    <table class="stats">
+      <thead><tr><th></th><th>7 jours</th><th>30 jours</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Nouveaux inscrits</th><td>${s.inscrits_7j}</td><td>${s.inscrits_30j}</td></tr>
+        <tr><th scope="row">Utilisateurs actifs</th><td>${s.actifs_7j}</td><td>${s.actifs_30j}</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Activité</h2>
+    <table class="stats">
+      <thead><tr><th></th><th>7 jours</th><th>30 jours</th><th>Total</th></tr></thead>
+      <tbody>${act('Connexions', a.connexions)}${act('Notes saisies', a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
+    </table>
+    <p class="small muted" style="margin:8px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
+  </section>` : '') + limitsCard() + `
+  <section class="card">
+    <div class="card-h"><h2>Utilisateurs</h2><span class="count">${list.length}</span></div>
+    <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Clients'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
+      `<button class="chip ${adm.filtre === k ? 'on' : ''}" style="--fc:var(--brand)" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
+    <input type="search" id="admSearch" placeholder="Rechercher : nom, n°, identifiant" aria-label="Rechercher un utilisateur" style="margin-bottom:10px">
+    ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
+  </section>`;
+}
+/* Limites des offres gratuites, relevées sur les pages officielles le 31/10/2026.
+   Sans clé secrète dans l'app, seules certaines consommations se mesurent : les autres renvoient au service. */
+const LIMITES = {base:500e6, actifs:50000, envois:300, depot:1e9, journal:5e6};
+const LIMITES_DATE = '31/10/2026';
+const GH_DEPOT = 'appmotus/appmotus.github.io';
+const fmtOctets = n => n < 1e6 ? `${Math.round(n / 1e3)} Ko` : n < 1e9 ? `${(n / 1e6).toLocaleString('fr-FR', {maximumFractionDigits:1})} Mo` : `${(n / 1e9).toLocaleString('fr-FR', {maximumFractionDigits:1})} Go`;
+const fmtNombre = n => Math.round(n).toLocaleString('fr-FR');
+
+/* Rappel à l'administrateur : ouvrir l'onglet Admin interroge Brevo, dont la clé expire après 90 jours sans utilisation.
+   La date est gardée dans le journal de chaque appareil. */
+const ADMIN_RAPPEL_JOURS = 30;
+function adminReminder() {
+  if (!session || !data.account?.est_admin) return '';
+  if (!data.adminVu) { data.adminVu = new Date().toISOString(); save(); return ''; }
+  const j = Math.floor((Date.now() - new Date(data.adminVu)) / 864e5);
+  if (j <= ADMIN_RAPPEL_JOURS) return '';
+  return `<div class="banner admin-rappel"><span>Vous n’avez pas ouvert l’onglet Admin depuis ${j} jours. Ouvrez-le pour vérifier les services et garder active la clé d’envoi des e-mails, qui expire après 90 jours sans utilisation.</span>
+    <button class="btn primary" data-act="goAdmin">Ouvrir</button></div>`;
+}
+async function loadLimites() {
+  adm.limEnCours = true;
+  const moi = adm;
+  const [r, g, b] = await Promise.allSettled([
+    API.rpc('admin_ressources'),
+    fetch(`https://api.github.com/repos/${GH_DEPOT}`).then(x => x.ok ? x.json() : Promise.reject()),
+    API.recup({action:'quota_envoi'}),
+  ]);
+  if (adm !== moi) return;
+  const val = p => p.status === 'fulfilled' ? p.value : null;
+  adm.limites = {res:val(r), depotKo:val(g)?.size ?? null, envoi:val(b)};
+  adm.limEnCours = false;
+  const c = $('#limCard');
+  if (c) c.outerHTML = limitsCard();
+}
+/* Jauge : la couleur porte la sévérité, toujours accompagnée d'un texte */
+function jauge(label, used, max, fmt, note = '') {
+  if (used == null) return `<div class="lim"><div class="lim-h"><span>${label}</span><span class="muted">Non disponible</span></div>${note ? `<div class="small muted">${note}</div>` : ''}</div>`;
+  const pct = Math.min(100, used / max * 100), niv = pct >= 95 ? 'crit' : pct >= 80 ? 'warn' : '';
+  return `<div class="lim">
+    <div class="lim-h"><span>${label}</span><b>${fmt(used)} / ${fmt(max)}</b></div>
+    <div class="meter ${niv && 'm-' + niv}" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${pct.toFixed(1)}%"></i></div>
+    <div class="small muted">${niv ? `<b class="lim-alerte">⚠ ${niv === 'crit' ? 'Limite atteinte ou presque' : 'Limite proche'}</b> · ` : ''}Il reste ${fmt(Math.max(max - used, 0))}${note ? ` · ${note}` : ''}</div>
+  </div>`;
+}
+const limInfo = (label, limite, note = '') => `<div class="lim"><div class="lim-h"><span>${label}</span><b>${limite}</b></div><div class="small muted">Consommation non mesurable depuis l’app${note ? ` · ${note}` : ''}</div></div>`;
+const limLien = (url, txt) => `<a class="small" href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>`;
+
+function limitsCard() {
+  const head = '<h2>Services et limites</h2>';
+  if (!adm.limites) return `<section class="card" id="limCard">${head}<p class="empty">Chargement…</p></section>`;
+  const {res, depotKo, envoi} = adm.limites;
+  const local = Object.keys(localStorage).filter(k => k.startsWith('journal-emotions')).reduce((n, k) => n + k.length + localStorage.getItem(k).length, 0);
+  const restants = envoi?.type === 'free' && envoi.credits != null ? Math.max(LIMITES.envois - envoi.credits, 0) : null;
+  return `<section class="card" id="limCard">
+    ${head}
+    <p class="small muted" style="margin:6px 0 0">Offres gratuites ; limites relevées le ${LIMITES_DATE}, elles peuvent changer.</p>
+
+    <div class="lim-g"><h3>Supabase (comptes et serveur)</h3>${limLien('https://supabase.com/dashboard/org/_/usage', 'Voir la consommation ↗')}</div>
+    ${jauge('Base de données', res?.base_octets ?? null, LIMITES.base, fmtOctets)}
+    ${jauge('Utilisateurs actifs (30 jours)', res?.actifs_30j ?? null, LIMITES.actifs, fmtNombre, 'estimation : Supabase compte par mois de facturation')}
+    ${limInfo('Bande passante', '5 Go par mois')}
+    ${limInfo('Appels de fonctions', '500 000 par mois')}
+    <p class="small muted" style="margin:8px 0 0">Le projet est suspendu automatiquement après 1 semaine sans activité ; il se réactive depuis le tableau de bord Supabase.</p>
+
+    <div class="lim-g"><h3>GitHub Pages (mise en ligne)</h3>${limLien(`https://github.com/${GH_DEPOT}`, 'Voir le dépôt ↗')}</div>
+    ${jauge('Taille du dépôt', depotKo == null ? null : depotKo * 1e3, LIMITES.depot, fmtOctets, 'limite recommandée')}
+    ${limInfo('Bande passante', '100 Go par mois', 'limite souple')}
+
+    <div class="lim-g"><h3>Brevo (e-mails de récupération)</h3>${limLien('https://app.brevo.com', 'Voir le compte ↗')}</div>
+    ${jauge('E-mails envoyés aujourd’hui', restants, LIMITES.envois, fmtNombre, restants == null ? 'la fonction d’envoi n’est pas encore en place ou Brevo n’a pas répondu' : '')}
+
+    <div class="lim-g"><h3>Cet appareil</h3></div>
+    ${jauge('Espace du navigateur', local, LIMITES.journal, fmtOctets, 'environ, selon le navigateur ; propre à chaque téléphone')}
+  </section>`;
+}
+function userRow(u) {
+  const open = adm.ouvert === u.id, moi = u.id === profil?.id, th = u.role === 'therapeute';
+  return `<div class="urow" data-name="${esc(`${who(u)} ${u.numero} ${u.identifiant}`.toLowerCase())}">
+    <button class="uhead" data-act="admOpen" data-id="${esc(u.id)}" aria-expanded="${open}">
+      <span><b>${esc(nomAdmin(u))}</b> ${esc(u.prenom)}</span>
+      <span class="badge ${th ? 'th' : ''}">${esc(u.numero)}</span>
+      <span class="small muted ufoot">${ROLE_N[u.role]}${u.est_admin ? ' · administrateur' : ''}${u.actif ? '' : ' · <b class="off">désactivé</b>'} · dernière connexion : ${fmtDT(u.derniere_connexion)}</span>
+    </button>
+    ${open ? `<div class="udetail">
+      <dl>
+        <dt>Identifiant</dt><dd>${esc(u.identifiant)}</dd>
+        <dt>Inscription</dt><dd>${fmtDT(u.cree_le)}</dd>
+        <dt>Connexions</dt><dd>${u.nb_connexions}</dd>
+        ${th ? `<dt>Thérapie</dt><dd>${esc(u.therapie) || '—'}</dd>
+        <dt>Téléphone</dt><dd>${esc(u.telephone) || '—'}</dd>
+        <dt>E-mail</dt><dd>${esc(u.email_contact) || '—'}</dd>
+        <dt>Adresse</dt><dd>${esc(u.adresse) || '—'}</dd>` : ''}
+      </dl>
+      ${moi ? '<p class="small muted" style="margin:8px 0 0">C’est votre compte.</p>' : `
+      <div class="row" style="margin-top:10px">
+        <button class="btn" data-act="admActif" data-id="${esc(u.id)}">${u.actif ? 'Désactiver' : 'Réactiver'}</button>
+        <button class="btn" data-act="admType" data-id="${esc(u.id)}">Passer en ${th ? 'client(e)' : 'thérapeute'}</button>
+      </div>
+      <button class="btn danger block" data-act="admSuppr" data-id="${esc(u.id)}">Supprimer le compte</button>`}
+    </div>` : ''}
+  </div>`;
+}
+async function admAction(id, question, run) {
+  const u = adm.users.find(x => x.id === id);
+  if (!u || !confirm(question(u))) return;
+  try { await run(u); toast('Modification enregistrée'); }
+  catch (x) { toast(x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Action impossible'); }
+  adm = {...admInit(), filtre:adm.filtre, ouvert:adm.ouvert};
+  render(true);
+}
+
+/* ───────────── Saisie d'une émotion ───────────── */
+let ed = null;
+/* Valeurs déjà saisies pour un champ (lieu, ville), les plus récentes d'abord */
+function recent(field) {
+  const seen = new Map();
+  Object.keys(data.days).sort().reverse().forEach(k => [...data.days[k].entries].sort((a,b) => b.time.localeCompare(a.time)).forEach(e => {
+    const l = (e[field] || '').trim(); if (l && !seen.has(l.toLowerCase())) seen.set(l.toLowerCase(), l);
+  }));
+  return [...seen.values()].slice(0, 20);
+}
+
+/* ───────────── Ville automatique : GPS + liste des communes intégrée (aucun envoi) ───────────── */
+let communes = null;
+function loadCommunes() {
+  return communes ||= fetch('communes.txt').then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(t => {
+    const lines = t.split('\n'), n = new Array(lines.length), la = new Float64Array(lines.length), lo = new Float64Array(lines.length);
+    lines.forEach((l, i) => { const [a, b, c] = l.split('\t'); n[i] = a; la[i] = +b; lo[i] = +c; });
+    return {n, la, lo};
+  }).catch(err => { communes = null; throw err; });
+}
+async function nearestCity(lat, lon) {
+  const C = await loadCommunes(), k = Math.cos(lat * Math.PI / 180);
+  let best = -1, bd = Infinity;
+  for (let i = 0; i < C.n.length; i++) {
+    const dy = C.la[i] - lat, dx = (C.lo[i] - lon) * k, d = dx*dx + dy*dy;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return Math.sqrt(bd) * 111 < 25 ? C.n[best] : null; // à plus de 25 km d'un centre de commune : hors de France
+}
+/* Le réglage de l'app ne suffit pas : le téléphone et le navigateur doivent aussi donner la position à Motus */
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+async function geoRefus() {
+  if (IOS) return 'L’iPhone ne donne pas la position à Motus. Dans les Réglages de l’iPhone, vérifiez : Confidentialité et sécurité › Service de localisation (activé, et autorisé pour les sites Safari), puis Safari › Localisation.';
+  let etat = '';
+  try { etat = (await navigator.permissions.query({name:'geolocation'})).state; } catch {}
+  if (etat === 'denied') return `Le navigateur bloque la position pour Motus. Dans Chrome : Paramètres › Paramètres des sites › Position, puis autorisez ${location.hostname}.`;
+  return 'Le téléphone ne donne pas la position à Motus. Vérifiez que la localisation du téléphone est activée et autorisée pour le navigateur.';
+}
+function trouverVille() {
+  return new Promise((ok, ko) => {
+    if (!navigator.geolocation) return ko('Localisation indisponible sur cet appareil.');
+    navigator.geolocation.getCurrentPosition(async p => {
+      try {
+        const v = await nearestCity(p.coords.latitude, p.coords.longitude);
+        v ? ok(v) : ko('Ville non trouvée (hors de France ?).');
+      } catch { ko('Liste des communes indisponible.'); }
+    }, async err => ko(err.code === 1 ? await geoRefus() : 'Position introuvable pour le moment.'),
+    {enableHighAccuracy:false, timeout:15000, maximumAge:300000});
+  });
+}
+function locate(force) {
+  const me = ed, status = msg => { const s = $('#geoSt'); if (s && ed === me) s.textContent = msg; };
+  status('Recherche de la ville…');
+  trouverVille().then(v => {
+    if (ed !== me) return;
+    if (force || !me.villeTouched) $('#eVille').value = v;
+    status('');
+  }, msg => status(force ? `${msg} Vous pouvez aussi saisir la ville.` : 'Ville non détectée. Touchez l’épingle pour en savoir plus, ou saisissez-la.'));
+}
+
+function openEntry(id) {
+  const e = id ? getDay(cur).entries.find(x => x.id === id) : null;
+  const villes = recent('ville');
+  ed = e ? structuredClone(e) : {id:null, time: cur === today() ? nowTime() : '12:00', ville: villes[0] || '', lieu:'', emos:[], car:''};
+  ed.fam = ed.emos[0]?.f || 'peur';
+  ed.int = ed.emos[0]?.i || 'l';
+  const D = $('#entryDlg');
+  D.innerHTML = `
+  <form method="dialog" id="entryForm">
+    <div class="dlg-h"><h2 id="entryTitle">${e ? 'Modifier' : 'Noter une émotion'}</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-b">
+      <div class="row">
+        <div style="flex:0 0 116px"><label class="label" for="eTime">Heure</label><input type="time" id="eTime" value="${esc(ed.time)}"></div>
+        <div><label class="label" for="eVille">Ville</label>
+          <div class="withbtn"><input type="text" id="eVille" list="villesList" value="${esc(ed.ville || '')}" placeholder="Ville" autocomplete="off">
+            <button type="button" class="geo-btn" data-act="locate" aria-label="Trouver ma ville"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg></button></div>
+          <datalist id="villesList">${villes.map(l => `<option value="${esc(l)}">`).join('')}</datalist></div>
+      </div>
+      <div class="geo-st small muted" id="geoSt" aria-live="polite"></div>
+      <label class="label" for="eLieu" style="margin-top:4px">Lieu (précision)</label>
+      <input type="text" id="eLieu" list="lieuxList" value="${esc(ed.lieu)}" placeholder="Maison, travail, voiture…" autocomplete="off">
+      <datalist id="lieuxList">${recent('lieu').map(l => `<option value="${esc(l)}">`).join('')}</datalist>
+      <p class="label">Je me sens…</p>
+      <div class="famgrid">${FAM.map(f => `<button type="button" class="fam" style="--fc:${f.c}" data-act="pickFam" data-f="${f.k}">${f.n}</button>`).join('')}</div>
+      <div id="picker"></div>
+      <p class="label">Mes émotions</p>
+      <div class="picked chips" id="picked"></div>
+      <label class="label" for="eCar">… car</label>
+      <textarea id="eCar" rows="3" placeholder="Ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
+      <div class="preview"><span class="k">Aperçu</span><span id="ePrev"></span></div>
+      <div class="err" id="eErr"></div>
+    </div>
+    <div class="dlg-f">
+      ${e ? '<button type="button" class="btn danger" data-act="delEntry">Supprimer</button>' : ''}
+      <button type="button" class="btn primary" data-act="saveEntry">Enregistrer</button>
+    </div>
+  </form>`;
+  renderPicker();
+  D.showModal();
+  D.scrollTop = 0;
+  if (!e && cur === today() && data.settings.geoloc) locate(false);
+}
+/* Note personnelle : texte libre, sur le même dialogue que la saisie d'une émotion */
+let noteId = null;
+function openNote(id) {
+  const n = id ? dayNotes(getDay(cur)).find(x => x.id === id) : null;
+  noteId = n?.id || null;
+  const dlg = $('#entryDlg');
+  dlg.innerHTML = `
+  <form method="dialog">
+    <div class="dlg-h"><h2 id="entryTitle">${n ? 'Modifier la note' : 'Note personnelle'}</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-b">
+      <label class="label" for="nTime">Heure</label>
+      <input type="time" id="nTime" value="${esc(n?.time || (cur === today() ? nowTime() : '12:00'))}" style="max-width:140px">
+      <label class="label" for="nText">Ma note</label>
+      <textarea id="nText" rows="6" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier…">${esc(n?.text || '')}</textarea>
+      <p class="small muted" style="margin:6px 0 0">Ni envoyée à votre thérapeute, ni incluse dans le fichier Excel.</p>
+      <div class="err" id="nErr"></div>
+    </div>
+    <div class="dlg-f">
+      ${n ? '<button type="button" class="btn danger" data-act="delNote">Supprimer</button>' : ''}
+      <button type="button" class="btn primary" data-act="saveNote">Enregistrer</button>
+    </div>
+  </form>`;
+  dlg.showModal();
+  dlg.scrollTop = 0;
+}
+function renderPicker() {
+  const f = FAMK[ed.fam];
+  $('#entryDlg').querySelectorAll('.fam').forEach(b => b.classList.toggle('on', b.dataset.f === ed.fam));
+  const has = w => ed.emos.some(x => x.f === ed.fam && x.w === w);
+  $('#picker').innerHTML = `
+    <div class="besoin">${f.b}</div>
+    <div class="seg">${INT.map(([k,n]) => `<button type="button" class="${ed.int === k ? 'on' : ''}" data-act="pickInt" data-i="${k}" aria-pressed="${ed.int === k}">${n}</button>`).join('')}</div>
+    <div class="chips">${f[ed.int].map(w => `<button type="button" class="chip ${has(w) ? 'on' : ''}" style="--fc:${f.c}" data-act="toggleEmo" data-w="${esc(w)}" aria-pressed="${has(w)}">${esc(w)}</button>`).join('')}</div>`;
+  $('#picked').innerHTML = ed.emos.length
+    ? ed.emos.map((x, i) => `<button type="button" class="chip on" style="--fc:${FAMK[x.f].c}" data-act="unpick" data-n="${i}" aria-label="Retirer ${esc(x.w)}">${esc(x.w)} ×</button>`).join('')
+    : '<span class="small muted">Choisissez une ou plusieurs émotions ci-dessus.</span>';
+  updatePreview();
+}
+function updatePreview() {
+  ed.car = $('#eCar').value;
+  $('#ePrev').innerHTML = ed.emos.length ? sentenceHtml(ed) : '<span class="muted">Je me sens … car …</span>';
+}
+
+/* ───────────── Export Excel (.xlsx généré sur le téléphone, sans bibliothèque externe) ───────────── */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_T[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files) {
+  const d = new Date(), time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  const parts = [], central = []; let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), body = enc.encode(f.data), crc = crc32(body);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+    h.setUint16(10, time, true); h.setUint16(12, date, true); h.setUint32(14, crc, true);
+    h.setUint32(18, body.length, true); h.setUint32(22, body.length, true); h.setUint16(26, name.length, true);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint16(12, time, true); c.setUint16(14, date, true); c.setUint32(16, crc, true);
+    c.setUint32(20, body.length, true); c.setUint32(24, body.length, true); c.setUint16(28, name.length, true);
+    c.setUint32(42, offset, true);
+    parts.push(new Uint8Array(h.buffer), name, body);
+    central.push(new Uint8Array(c.buffer), name);
+    offset += 30 + name.length + body.length;
+  }
+  const cdSize = central.reduce((a, u) => a + u.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cdSize, true); e.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+const xesc = s => String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const colL = i => String.fromCharCode(65 + i);
+const cS = (ref, s, t) => `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xesc(t)}</t></is></c>`;
+const cN = (ref, s, n) => `<c r="${ref}" s="${s}"><v>${n}</v></c>`;
+const cE = (ref, s) => `<c r="${ref}" s="${s}"/>`;
+const xRow = (r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"` : ''}>${cells.join('')}</row>`;
+function sheet({cols, rows, merges = [], landscape}) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`
+  + `<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>`
+  + `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`
+  + `<sheetFormatPr defaultRowHeight="15"/>`
+  + `<cols>${cols.map((w, i) => `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`
+  + `<sheetData>${rows.join('')}</sheetData>`
+  + (merges.length ? `<mergeCells count="${merges.length}">${merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '')
+  + `<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>`
+  + `<pageSetup paperSize="9" orientation="${landscape ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>`
+  + `</worksheet>`;
+}
+/* Styles repris du modèle « Tableau d'Observation » (couleurs, polices, bordures) */
+const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="11">
+<font><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="16"/><color rgb="FF8C5E3C"/><name val="Arial"/></font>
+<font><i/><sz val="10"/><color rgb="FFC27B42"/><name val="Arial"/></font>
+<font><b/><sz val="10"/><color rgb="FF8C5E3C"/><name val="Arial"/></font>
+<font><b/><sz val="11"/><color rgb="FF8C5E3C"/><name val="Arial"/></font>
+<font><b/><sz val="9.5"/><color rgb="FF155724"/><name val="Arial"/></font>
+<font><b/><sz val="9.5"/><color rgb="FF856404"/><name val="Arial"/></font>
+<font><b/><sz val="9.5"/><color rgb="FF721C24"/><name val="Arial"/></font>
+<font><sz val="9"/><color rgb="FF333333"/><name val="Arial"/></font>
+<font><b/><i/><sz val="9"/><color rgb="FF8C5E3C"/><name val="Arial"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>
+</fonts>
+<fills count="9">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFF9F6F0"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFC3B2D6"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFD4EDDA"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFFF3CD"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFF8D7DA"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFC27B42"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="6">
+<border><left/><right/><top/><bottom/><diagonal/></border>
+<border><left style="thin"><color rgb="FFC27B42"/></left><right style="thin"><color rgb="FFC27B42"/></right><top style="thin"><color rgb="FFC27B42"/></top><bottom style="thin"><color rgb="FFC27B42"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FFA0A0A0"/></left><right style="thin"><color rgb="FFA0A0A0"/></right><top style="thin"><color rgb="FFA0A0A0"/></top><bottom style="thin"><color rgb="FFA0A0A0"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FFFFFFFF"/></left><right style="thin"><color rgb="FFFFFFFF"/></right><top style="medium"><color rgb="FF8C5E3C"/></top><bottom style="medium"><color rgb="FF8C5E3C"/></bottom><diagonal/></border>
+<border><left style="medium"><color rgb="FF8C5E3C"/></left><right style="medium"><color rgb="FF8C5E3C"/></right><top style="thin"><color rgb="FFC27B42"/></top><bottom style="thin"><color rgb="FFC27B42"/></bottom><diagonal/></border>
+<border><left/><right/><top/><bottom style="thin"><color rgb="FFC27B42"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="19">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="5" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+<xf numFmtId="0" fontId="4" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="left" vertical="center" indent="1"/></xf>
+<xf numFmtId="0" fontId="5" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="6" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="7" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="10" fillId="7" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="3" fillId="2" borderId="4" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="4" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="5" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="6" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="9" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="8" fillId="8" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+const S = {title:1, sub:2, lab:3, val:4, sect:5, vert:6, jaune:7, rouge:8, legend:9, txt:10, head:11, week:12, cell:13, cvert:14, cjaune:15, crouge:16, conf:17, off:18};
+const cellStyle = c => c ? S['c' + c] : S.cell;
+const estLines = (t, w) => t.split('\n').reduce((a, l) => a + Math.max(1, Math.ceil(l.length / w)), 0);
+
+function buildXlsx(from, to) {
+  const L = D().labels, p = D().profile;
+  const keys = []; for (let k = from; k <= to; k = addDays(k, 1)) keys.push(k);
+  const byTime = d => [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
+
+  /* Feuille 1 : tableau d'observation hebdomadaire (mise en page du modèle) */
+  const H = 'ABCDEFGH'.split(''), fill = (r, s) => H.slice(1).map(c => cE(c + r, s));
+  const r1 = [
+    xRow(1, [cS('A1', S.title, 'TABLEAU D\'OBSERVATION'), ...fill(1, S.title)], 28),
+    xRow(2, [cS('A2', S.sub, 'Motus — Éclairer ce qui se passe en soi'), ...fill(2, S.sub)], 18),
+    xRow(4, [cS('A4', S.lab, 'Nom :'), cS('B4', S.val, p.nom), cE('C4', S.val), cS('D4', S.lab, 'Prénom :'), cS('E4', S.val, p.prenom), cE('F4', S.val),
+      cS('G4', S.lab, 'Période :'), cS('H4', S.val, `${fmtFR(from)} – ${fmtFR(to)}`)], 22),
+    xRow(6, [cS('A6', S.sect, 'CONSIGNES & CODE COULEUR DE LA JOURNÉE'), ...fill(6, S.sect)], 24),
+    xRow(7, [cS('A7', S.vert, 'VERT'), cS('B7', S.legend, L.vert), cS('C7', S.jaune, 'JAUNE'), cS('D7', S.legend, L.jaune), cS('E7', S.rouge, 'ROUGE'), cS('F7', S.legend, L.rouge)], 22),
+    xRow(8, [cS('A8', S.txt, '• Au fil de la journée : heure / ville / lieu — « Je me sens [émotion du répertoire] car [ce qui l’a déclenchée]. »')], 18),
+    xRow(9, [cS('A9', S.txt, '• Chaque soir : une synthèse de la journée et une couleur (vert, jaune ou rouge).')], 18),
+    xRow(10, [cS('A10', S.conf, 'Ce tableau est confidentiel et constitue une base de travail essentielle.')], 18),
+    xRow(12, [cS('A12', S.head, 'Semaine / Date'), ...['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((j, i) => cS(H[i+1] + 12, S.head, j))], 28),
+  ];
+  const base = p.start && p.start <= from ? mondayOf(p.start) : mondayOf(from);
+  let r = 13;
+  for (let mon = mondayOf(from); mon <= to; mon = addDays(mon, 7), r++) {
+    const n = Math.round((parse(mon) - parse(base)) / 864e5 / 7) + 1;
+    const cells = [cS('A' + r, S.week, `SEMAINE ${n}\n\nLundi :\n${fmtFR(mon)}`)];
+    let lines = 4;
+    for (let i = 0; i < 7; i++) {
+      const k = addDays(mon, i), ref = H[i+1] + r, d = D().days[k];
+      if (k < from || k > to) { cells.push(cE(ref, S.off)); continue; }
+      if (!dayUsed(d)) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
+      let t = fmtFR(k).slice(0, 5) + (d.color ? ' — ' + L[d.color] : '');
+      byTime(d).forEach(e => t += `\n\n${e.time}${where(e) ? ' · ' + where(e) : ''}\n${sentence(e)}`);
+      if (d.synth?.trim()) t += `\n\nSYNTHÈSE : ${d.synth.trim()}`;
+      lines = Math.max(lines, estLines(t, 34));
+      cells.push(cS(ref, cellStyle(d.color), t));
+    }
+    r1.push(xRow(r, cells, Math.min(409, Math.max(60, lines * 11.5 + 8))));
+  }
+  const s1 = sheet({cols:[16,30,30,30,30,30,30,30], rows:r1, merges:['A1:H1','A2:H2','B4:C4','E4:F4','A6:H6','A8:H8','A9:H9','A10:H10'], landscape:true});
+
+  /* Feuille 2 : détail de chaque émotion notée */
+  const h2 = ['Date','Jour','Heure','Ville','Lieu','Émotion','Intensité','Je me sens…','… car','Couleur du jour'];
+  const r2 = [xRow(1, h2.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
+  let n2 = 2;
+  for (const k of keys) {
+    const d = D().days[k]; if (!d?.entries?.length) continue;
+    for (const e of byTime(d)) {
+      const vals = [fmtFR(k), JOURS[parse(k).getDay()], e.time, e.ville || '', e.lieu,
+        [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', '),
+        [...new Set(e.emos.map(x => INTN[x.i]))].join(', '),
+        joinFr(e.emos.map(x => lc(x.w))), (e.car || '').trim()];
+      const row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
+      row.push(d.color ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
+      r2.push(xRow(n2, row, Math.min(409, Math.max(15, Math.max(estLines(e.car || '', 60), estLines(vals[7], 34)) * 12 + 4))));
+      n2++;
+    }
+  }
+  const s2 = sheet({cols:[11,10,7,16,16,14,11,30,55,18], rows:r2, landscape:true});
+
+  /* Feuille 3 : synthèses quotidiennes */
+  const h3 = ['Date','Jour','Couleur','Nb d’émotions notées','Synthèse de la journée'];
+  const r3 = [xRow(1, h3.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
+  let n3 = 2;
+  for (const k of keys) {
+    const d = D().days[k]; if (!dayUsed(d)) continue;
+    const st = cellStyle(d.color);
+    r3.push(xRow(n3, [cS('A' + n3, st, fmtFR(k)), cS('B' + n3, st, JOURS[parse(k).getDay()]), d.color ? cS('C' + n3, st, L[d.color]) : cE('C' + n3, st),
+      cN('D' + n3, st, d.entries.length), cS('E' + n3, st, (d.synth || '').trim())], Math.min(409, Math.max(15, estLines(d.synth || '', 85) * 12 + 4))));
+    n3++;
+  }
+  const s3 = sheet({cols:[11,10,18,12,80], rows:r3});
+
+  const names = ['Tableau d’observation', 'Détail des émotions', 'Synthèses'];
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  return zip([
+    {name:'[Content_Types].xml', data: X + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${[1,2,3].map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+    {name:'_rels/.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml', data: X + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${names.map((n, i) => `<sheet name="${xesc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${[1,2,3].map(i => `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`).join('')}<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml', data:STYLES},
+    {name:'xl/worksheets/sheet1.xml', data:s1},
+    {name:'xl/worksheets/sheet2.xml', data:s2},
+    {name:'xl/worksheets/sheet3.xml', data:s3},
+  ]);
+}
+
+function weekLabel() {
+  const end = addDays(xStart, 6);
+  return `${end === today() ? '<div class="small muted">Les 7 derniers jours</div>' : ''}Du <b>${fmtDay(xStart)}</b><br>au <b>${fmtDay(end)} ${parse(end).getFullYear()}</b>`;
+}
+function setWeek(n) {
+  xStart = addDays(xStart, 7 * n);
+  if (addDays(xStart, 6) > today()) xStart = addDays(today(), -6);
+  $('#wkLabel').innerHTML = weekLabel();
+  $('#xNext').disabled = addDays(xStart, 6) >= today();
+  $('#xFrom').value = xStart; $('#xTo').value = addDays(xStart, 6);
+  $('#xFromWd').textContent = weekday(xStart); $('#xToWd').textContent = weekday(addDays(xStart, 6));
+  const st = $('#sentSt'); if (st) st.textContent = sentStatus();
+}
+function exportRange() {
+  let from = xStart, to = addDays(xStart, 6);
+  if ($('#xCustom').open) { from = $('#xFrom').value; to = $('#xTo').value; }
+  if (!from || !to) { toast('Choisissez une période.'); return null; }
+  if (from > to) [from, to] = [to, from];
+  return {from, to, name:`Motus_${from}_${to}.xlsx`};
+}
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function withBusy(fn) { busy = true; try { await fn(); } finally { setTimeout(() => busy = false, 1500); } }
+
+/* ───────────── Dialogue de saisie du code ───────────── */
+function askCode(title, {confirm = false, hint = '', label = 'Mot de passe', min = 8} = {}) {
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="codeForm">
+      <div class="dlg-h"><h2>${esc(title)}</h2></div>
+      <div class="dlg-b">
+        ${hint ? `<p class="small muted">${esc(hint)}</p>` : ''}
+        <label class="label" for="cd1">${confirm ? `Nouveau mot de passe (${min} caractères minimum)` : esc(label)}</label>
+        <input type="password" id="cd1" autocomplete="${confirm ? 'new-password' : 'current-password'}">
+        ${confirm ? '<label class="label" for="cd2">Confirmez</label><input type="password" id="cd2" autocomplete="new-password">' : ''}
+        <div class="err" id="cdErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="cdCancel">Annuler</button><button class="btn primary">Valider</button></div>
+    </form>`;
+    const done = v => { D.close(); resolve(v); };
+    $('#cdCancel').onclick = () => done(null);
+    D.oncancel = () => resolve(null);
+    $('#codeForm').onsubmit = e => {
+      e.preventDefault();
+      const v = $('#cd1').value;
+      if (confirm) {
+        if (v.length < min) return $('#cdErr').textContent = `Au moins ${min} caractères.`;
+        if (v !== $('#cd2').value) return $('#cdErr').textContent = 'Les deux mots de passe ne correspondent pas.';
+      }
+      done(v);
+    };
+    D.showModal();
+  });
+}
+
+/* ───────────── Actions ───────────── */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+
+const ACT = {
+  tab: t => {
+    view = t.dataset.v; src = null;
+    if (view === 'day') cur = today();
+    render();
+    if (view === 'set' && (data.account?.recup === 'attente' || data.account?.recupChange)) ensureSecours();
+  },
+  /* lien client ↔ thérapeute */
+  addTherapist: () => offerInvite($('#invCode').value),
+  removeTherapist: () => { if (!confirm('Retirer ce thérapeute ? Vous ne pourrez plus lui envoyer vos semaines.')) return; data.therapist = null; save(); render(); },
+  sendWeek: () => sendWeek(),
+  goSend: () => { xStart = addDays(today(), -6); view = 'set'; render(); },
+  shareInvite: () => shareInvite(),
+  copyInvite: async () => {
+    try { await navigator.clipboard.writeText(inviteLink()); toast('Lien copié'); }
+    catch { const f = $('#invField'); if (f) { f.focus(); f.select(); } toast('Sélectionnez le lien pour le copier'); }
+  },
+  importEnvoi: () => { importTarget = src.id; busy = true; $('#importFile').value = ''; $('#importFile').click(); setTimeout(() => busy = false, 60000); },
+  openClient: t => openClient(t.dataset.id),
+  newClient: () => openClientForm(null),
+  editClient: () => openClientForm(src.id),
+  saveClient: t => {
+    const prenom = $('#cfPrenom').value.trim(), nom = $('#cfNom').value.trim();
+    if (!prenom && !nom) return $('#cfErr').textContent = 'Indiquez au moins un prénom ou un nom.';
+    let c = data.clients[t.dataset.id];
+    if (!c) { const id = 'c' + rid(6); c = data.clients[id] = {id, uid:null, profile:{nom:'', prenom:'', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[]}; }
+    Object.assign(c.profile, {prenom, nom});
+    c.contact = {tel:$('#cfTel').value.trim(), email:$('#cfEmail').value.trim()};
+    c.note = $('#cfNote').value.trim();
+    save(); $('#clientDlg').close(); openClient(c.id);
+  },
+  backClients: () => { src = null; view = 'clients'; render(); },
+  clientCal: () => { view = 'cal'; render(); },
+  exportClient: () => {
+    const ks = Object.keys(src.days).sort(); if (!ks.length) return toast('Aucune donnée à exporter.');
+    const from = src.envois[0]?.from || ks[0], to = lastOf(src.envois)?.to || lastOf(ks);
+    const who = `${src.profile.prenom}-${src.profile.nom}`.replace(/[^\p{L}\p{N}-]+/gu, '');
+    withBusy(() => download(buildXlsx(from, to), `Motus_${who}_${from}_${to}.xlsx`));
+  },
+  removeClient: () => {
+    if (!confirm(`Supprimer la fiche de ${fullName(src)} et toutes les données reçues ?`)) return;
+    delete data.clients[src.id]; src = null; view = 'clients'; save(); render();
+  },
+  prevDay: () => { cur = addDays(cur, -1); render(); },
+  nextDay: () => { if (cur < today()) { cur = addDays(cur, 1); render(); } },
+  goToday: () => { cur = today(); render(); },
+  openDay: t => { cur = t.dataset.k; view = 'day'; render(); },
+  calFilter: t => { calF = t.dataset.f || null; calW = null; render(); },
+  calWord: t => { calW = t.dataset.w || null; render(); },
+  calMode: t => { calMode = t.dataset.m; render(); },
+  xPrevWeek: () => setWeek(-1),
+  xNextWeek: () => setWeek(1),
+  prevMonth: () => { if (--calM < 0) { calM = 11; calY--; } render(); },
+  nextMonth: () => { if (++calM > 11) { calM = 0; calY++; } render(); },
+  setColor: t => {
+    const d = ensureDay(cur), c = t.dataset.c;
+    d.color = d.color === c ? null : c;
+    document.querySelectorAll('.colbtn').forEach(b => { const on = b.dataset.c === d.color; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    save();
+  },
+  newEntry: () => openEntry(null),
+  editEntry: t => openEntry(t.dataset.id),
+  closeDlg: t => t.closest('dialog').close(),
+  newNote: () => openNote(null),
+  editNote: t => openNote(t.dataset.id),
+  saveNote: () => {
+    const text = $('#nText').value.trim(), time = $('#nTime').value || nowTime();
+    if (!text) return $('#nErr').textContent = 'Écrivez quelque chose avant d’enregistrer.';
+    const d = ensureDay(cur); d.notes ||= [];
+    const n = d.notes.find(x => x.id === noteId);
+    if (n) Object.assign(n, {text, time}); else d.notes.push({id:uid(), time, text});
+    save(); $('#entryDlg').close(); render(); toast('Note enregistrée');
+  },
+  delNote: () => {
+    if (!confirm('Supprimer cette note personnelle ?')) return;
+    const d = ensureDay(cur); d.notes = dayNotes(d).filter(x => x.id !== noteId);
+    save(); $('#entryDlg').close(); render();
+  },
+  geoTest: async () => {
+    const s = $('#geoTest'); s.textContent = 'Recherche de la ville…';
+    try { s.textContent = `Ça fonctionne : ${await trouverVille()}.`; } catch (msg) { s.textContent = msg; }
+  },
+  pickFam: t => { ed.fam = t.dataset.f; renderPicker(); },
+  pickInt: t => { ed.int = t.dataset.i; renderPicker(); },
+  toggleEmo: t => {
+    const w = t.dataset.w, i = ed.emos.findIndex(x => x.f === ed.fam && x.w === w);
+    if (i >= 0) ed.emos.splice(i, 1); else ed.emos.push({f:ed.fam, i:ed.int, w});
+    renderPicker();
+  },
+  unpick: t => { ed.emos.splice(+t.dataset.n, 1); renderPicker(); },
+  locate: () => locate(true),
+  saveEntry: () => {
+    ed.time = $('#eTime').value || nowTime();
+    ed.ville = $('#eVille').value.trim();
+    ed.lieu = $('#eLieu').value.trim();
+    ed.car = $('#eCar').value.trim();
+    if (!ed.emos.length) return $('#eErr').textContent = 'Choisissez au moins une émotion.';
+    const d = ensureDay(cur), {fam, int, villeTouched, ...entry} = ed;
+    if (entry.id) d.entries[d.entries.findIndex(x => x.id === entry.id)] = entry;
+    else { entry.id = uid(); d.entries.push(entry); countStat('notes'); }
+    save(); $('#entryDlg').close(); render(); toast('Émotion enregistrée');
+  },
+  delEntry: () => {
+    if (!confirm('Supprimer cette note ?')) return;
+    const d = ensureDay(cur); d.entries = d.entries.filter(x => x.id !== ed.id);
+    save(); $('#entryDlg').close(); render();
+  },
+  exportXlsx: () => { const x = exportRange(); if (x) withBusy(() => download(buildXlsx(x.from, x.to), x.name)); },
+  shareXlsx: () => {
+    const x = exportRange(); if (!x) return;
+    const file = new File([buildXlsx(x.from, x.to)], x.name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    withBusy(async () => {
+      if (navigator.canShare?.({files:[file]})) { try { await navigator.share({files:[file], title:'Motus'}); } catch {} }
+      else download(file, x.name);
+    });
+  },
+  changeCode: async () => {
+    if (!session) return toast('Connexion internet nécessaire pour changer de mot de passe.');
+    const c = await askCode('Changer mon mot de passe', {confirm:true});
+    if (!c) return;
+    try { await API.setPassword(c); }
+    catch (x) { return toast(x.code === 'faible' ? 'Mot de passe trop simple.' : x.code === 'reseau' ? 'Pas de connexion internet.' : 'Changement impossible pour le moment.'); }
+    salt = crypto.getRandomValues(new Uint8Array(16));
+    key = await deriveKey(c, salt);
+    if (data.settings.autolock === -1) await rememberKey().catch(() => {});
+    await saveNow(); await ensureSecours(c); toast('Mot de passe modifié');
+  },
+  lockNow: () => lock(),
+  backup: () => sauvegarder(),
+  backupLater: () => { data.backupPlusTard = today(); save(); $('.sauvegarde-rappel')?.remove(); },
+  majApp: async () => { if (key) await saveNow(); location.reload(); },
+  restore: () => { busy = true; $('#restoreFile').value = ''; $('#restoreFile').click(); setTimeout(() => busy = false, 60000); },
+  install: () => { if (installEvt) { installEvt.prompt(); installEvt = null; } },
+  wipe: async () => {
+    if (!confirm('Effacer définitivement toutes vos notes de ce téléphone ?\n\nVotre compte reste actif.')) return;
+    if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
+    const vk = VKEY, sk = secoursKey(data.account.identifiant); await lock(); localStorage.removeItem(vk); localStorage.removeItem(sk);
+  },
+  addRecovery: async () => {
+    if (!session) return toast('Connexion internet nécessaire.');
+    const r = await askRecovery();
+    if (r) await setRecovery(r.email, r.pw);
+  },
+  confirmRecovery: () => openRecupCode(),
+  adoptLegacy: () => adoptLegacy(),
+  deleteLegacy: () => {
+    if (!confirm('Supprimer définitivement l’ancien journal de cet appareil ?\n\nSes notes seront perdues.')) return;
+    if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
+    localStorage.removeItem(LEGACY_VKEY); render(); toast('Ancien journal supprimé');
+  },
+  removeRecovery: async () => {
+    if (!session) return toast('Connexion internet nécessaire.');
+    if (!confirm('Retirer l’adresse de récupération ?\n\nEn cas d’oubli du mot de passe, le compte ne pourra plus être récupéré.')) return;
+    try { await API.rpc('retirer_recuperation'); await ensureSecours(); toast('Adresse retirée'); }
+    catch { toast('Action impossible pour le moment.'); }
+  },
+  /* connexion, inscription */
+  goSignup: () => showLock('signup'),
+  goLogin: () => showLock('login'),
+  forgot: () => showLock('forgot'),
+  /* administration */
+  goAdmin: () => { src = null; view = 'admin'; render(); },
+  admReload: () => { adm = admInit(); render(true); },
+  admFiltre: t => { adm.filtre = t.dataset.f; render(true); },
+  admOpen: t => { adm.ouvert = adm.ouvert === t.dataset.id ? null : t.dataset.id; render(true); },
+  admActif: t => admAction(t.dataset.id,
+    u => u.actif ? `Désactiver le compte de ${who(u)} ?\n\nIl ne pourra plus se connecter.` : `Réactiver le compte de ${who(u)} ?`,
+    u => API.rpc('admin_activer', {p_id:u.id, p_actif:!u.actif})),
+  admType: t => admAction(t.dataset.id,
+    u => `Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'client(e)'} ?\n\nUn nouveau numéro lui sera attribué.`,
+    u => API.rpc('admin_type', {p_id:u.id, p_role:u.role === 'client' ? 'therapeute' : 'client'})),
+  admSuppr: t => admAction(t.dataset.id,
+    u => `Supprimer définitivement le compte de ${who(u)} ?\n\nSon journal reste sur son téléphone, mais il ne pourra plus se connecter.`,
+    u => API.rpc('admin_supprimer', {p_id:u.id})),
+};
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (!data) return;
+  if (t.id === 'synth') {
+    ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
+  } else if (t.id === 'eCar') updatePreview();
+  else if (t.id === 'eVille') ed.villeTouched = true;
+  else if (t.id === 'xFrom' || t.id === 'xTo') $('#' + t.id + 'Wd').textContent = weekday(t.value);
+  else if (t.id === 'geoloc') { data.settings.geoloc = t.checked; save(); }
+  else if (t.id === 'cliSearch') {
+    const q = t.value.trim().toLowerCase();
+    document.querySelectorAll('.clientrow').forEach(r => r.hidden = !!q && !r.dataset.name.includes(q));
+  }
+  else if (t.dataset.prof) { data.profile[t.dataset.prof] = t.value; save(); refreshInvite(); pushProfile(); }
+  else if (t.dataset.thera) { data.thera[t.dataset.thera] = t.value; save(); refreshInvite(); pushProfile(); }
+  else if (t.id === 'admSearch') {
+    const q = t.value.trim().toLowerCase();
+    document.querySelectorAll('.urow').forEach(r => r.hidden = !!q && !r.dataset.name.includes(q));
+  }
+  else if (t.dataset.label) { data.labels[t.dataset.label] = t.value.trim() || DEF_LABELS[t.dataset.label]; save(); }
+  else if (t.id === 'autolock') setAutolock(t);
+});
+$('#entryDlg').addEventListener('click', e => { if (e.target === e.currentTarget && !$('#nText')) e.currentTarget.close(); });   // une note en cours ne se perd pas d'un appui à côté
+
+$('#restoreFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; busy = false; if (!f) return;
+  let v;
+  try { v = JSON.parse(await f.text()); if (v.app !== 'journal-emotions' || !v.ct || v.type) throw 0; }
+  catch { return toast(v?.type === 'envoi' ? 'Ce fichier est un envoi pour un thérapeute, pas une sauvegarde.' : 'Ce fichier n’est pas une sauvegarde du journal.'); }
+  const c = await askCode('Restaurer une sauvegarde', {label:'Mot de passe ou code de la sauvegarde', hint:'Entrez le mot de passe (ou le code, pour une sauvegarde faite avant les comptes) utilisé au moment de la sauvegarde.'});
+  if (c == null) return;
+  try {
+    const r = await openVault(v, c);
+    if (!confirm('Remplacer les notes actuelles par celles de la sauvegarde ?')) return;
+    const account = data.account, role = data.role;   // le compte et son type restent ceux du serveur
+    data = defaults(r.obj); data.account = account; data.role = role;
+    if (role === 'therapeute') await ensureKeys();
+    await saveNow(); showApp(); toast('Sauvegarde restaurée');
+  } catch { toast('Mot de passe incorrect pour cette sauvegarde.'); }
+});
+$('#importFile').addEventListener('change', e => { busy = false; const f = e.target.files[0]; if (f) importEnvoi(f, importTarget); });
+
+/* Lien d'invitation ouvert directement : on le garde pour après le déverrouillage et on l'efface de l'adresse */
+{
+  const m = location.hash.match(/inv=([A-Za-z0-9_-]+)/);
+  if (m) { pendingInv = m[1]; history.replaceState(null, '', location.pathname + location.search); }
+}
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  // Une nouvelle version vient de s'installer alors que l'app était déjà pilotée par une ancienne : on le propose.
+  const dejaActif = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!dejaActif || $('.maj-banner')) return;
+    const b = document.createElement('div');
+    b.className = 'banner maj-banner'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span>Nouvelle version disponible. Vos notes sont conservées.</span><button class="btn primary" data-act="majApp">Mettre à jour</button>';
+    document.body.appendChild(b);
+  });
+  navigator.serviceWorker.register('sw.js').then(r => swReg = r).catch(() => {});
+}
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Motus",
+  "short_name": "Motus",
+  "description": "Éclairer ce qui se passe en soi : noter ses émotions au fil de la journée, faire une synthèse quotidienne et suivre son évolution.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F9F6F0",
+  "theme_color": "#F9F6F0",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
