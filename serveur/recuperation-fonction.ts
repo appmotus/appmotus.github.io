@@ -216,7 +216,7 @@ async function effacerDemande(req: Request, email: string) {
   return ok ? rep(200, { ok: true }) : rep(502, { code: "envoi", message: "E-mail non envoyé" });
 }
 
-async function effacerConfirme(req: Request, code: string) {
+async function effacerConfirme(req: Request, code: string, email: string) {
   const id = await utilisateur(req);
   if (!id) return rep(401, { code: "session", message: "Session invalide" });
   const invalide = rep(400, { code: "code_invalide", message: "Code incorrect ou expiré" });
@@ -230,6 +230,11 @@ async function effacerConfirme(req: Request, code: string) {
     method: "PATCH",
     body: JSON.stringify({ code_empreinte: null, code_expire: null, essais: 0 }),
   });
+  // Mail de confirmation : un échec d'envoi ne doit pas empêcher l'effacement demandé
+  if (l.email_empreinte === (await empreinte(`${id}|${email}`))) {
+    await envoyer(email, "Vos notes ont bien été effacées",
+      `Vos notes Motus ont bien été effacées de votre téléphone. Votre compte reste actif.\n\nSi vous n'êtes pas à l'origine de cette demande, changez votre mot de passe sans attendre.`).catch(console.error);
+  }
   return rep(200, { ok: true });
 }
 
@@ -242,7 +247,7 @@ Deno.serve(async (req) => {
     if (b.action === "definir") return await definir(req, norm(b.email));
     if (b.action === "confirmer") return await confirmer(req, String(b.code ?? "").trim());
     if (b.action === "effacer_demande") return await effacerDemande(req, norm(b.email));
-    if (b.action === "effacer_confirme") return await effacerConfirme(req, String(b.code ?? "").trim());
+    if (b.action === "effacer_confirme") return await effacerConfirme(req, String(b.code ?? "").trim(), norm(b.email));
     if (b.action === "demande") return await demande(norm(b.identifiant), norm(b.email));
     if (b.action === "confirme") return await confirme(norm(b.identifiant), String(b.code ?? "").trim(), String(b.mot_de_passe ?? ""));
     return rep(400, { code: "action", message: "Action inconnue" });

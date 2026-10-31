@@ -349,7 +349,7 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 18;// même numéro que CACHE dans sw.js
+const APP_VERSION = 19;   // même numéro que CACHE dans sw.js
 let toastTimer;
 function toast(msg) {
   document.querySelector('.toast')?.remove();
@@ -420,6 +420,8 @@ const dayUsed = d => !!(d && (d.color || d.synth?.trim() || d.entries?.length));
 const dayNotes = d => d?.notes || [];   // notes personnelles : ni envoyées au thérapeute, ni exportées
 const dayFilled = d => dayUsed(d) || dayNotes(d).length > 0;
 const initiale = s => { const c = [...String(s || '').trim()][0]; return c ? c.toUpperCase() + '.' : ''; };
+/* Aide-mémoire du mail de récupération, gardé uniquement dans le journal chiffré de l'appareil */
+const masque = m => { const [u, d] = String(m).split('@'); return d ? `${u.slice(0, Math.min(4, Math.ceil(u.length / 2)))}*******@${d}` : ''; };
 
 /* ───────────── Serveur : comptes, compteurs, administration ─────────────
    Le serveur (Supabase) ne connaît que les comptes et des compteurs, jamais les notes.
@@ -615,6 +617,7 @@ function showLock(mode = 'login') {
         <input type="text" id="fId" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(localStorage.getItem(LAST_ID) || '')}">
         <label class="label" for="fMail">Adresse de récupération</label>
         <input type="email" id="fMail" autocomplete="email" autocapitalize="none">
+        <div class="small muted" id="fIndice" style="margin-top:4px"></div>
         <div class="err" id="lockErr"></div>
         <button class="btn primary block" id="forgotBtn">Recevoir un code</button>
       </form>
@@ -640,6 +643,11 @@ function showLock(mode = 'login') {
       ${demo}
     </div>`;
     $('#forgotForm')?.addEventListener('submit', onForgot);
+    const majIndice = () => {
+      const i = localStorage.getItem(indiceKey($('#fId').value.trim().toLowerCase())) || '';
+      $('#fMail').placeholder = i; $('#fIndice').textContent = i ? `Pour vous aider : ${i}` : '';
+    };
+    if ($('#fId')) { $('#fId').oninput = majIndice; majIndice(); }
     $('#resetForm')?.addEventListener('submit', onResetCode);
     return;
   }
@@ -801,6 +809,12 @@ function applyProfil() {
 /* Récupération par e-mail : le serveur garde une clé de secours et seulement une empreinte de l'adresse.
    Cet appareil garde la clé du journal chiffrée par la clé de secours : aucun des deux, seul, n'ouvre les notes. */
 const secoursKey = id => 'journal-emotions.secours.' + id;
+/* Aide-mémoire pour « Mot de passe oublié » : uniquement la version masquée, lisible sans ouvrir le journal */
+const indiceKey = id => 'journal-emotions.indice.' + id;
+function syncIndice() {
+  const k = indiceKey(data.account.identifiant);
+  if (data.recupIndice) localStorage.setItem(k, data.recupIndice); else localStorage.removeItem(k);
+}
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 async function passwordBits(pw, saltU8) {
   const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
@@ -818,6 +832,9 @@ async function ensureSecours(pw) {
     data.account.recup = etat?.confirmee ? 'confirmee' : etat?.attente ? 'attente' : false;
     data.account.recupChange = !!(etat?.confirmee && etat.attente);
     if (data.account.recup !== 'attente' && !data.account.recupChange) { delete data.recupMail; delete data.recupEnvoi; }
+    if (!cle) { delete data.recupIndice; delete data.recupIndiceNouveau; }
+    else if (etat?.confirmee && !etat.attente && data.recupIndiceNouveau) { data.recupIndice = data.recupIndiceNouveau; delete data.recupIndiceNouveau; }
+    syncIndice();
     if (!cle) localStorage.removeItem(sk);
     else if (pw) {
       const k = await crypto.subtle.importKey('raw', fromB64(cle), 'AES-GCM', false, ['encrypt']);
@@ -867,6 +884,7 @@ function askRecovery(oblig) {
     D.innerHTML = `<form method="dialog" id="recForm">
       <div class="dlg-h"><h2>${data.account?.recup ? 'Changer de mail de récupération' : 'Ajouter un mail de récupération'}</h2></div>
       <div class="dlg-b">
+        ${data.recupIndice ? `<p class="small muted">Mail actuel : <b>${esc(data.recupIndice)}</b></p>` : ''}
         <p class="small muted">${oblig ? 'Il est obligatoire pour continuer. ' : ''}Il sert uniquement à recevoir un code si vous oubliez votre mot de passe ou si vous effacez vos données. Vous recevrez un code pour le confirmer. Seule une empreinte illisible est conservée : personne ne peut le lire, pas même l’administrateur. Vous devrez le retaper à l’identique en cas de besoin.</p>
         <label class="label" for="rMail">Adresse e-mail</label>
         <input type="email" id="rMail" autocomplete="email" autocapitalize="none">
@@ -897,7 +915,7 @@ async function setRecovery(email, pw, oblig) {
   try {
     await API.recup({action:'definir', email});
     // gardée dans le journal chiffré de l'appareil, le temps de pouvoir renvoyer le code
-    data.recupMail = email; data.recupEnvoi = new Date().toISOString();
+    data.recupMail = email; data.recupEnvoi = new Date().toISOString(); data.recupIndiceNouveau = masque(email);
     await saveNow();
     await ensureSecours(pw);
     openRecupCode(oblig);
@@ -937,7 +955,7 @@ function openRecupCode(oblig) {
       <input type="text" id="rcCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
       <div class="err" id="rcErr"></div>
       <button type="button" class="btn block" id="rcResend"></button>
-      ${oblig ? `<button type="button" class="link small" id="rcFix" style="display:block;margin-top:8px">Corriger l’adresse</button>
+      ${oblig ? `<button type="button" class="link small" id="rcFix" style="display:block;margin-top:8px">Changer l’adresse mail de récupération</button>
       <button type="button" class="link small" id="rcSkip" hidden style="display:block">Je n’ai rien reçu : continuer pour l’instant</button>` : ''}
     </div>
     <div class="dlg-f"><button type="button" class="btn" id="rcLater">${oblig ? 'Se déconnecter' : 'Plus tard'}</button><button class="btn primary">Confirmer</button></div>
@@ -989,7 +1007,8 @@ function effacerParCode() {
       <div class="dlg-h"><h2>Confirmer l’effacement</h2></div>
       <div class="dlg-b">
         <p class="small muted" id="efInfo">Pour vérifier que c’est bien vous, entrez votre adresse de récupération : un code à 6 chiffres vous sera envoyé.</p>
-        <div id="efMailBloc"><label class="label" for="efMail">Adresse de récupération</label><input type="email" id="efMail" autocomplete="email" autocapitalize="none"></div>
+        <div id="efMailBloc"><label class="label" for="efMail">Adresse de récupération</label><input type="email" id="efMail" autocomplete="email" autocapitalize="none" placeholder="${esc(data.recupIndice || '')}">
+          ${data.recupIndice ? `<div class="small muted" style="margin-top:4px">Pour vous aider : <b>${esc(data.recupIndice)}</b></div>` : ''}</div>
         <div id="efCodeBloc" hidden>
           <label class="label" for="efCode">Code reçu par e-mail</label>
           <input type="text" id="efCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
@@ -1005,7 +1024,10 @@ function effacerParCode() {
       const b = $('#efResend'), s = Math.max(0, 60 - Math.floor((Date.now() - envoi) / 1000));
       if (b) { b.disabled = s > 0; b.textContent = s ? `Renvoyer le code dans ${s} s` : 'Renvoyer le code'; }
     };
-    const demander = () => API.recup({action:'effacer_demande', email:mail}).then(() => { envoi = Date.now(); maj(); });
+    const demander = () => API.recup({action:'effacer_demande', email:mail}).then(() => {
+      envoi = Date.now(); maj();
+      if (!data.recupIndice) { data.recupIndice = masque(mail); save(); syncIndice(); }   // compte confirmé avant l'existence de l'aide-mémoire
+    });
     $('#efCancel').onclick = () => fin(false);
     dlg.onclose = () => fin(false);   // touche Échap
     $('#efResend').onclick = async () => {
@@ -1030,7 +1052,7 @@ function effacerParCode() {
         }
         const code = $('#efCode').value.trim();
         if (!/^\d{6}$/.test(code)) return err('Entrez les 6 chiffres du code.');
-        await API.recup({action:'effacer_confirme', code});
+        await API.recup({action:'effacer_confirme', code, email:mail});
         fin(true);
       } catch (x) { err(EFFACER_ERR[x.code] || 'Action impossible pour le moment.'); }
       finally { enCours = false; }
@@ -1617,6 +1639,7 @@ function securityCard() {
     <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
     <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
     <div class="stat"><span class="muted">Mail de récupération</span><b>${a.recup === 'attente' ? 'À confirmer' : a.recup ? 'Confirmé' : 'À ajouter'}</b></div>
+    ${a.recup && (data.recupIndice || data.recupIndiceNouveau) ? `<div class="stat small"><span class="muted">Adresse</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? data.recupIndiceNouveau || data.recupIndice : data.recupIndice || data.recupIndiceNouveau)}</b></div>` : ''}
     ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
     <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
     ${a.recup ? '<button class="btn block" data-act="addRecovery">Changer de mail de récupération</button>' : ''}
@@ -1952,7 +1975,7 @@ function vAdmin() {
   const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
   const act = (l, o) => `<tr><th scope="row">${l}</th><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
   const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
-    .sort((x, y) => `${nomAdmin(x)} ${x.prenom}`.localeCompare(`${nomAdmin(y)} ${y.prenom}`, 'fr', {sensitivity:'base'}));
+    .sort((x, y) => who(x).localeCompare(who(y), 'fr', {sensitivity:'base'}));
   return head
   + (adm.err ? `<div class="banner"><span>${esc(adm.err)}</span><button class="btn" data-act="admReload">Réessayer</button></div>` : '')
   + (s ? `
@@ -2062,7 +2085,7 @@ function userRow(u) {
   const open = adm.ouvert === u.id, moi = u.id === profil?.id, th = u.role === 'therapeute';
   return `<div class="urow" data-name="${esc(`${who(u)} ${u.numero} ${u.identifiant}`.toLowerCase())}">
     <button class="uhead" data-act="admOpen" data-id="${esc(u.id)}" aria-expanded="${open}">
-      <span><b>${esc(nomAdmin(u))}</b> ${esc(u.prenom)}</span>
+      <span><b>${esc(u.prenom)}</b> ${esc(nomAdmin(u))}</span>
       <span class="badge ${th ? 'th' : ''}">${esc(u.numero)}</span>
       <span class="small muted ufoot">${ROLE_N[u.role]}${u.est_admin ? ' · administrateur' : ''}${u.actif ? '' : ' · <b class="off">désactivé</b>'} · dernière connexion : ${fmtDT(u.derniere_connexion)}</span>
     </button>
@@ -2646,7 +2669,8 @@ const ACT = {
   wipe: async () => {
     if (!confirm('Effacer définitivement toutes vos notes de ce téléphone ?\n\nVotre compte reste actif.')) return;
     if (!await confirmerEffacement()) return;
-    const vk = VKEY, sk = secoursKey(data.account.identifiant); await lock(); localStorage.removeItem(vk); localStorage.removeItem(sk);
+    const vk = VKEY, sk = secoursKey(data.account.identifiant), ik = indiceKey(data.account.identifiant);
+    await lock(); localStorage.removeItem(vk); localStorage.removeItem(sk); localStorage.removeItem(ik);
     toast('Vos notes ont été effacées de ce téléphone');
   },
   addRecovery: async () => {
