@@ -11,11 +11,13 @@ Web app (PWA) pour les personnes suivies par un thérapeute : noter ses émotion
 | `index.html` | Toute l'application (interface, chiffrement, export Excel) |
 | `sw.js` | Fonctionnement hors connexion |
 | `confidentialite.html` | Politique de confidentialité, à accepter à l'inscription (version dans `RGPD_VERSION`, dans `index.html`) |
+| `fonts/` | Police Plus Jakarta Sans (licence libre), livrée avec l'app pour qu'elle soit la même partout, sans jamais appeler Google |
 | `communes.txt` | Liste des communes françaises (nom + coordonnées du centre) pour trouver la ville sans connexion |
 | `manifest.webmanifest`, `icon-*.png` | Installation sur l'écran d'accueil |
 | `outils/generer-communes.ps1` | Régénère `communes.txt` depuis geo.api.gouv.fr |
 | `outils/serveur-local.ps1` | Serveur de test sur ce PC (http://localhost:8765) |
 | `outils/generer-icones.ps1` | Régénère les icônes |
+| `outils/compter-heures.ps1` | Estime les heures de travail, pour le compteur de la page admin |
 
 ## Confidentialité
 
@@ -34,6 +36,7 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 - **Mail de récupération (obligatoire)** : demandé à l'inscription, et à l'ouverture de l'app pour les comptes plus anciens tant qu'il n'est pas confirmé. Sans internet, si l'envoi échoue ou si rien n'arrive au bout de 2 minutes, le journal reste accessible et un bandeau le redemande. Confirmé par un code à 6 chiffres reçu par e-mail (renvoi possible après 1 minute), il peut être changé dans les Réglages mais pas retiré. Il permet de recevoir un code à 6 chiffres si le mot de passe est oublié (5 demandes par 24 heures, 5 essais par code, validité 15 minutes). Le serveur n'en garde qu'une empreinte illisible : elle n'apparaît ni dans la page admin ni dans Supabase, et l'utilisateur la retape à l'identique en cas d'oubli. Le service d'envoi (Brevo) reçoit l'adresse à chaque envoi et l'affiche dans l'historique du compte Brevo, conservé 1 mois et visible par la personne qui gère ce compte. Sans adresse enregistrée, un mot de passe perdu ne peut pas être réinitialisé.
 - **Thérapeute : un seul mail** : son mail professionnel sert aussi de mail de récupération. Dès qu'il est confirmé, il devient le mail de contact transmis aux clients avec le lien d'invitation, en clair sur le serveur avec ses coordonnées.
 - **Effacer ses données** : avec une adresse confirmée, l'utilisateur la retape et saisit un code à 6 chiffres reçu par e-mail (fonction `recuperation`, actions `effacer_demande` et `effacer_confirme`) ; tant que le mail n'est pas confirmé, il confirme avec son mot de passe. Le fichier chiffré « données utilisateur » a trois sections : `journal` (jours, date de sauvegarde), `donneesClients` (thérapeute) et `parametres` (profil, réglages, libellés, thérapeute lié, historique des envois, clé du thérapeute, mail masqué). L'effacement vide le journal et les données reçues des clients sur l'appareil, sans déconnecter ; le compte, les paramètres et les fiches clients restent, et un mail le confirme quand un code a été utilisé. Les sauvegardes, fichiers Excel et envois déjà créés ne sont pas concernés. Une version masquée du mail (`adre*******@domaine.fr`) est gardée sur l'appareil pour aider l'utilisateur à s'en souvenir : dans le journal chiffré, et en clair pour la page « Mot de passe oublié », où le journal est verrouillé. Le mail complet n'y est pas conservé, et cette version masquée n'est jamais envoyée au serveur.
+- **Supprimer son compte** : Réglages › Supprimer mon compte, avec internet. Avec une adresse confirmée, l'utilisateur la retape et saisit un code à 6 chiffres (actions `supprimer_demande` et `supprimer_confirme`) ; sinon il confirme avec son mot de passe, vérifié par le serveur (action `supprimer_mdp`). Le serveur supprime d'abord le compte, et le profil, les compteurs et la récupération suivent par cascade ; l'appareil n'est vidé qu'ensuite, donc rien n'est effacé si le serveur refuse. Le compte administrateur ne peut pas être supprimé ainsi. Les sauvegardes, fichiers Excel, envois déjà créés et notes d'un autre appareil ne sont pas concernés.
 - **Reprise des notes** : le serveur garde une clé de secours, et l'appareil la clé du journal chiffrée par cette clé de secours. Aucun des deux, seul, n'ouvre les notes ; une personne ayant à la fois le téléphone et l'accès à la boîte mail le pourrait. Sur un nouvel appareil, seul le compte est récupéré : les notes reviennent avec une sauvegarde.
 - **Déconnexion automatique** : réglable, jusqu'à « Jamais ». Le journal s'ouvre alors sans mot de passe sur cet appareil, même après fermeture de l'app, jusqu'à « Se déconnecter ».
 
@@ -88,4 +91,6 @@ Rappel : une mise à jour ne protège pas contre la perte du téléphone ou l'ef
 
 ## Mettre à jour
 
-Après une modification, augmenter le numéro de `CACHE` dans `sw.js` et donner le même à `APP_VERSION` dans `index.html`. Les téléphones installent alors la nouvelle version en arrière-plan, puis l'app affiche « Nouvelle version disponible » avec un bouton « Mettre à jour ». Le numéro installé se lit en bas des Réglages.
+Après une modification, augmenter le numéro de `CACHE` dans `sw.js` et donner le même à `APP_VERSION` dans `index.html`. Les téléphones installent alors la nouvelle version en arrière-plan, puis l'app affiche « Nouvelle version disponible » avec un bouton « Mettre à jour ». Le numéro installé se lit dans Réglages › À propos.
+
+À chaque nouvelle version, lancer aussi `outils/compter-heures.ps1` et reporter le résultat dans `HEURES_TRAVAIL`, dans `index.html` : c'est le compteur de la page admin.

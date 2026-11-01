@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex, nofollow">
 <title>Confidentialité – Motus</title>
 <style>
-:root{--bg:#F9F6F0;--surface:#FFFFFF;--text:#3A2E26;--muted:#85766A;--brand:#8C5E3C;--accent:#C27B42;--border:#E7DCCD;--todo:#FFF3CD;--todo-fg:#856404}
-@media (prefers-color-scheme: dark){:root{--bg:#1E1915;--surface:#2A231D;--text:#F1E8DE;--muted:#B3A393;--brand:#E3AC7E;--accent:#D98E52;--border:#43382E;--todo:#3D3418;--todo-fg:#F1D27A}}
+:root{--bg:#FFFFFF;--surface:#F2F2F8;--text:#1D1B4C;--muted:#6B6A8A;--brand:#1D1B4C;--accent:#4F4BC9;--border:#E3E3EE;--todo:#FCF0D2;--todo-fg:#7A5A08}
+@media (prefers-color-scheme: dark){:root{--bg:#0F0F1C;--surface:#1A1A2C;--text:#ECECFA;--muted:#A3A2BF;--brand:#ECECFA;--accent:#9591F5;--border:#2C2C44;--todo:#3B3116;--todo-fg:#F6D98E}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/plus-jakarta-sans.woff2) format('woff2');font-weight:400 700;font-display:swap}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 'Plus Jakarta Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 main{max-width:680px;margin:0 auto;padding:24px 16px 48px}
 h1{color:var(--brand);font-size:1.5rem;margin:0 0 4px}
 h2{color:var(--brand);font-size:1.05rem;margin:28px 0 8px}
@@ -92,8 +93,8 @@ Pour toute question ou demande : <span class="todo">[adresse e-mail de contact]<
 <p>Nous ne pouvons pas agir sur les fichiers déjà sortis de l'app : <b>sauvegardes</b>, <b>fichiers Excel</b> (non chiffrés) et <b>envois au thérapeute</b>. Pensez à supprimer vous-même ceux que vous ne souhaitez pas garder, et à demander à votre thérapeute de supprimer ce qu'il a reçu.</p>
 
 <h2>7. Vos droits</h2>
-<p>Vous pouvez accéder à vos données, les rectifier, les effacer, en limiter le traitement, vous y opposer, en demander la portabilité et retirer votre consentement à tout moment. Pour supprimer votre compte ou exercer ces droits, écrivez à <span class="todo">[adresse e-mail de contact]</span>.</p>
-<p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL : <a href="https://www.cnil.fr" rel="noopener">www.cnil.fr</a>.</p>
+<p>Vous pouvez accéder à vos données, les rectifier, les effacer, en limiter le traitement, vous y opposer, en demander la portabilité et retirer votre consentement à tout moment. Pour supprimer votre compte : Réglages › Supprimer mon compte. Pour exercer vos autres droits, écrivez à <span class="todo">[adresse e-mail de contact]</span>.</p>
+<p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL : <a href="https://www.cnil.fr" target="_blank" rel="noopener">www.cnil.fr</a>.</p>
 
 <h2>8. Âge minimum</h2>
 <p><span class="todo">[à décider : âge minimum pour utiliser Motus, et accord des parents en dessous]</span></p>

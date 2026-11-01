@@ -184,11 +184,12 @@ async function confirme(identifiant: string, code: string, motDePasse: string) {
   return rep(200, { cle_secours: l.cle_secours });
 }
 
-// Effacer ses données : le code prouve l'accès à la boîte mail. L'effacement lui-même se fait sur l'appareil.
+// Effacer ses données ou supprimer son compte : le code prouve l'accès à la boîte mail.
 // Partage le code en cours et les limites du mot de passe oublié, mais un code ne vaut jamais pour l'autre usage.
-async function effacerDemande(req: Request, email: string) {
+async function envoyerCode(req: Request, email: string, usage: string, sujet: string, corps: (code: string) => string) {
   const id = await utilisateur(req);
   if (!id) return rep(401, { code: "session", message: "Session invalide" });
+  if (usage === "supprimer" && (await estAdmin(id))) return rep(403, { code: "admin", message: "Compte administrateur" });
   const l = await ligneRecup(id);
   if (!l?.email_empreinte || l.email_empreinte !== (await empreinte(`${id}|${email}`))) {
     return rep(400, { code: "adresse", message: "Adresse incorrecte" });
@@ -203,7 +204,7 @@ async function effacerDemande(req: Request, email: string) {
   await db(`recuperation?profil=eq.${id}`, {
     method: "PATCH",
     body: JSON.stringify({
-      code_empreinte: await empreinte(`effacer|${id}|${code}`),
+      code_empreinte: await empreinte(`${usage}|${id}|${code}`),
       code_expire: new Date(Date.now() + 15 * 60_000).toISOString(),
       essais: 0,
       derniere_demande: new Date().toISOString(),
@@ -211,18 +212,26 @@ async function effacerDemande(req: Request, email: string) {
       demandes_depuis: neuf ? new Date().toISOString() : l.demandes_depuis,
     }),
   });
-  const ok = await envoyer(email, "Votre code pour effacer vos données",
-    `Votre code pour effacer vos données Motus : ${code}\n\nIl est valable 15 minutes. Le saisir efface définitivement les notes de votre téléphone. Si vous n'avez rien demandé, ne le communiquez à personne et changez votre mot de passe.`);
+  const ok = await envoyer(email, sujet, corps(code));
   return ok ? rep(200, { ok: true }) : rep(502, { code: "envoi", message: "E-mail non envoyé" });
 }
 
-async function effacerConfirme(req: Request, code: string, email: string) {
+const effacerDemande = (req: Request, email: string) =>
+  envoyerCode(req, email, "effacer", "Votre code pour effacer vos données", (code) =>
+    `Votre code pour effacer vos données Motus : ${code}\n\nIl est valable 15 minutes. Le saisir efface définitivement les notes de votre téléphone. Si vous n'avez rien demandé, ne le communiquez à personne et changez votre mot de passe.`);
+
+const supprimerDemande = (req: Request, email: string) =>
+  envoyerCode(req, email, "supprimer", "Votre code pour supprimer votre compte", (code) =>
+    `Votre code pour supprimer votre compte Motus : ${code}\n\nIl est valable 15 minutes. Le saisir supprime définitivement votre compte et les données de votre téléphone. Si vous n'avez rien demandé, ne le communiquez à personne et changez votre mot de passe.`);
+
+// Vérifie le code reçu ; renvoie l'identifiant de l'utilisateur, ou la réponse d'erreur
+async function verifierCode(req: Request, code: string, usage: string): Promise<{ id: string; ligne: Record<string, unknown> } | Response> {
   const id = await utilisateur(req);
   if (!id) return rep(401, { code: "session", message: "Session invalide" });
   const invalide = rep(400, { code: "code_invalide", message: "Code incorrect ou expiré" });
   const l = await ligneRecup(id);
   if (!l?.code_empreinte || !l.code_expire || new Date(l.code_expire).getTime() < Date.now() || l.essais >= 5) return invalide;
-  if (l.code_empreinte !== (await empreinte(`effacer|${id}|${code}`))) {
+  if (l.code_empreinte !== (await empreinte(`${usage}|${id}|${code}`))) {
     await db(`recuperation?profil=eq.${id}`, { method: "PATCH", body: JSON.stringify({ essais: l.essais + 1 }) });
     return invalide;
   }
@@ -230,12 +239,65 @@ async function effacerConfirme(req: Request, code: string, email: string) {
     method: "PATCH",
     body: JSON.stringify({ code_empreinte: null, code_expire: null, essais: 0 }),
   });
+  return { id, ligne: l };
+}
+
+async function effacerConfirme(req: Request, code: string, email: string) {
+  const v = await verifierCode(req, code, "effacer");
+  if (v instanceof Response) return v;
+  const { id, ligne: l } = v;
   // Mail de confirmation : un échec d'envoi ne doit pas empêcher l'effacement demandé
   if (l.email_empreinte === (await empreinte(`${id}|${email}`))) {
     await envoyer(email, "Vos notes ont bien été effacées",
       `Vos notes Motus ont bien été effacées de votre téléphone. Votre compte et vos réglages sont conservés.\n\nLes sauvegardes, fichiers Excel et envois au thérapeute déjà créés ne sont pas concernés : pensez à supprimer vous-même ceux que vous ne souhaitez pas garder.\n\nSi vous n'êtes pas à l'origine de cette demande, changez votre mot de passe sans attendre.`).catch(console.error);
   }
   return rep(200, { ok: true });
+}
+
+const estAdmin = async (id: string) => !!(await db(`profils?id=eq.${id}&select=est_admin`))[0]?.est_admin;
+
+// Supprime le compte : profil, compteurs et récupération suivent (« on delete cascade » dans la base)
+async function supprimerUtilisateur(id: string) {
+  if (await estAdmin(id)) return rep(403, { code: "admin", message: "Compte administrateur" });
+  const r = await fetch(`${BASE}/auth/v1/admin/users/${id}`, {
+    method: "DELETE",
+    headers: { apikey: ROLE, Authorization: `Bearer ${ROLE}` },
+  });
+  if (!r.ok) {
+    console.error("Suppression", r.status, await r.text());
+    return rep(500, { code: "serveur", message: "Suppression impossible" });
+  }
+  return rep(200, { ok: true });
+}
+
+async function supprimerConfirme(req: Request, code: string, email: string) {
+  const v = await verifierCode(req, code, "supprimer");
+  if (v instanceof Response) return v;
+  const { id, ligne: l } = v;
+  const fin = await supprimerUtilisateur(id);
+  // Mail de confirmation : un échec d'envoi ne change rien à la suppression déjà faite
+  if (fin.ok && l.email_empreinte === (await empreinte(`${id}|${email}`))) {
+    await envoyer(email, "Votre compte a bien été supprimé",
+      `Votre compte Motus et vos données ont bien été supprimés de nos serveurs et de votre téléphone.\n\nLes sauvegardes, fichiers Excel et envois au thérapeute déjà créés, ainsi que les notes sur un autre appareil, ne sont pas concernés : pensez à supprimer vous-même ceux que vous ne souhaitez pas garder.\n\nSi vous n'êtes pas à l'origine de cette demande, répondez à ce message.`).catch(console.error);
+  }
+  return fin;
+}
+
+// Sans mail confirmé, aucun code ne peut partir : le mot de passe, vérifié ici, prouve que c'est bien le titulaire.
+async function supprimerMotDePasse(req: Request, motDePasse: string) {
+  const u = await fetch(`${BASE}/auth/v1/user`, {
+    headers: { apikey: ROLE, Authorization: req.headers.get("Authorization") ?? "" },
+  });
+  if (!u.ok) return rep(401, { code: "session", message: "Session invalide" });
+  const { id, email } = await u.json();
+  if ((await ligneRecup(id))?.email_empreinte) return rep(400, { code: "code_invalide", message: "Un code par e-mail est nécessaire" });
+  const t = await fetch(`${BASE}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: ROLE, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password: motDePasse }),
+  });
+  if (!t.ok) return rep(400, { code: "mot_de_passe", message: "Mot de passe incorrect" });
+  return supprimerUtilisateur(id);
 }
 
 Deno.serve(async (req) => {
@@ -248,6 +310,9 @@ Deno.serve(async (req) => {
     if (b.action === "confirmer") return await confirmer(req, String(b.code ?? "").trim());
     if (b.action === "effacer_demande") return await effacerDemande(req, norm(b.email));
     if (b.action === "effacer_confirme") return await effacerConfirme(req, String(b.code ?? "").trim(), norm(b.email));
+    if (b.action === "supprimer_demande") return await supprimerDemande(req, norm(b.email));
+    if (b.action === "supprimer_confirme") return await supprimerConfirme(req, String(b.code ?? "").trim(), norm(b.email));
+    if (b.action === "supprimer_mdp") return await supprimerMotDePasse(req, String(b.mot_de_passe ?? ""));
     if (b.action === "demande") return await demande(norm(b.identifiant), norm(b.email));
     if (b.action === "confirme") return await confirme(norm(b.identifiant), String(b.code ?? "").trim(), String(b.mot_de_passe ?? ""));
     return rep(400, { code: "action", message: "Action inconnue" });

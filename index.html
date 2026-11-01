@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'self' https://*.supabase.co https://api.github.com; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; frame-src 'self'; font-src 'self'; connect-src 'self' https://*.supabase.co https://api.github.com; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#F9F6F0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1E1915" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Motus">
@@ -16,64 +15,92 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Motus</title>
+<script>
+/* Apparence : automatique, clair ou sombre. Choix propre à cet appareil, appliqué avant l'affichage pour éviter un flash. */
+const THEME_KEY = 'journal-emotions.theme';
+function themeChoisi() { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch { return 'auto'; } }
+function appliquerTheme() {
+  const c = themeChoisi(), sombre = c === 'sombre' || (c !== 'clair' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = sombre ? 'dark' : 'light';
+  document.querySelector('meta[name=theme-color]').content = sombre ? '#0F0F1C' : '#FFFFFF';
+}
+appliquerTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', appliquerTheme);
+</script>
 <style>
 :root{
-  --bg:#F9F6F0;--surface:#FFFFFF;--surface2:#F3ECE2;--text:#3A2E26;--muted:#85766A;
-  --brand:#8C5E3C;--accent:#C27B42;--lav:#C3B2D6;--border:#E7DCCD;
-  --vert:#3FA35B;--vert-bg:#D4EDDA;--vert-fg:#155724;
-  --jaune:#E3B21F;--jaune-bg:#FFF3CD;--jaune-fg:#856404;
-  --rouge:#D9534F;--rouge-bg:#F8D7DA;--rouge-fg:#721C24;
-  --shadow:0 1px 2px rgba(58,46,38,.06),0 4px 14px rgba(58,46,38,.06);
-  --r:16px;
+  --bg:#FFFFFF;--surface:#F2F2F8;--surface2:#E8E8F2;--text:#1D1B4C;--muted:#6B6A8A;
+  --brand:#1D1B4C;--accent:#4F4BC9;--on-accent:#FFFFFF;--lav:#B9B6EE;--border:#E3E3EE;--seg-on:#FFFFFF;
+  --vert:#3FAE82;--vert-bg:#DDF3EA;--vert-fg:#17694B;
+  --jaune:#EBB033;--jaune-bg:#FCF0D2;--jaune-fg:#7A5A08;
+  --rouge:#EC6A6F;--rouge-txt:#C63F46;--rouge-bg:#FBE1E2;--rouge-fg:#8E2A30;
+  --sur-jour:#FFFFFF;--sur-jaune:#3A2E00;
+  --shadow:0 8px 26px rgba(29,27,76,.1);
+  --r:22px;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root{
-  --bg:#1E1915;--surface:#2A231D;--surface2:#342B24;--text:#F1E8DE;--muted:#B3A393;
-  --brand:#E3AC7E;--accent:#D98E52;--lav:#9F8CB8;--border:#43382E;
-  --vert-bg:#1F3A27;--vert-fg:#A6DDB3;--jaune-bg:#3D3418;--jaune-fg:#F1D27A;--rouge-bg:#45232A;--rouge-fg:#F2B1B8;
+:root[data-theme=dark]{
+  --bg:#0F0F1C;--surface:#1A1A2C;--surface2:#2A2A42;--text:#ECECFA;--muted:#A3A2BF;
+  --brand:#ECECFA;--accent:#9591F5;--on-accent:#0F0F1C;--lav:#5F5BA8;--border:#2C2C44;--seg-on:#2F2F4A;
+  --vert:#58C79B;--vert-bg:#173A2D;--vert-fg:#A6E6CB;
+  --jaune:#F0BE55;--jaune-bg:#3B3116;--jaune-fg:#F6D98E;
+  --rouge:#F08489;--rouge-txt:#F08489;--rouge-bg:#45222A;--rouge-fg:#F7BABD;
+  --sur-jour:#0F0F1C;--sur-jaune:#0F0F1C;
   --shadow:none;
-}}
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;min-height:100dvh}
+@font-face{font-family:'Plus Jakarta Sans';src:url(fonts/plus-jakarta-sans.woff2) format('woff2');font-weight:400 700;font-display:swap}
+body{font:500 15px/1.45 'Plus Jakarta Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;word-spacing:.05em;min-height:100dvh}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer}
 h1,h2,h3{margin:0;color:var(--brand);line-height:1.2}
-h1{font-size:1.35rem}
-h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+h1{font-size:1.55rem;font-weight:600;letter-spacing:-.02em}
+h2{font-size:.97rem;font-weight:600}
 [hidden]{display:none!important}
-.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 96px)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
-.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.count{background:var(--surface2);color:var(--muted);border-radius:99px;padding:1px 9px;font-size:.8rem;font-weight:700}
-.eyebrow{font-size:.78rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 96px)}
+.card{background:var(--surface);border-radius:var(--r);padding:15px 16px;margin:0 0 12px}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.count{color:var(--muted);font-size:.8rem;font-weight:500}
+.eyebrow{font-size:.85rem;color:var(--muted);font-weight:500}
 .muted{color:var(--muted)}
 .small{font-size:.85rem}
-.label{display:block;font-size:.85rem;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.label{display:block;font-size:.84rem;font-weight:500;color:var(--muted);margin:13px 0 6px}
 input[type=text],input[type=password],input[type=email],input[type=search],input[type=time],input[type=date],textarea,select{
-  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 12px;outline:none}
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:11px 12px;outline:none}
 input[type=time],input[type=date]{display:block;min-width:0;max-width:100%}
 /* iPhone : sans cela, les champs date et heure gardent leur largeur native et débordent de leur case */
 @supports (-webkit-touch-callout:none){
   input[type=time],input[type=date]{-webkit-appearance:none;appearance:none;min-height:46px}
   input::-webkit-date-and-time-value{text-align:left}
 }
-input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
 textarea{resize:vertical;min-height:84px}
-.btn{border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:11px 16px;font-weight:700}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.danger{background:transparent;border-color:var(--rouge);color:var(--rouge)}
+.btn{border:1px solid var(--border);background:var(--bg);border-radius:15px;padding:11px 16px;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{background:transparent;border-color:var(--rouge-txt);color:var(--rouge-txt)}
 .btn.block{display:block;width:100%;margin-top:12px}
 .btn:disabled{opacity:.5}
 .row{display:flex;gap:10px}
 .row>*{flex:1;min-width:0}
-.link{background:none;border:0;color:var(--accent);font-weight:700;padding:4px 0}
-.icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-size:1.5rem;line-height:1;display:grid;place-items:center;flex:none}
+.link{background:none;border:0;color:var(--accent);font-weight:600;padding:4px 0}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--bg);font-size:1.3rem;line-height:1;display:grid;place-items:center;flex:none}
 .icon-btn:disabled{opacity:.3}
 
 /* En-tête du jour */
-.dayhead{display:flex;align-items:center;gap:10px;margin:4px 0 16px}
-.dayhead-t{flex:1;text-align:center;min-width:0}
-.dayhead h1{font-size:1.2rem}
+.dayhead{display:flex;align-items:center;gap:8px;margin:2px 0 11px}
+.dayhead-t{flex:1;min-width:0}
+.dayhead h1{font-size:1.5rem}
+
+/* Frise de la semaine */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:14px}
+.w{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;border-radius:15px;padding:7px 0;font-size:.72rem;color:var(--muted)}
+.w b{font-size:.98rem;font-weight:600;color:var(--text)}
+.w i{width:6px;height:6px;border-radius:50%;background:transparent}
+.w.vert i{background:var(--vert)}.w.jaune i{background:var(--jaune)}.w.rouge i{background:var(--rouge)}
+.w.on{background:var(--accent);color:var(--on-accent)}.w.on b{color:inherit}
+.w:disabled{opacity:.45;cursor:default}
 
 /* Ville automatique */
 .withbtn{position:relative}
@@ -84,147 +111,184 @@ textarea{resize:vertical;min-height:84px}
 input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none}
 
 /* Export : choix de la semaine */
-.weeknav{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--surface2);border-radius:14px;padding:8px}
+.weeknav{display:flex;align-items:center;gap:10px;margin-top:12px;background:var(--bg);border-radius:15px;padding:8px}
 .weeknav .wk{flex:1;text-align:center;font-size:.92rem;line-height:1.35}
 .card:has(#xCustom[open]) .weeknav{opacity:.4}
-.custom summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:.88rem;margin-top:12px}
+.custom summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.88rem;margin-top:12px}
 .wd-hint{font-size:.8rem;color:var(--muted);margin-top:4px;text-transform:capitalize}
 
 /* Notes */
-.entries{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.entry{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-left:5px solid var(--fc,var(--accent));border-radius:12px;padding:10px 12px}
-.entry .meta{font-size:.8rem;color:var(--muted);font-weight:700}
-.entry p{margin:3px 0 0}
-.entry b,.preview b{color:var(--fc)}
+.entries{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.entry{display:flex;gap:11px;width:100%;text-align:left;background:none;border:0;padding:6px 0}
+.edot{flex:none;width:32px;height:32px;border-radius:50%;background:color-mix(in srgb,var(--fc,var(--accent)) 16%,transparent);display:grid;place-items:center}
+.edot::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--fc,var(--accent))}
+.etxt{min-width:0;display:block}
+.entry .meta{display:block;font-size:.78rem;color:var(--muted);font-weight:500}
+.entry .txt{display:block;font-size:.95rem;line-height:1.35}
+.entry b,.preview b{color:var(--fc);font-weight:700}
 .empty{color:var(--muted);margin:4px 0 0}
 .note-txt{white-space:pre-wrap;overflow-wrap:anywhere}
 
 /* Couleurs de journée */
-.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.colbtn{border:2px solid transparent;border-radius:12px;padding:10px 6px;font-size:.82rem;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
-.colbtn .dot{width:26px;height:26px;border-radius:50%}
-.colbtn.vert{background:var(--vert-bg);color:var(--vert-fg)}.colbtn.vert .dot{background:var(--vert)}
-.colbtn.jaune{background:var(--jaune-bg);color:var(--jaune-fg)}.colbtn.jaune .dot{background:var(--jaune)}
-.colbtn.rouge{background:var(--rouge-bg);color:var(--rouge-fg)}.colbtn.rouge .dot{background:var(--rouge)}
-.colbtn.on{border-color:currentColor}
-.colbtn.on .dot{box-shadow:0 0 0 3px var(--surface),0 0 0 5px currentColor}
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.colbtn{--dc:var(--vert);border:0;background:var(--bg);color:var(--muted);border-radius:14px;padding:10px 4px;font-size:.78rem;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.colbtn.jaune{--dc:var(--jaune)}.colbtn.rouge{--dc:var(--rouge)}
+.colbtn .dot{width:14px;height:14px;border-radius:50%;background:var(--dc)}
+.colbtn.on{box-shadow:inset 0 0 0 1.5px var(--dc);color:var(--text)}
 .saved{font-size:.8rem;color:var(--muted);height:1.2em;margin-top:6px;text-align:right}
 
 /* Pastilles émotions */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{border:1px solid color-mix(in srgb,var(--fc) 45%,transparent);background:color-mix(in srgb,var(--fc) 10%,var(--surface));color:var(--text);border-radius:99px;padding:7px 12px;font-size:.9rem}
-.chip.on{background:var(--fc);border-color:var(--fc);color:#fff;font-weight:700}
+.chip{border:0;background:color-mix(in srgb,var(--fc) 13%,transparent);color:color-mix(in srgb,var(--fc) 85%,var(--text));border-radius:99px;padding:6px 12px;font-size:.84rem;font-weight:500}
+.chip.on{background:var(--fc);color:#fff;font-weight:600}
+.chip.neutre{background:var(--bg);color:var(--muted)}
+.chip.neutre.on{background:var(--accent);color:var(--on-accent)}
 .chip.static{padding:4px 10px;font-size:.8rem}
 .famgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.fam{border:2px solid transparent;border-radius:12px;padding:9px 4px;font-weight:800;font-size:.82rem;background:color-mix(in srgb,var(--fc) 13%,var(--surface));color:var(--fc)}
+.fam{border:1.5px solid transparent;border-radius:13px;padding:9px 4px;font-weight:600;font-size:.82rem;background:color-mix(in srgb,var(--fc) 13%,transparent);color:color-mix(in srgb,var(--fc) 85%,var(--text))}
 .fam.on{border-color:var(--fc)}
-@media (prefers-color-scheme: dark){
-  .fam,.rep h3{color:color-mix(in srgb,var(--fc) 55%,#fff)}
-  .entry b,.preview b{color:color-mix(in srgb,var(--fc) 50%,#fff)}
-}
+[data-theme=dark] .fam,[data-theme=dark] .rep h3{color:color-mix(in srgb,var(--fc) 45%,#fff)}
+[data-theme=dark] .entry b,[data-theme=dark] .preview b,[data-theme=dark] .occ b{color:color-mix(in srgb,var(--fc) 45%,#fff)}
+[data-theme=dark] .chip:not(.on):not(.neutre){background:color-mix(in srgb,var(--fc) 28%,transparent);color:color-mix(in srgb,var(--fc) 38%,#fff)}
+[data-theme=dark] .chip.on:not(.neutre){background:color-mix(in srgb,var(--fc) 80%,#fff)}
 .besoin{font-size:.85rem;font-style:italic;color:var(--muted);margin:8px 0}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface2);border-radius:12px;padding:3px;margin-bottom:10px}
-.seg button{border:0;background:none;border-radius:9px;padding:8px 4px;font-size:.88rem;font-weight:600;color:var(--muted)}
-.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.picked{min-height:38px;padding:8px;border:1px dashed var(--border);border-radius:12px}
-.preview{background:color-mix(in srgb,var(--lav) 28%,var(--surface));border-radius:12px;padding:12px;margin-top:14px;font-size:.95rem}
-.preview .k{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--brand);display:block;margin-bottom:4px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border-radius:15px;padding:3px;margin-bottom:10px}
+.seg button{border:0;background:none;border-radius:12px;padding:7px 4px;font-size:.87rem;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--seg-on);color:var(--text)}
+.picked{min-height:38px;padding:8px;border:1px dashed var(--border);border-radius:13px}
+.preview{background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-radius:14px;padding:12px;margin-top:14px;font-size:.95rem}
+.preview .k{font-size:.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
 
 /* Calendrier */
-.calhead{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
-.calhead h1{flex:1;text-align:center;text-transform:capitalize}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-.cal .wd{text-align:center;font-size:.72rem;font-weight:800;color:var(--muted);padding-bottom:2px}
-.cday{aspect-ratio:1;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:0;font-weight:600;font-size:.9rem;position:relative;display:grid;place-items:center;overflow:hidden}
-.cday.vert{background:var(--vert);border-color:var(--vert);color:#fff}
-.cday.jaune{background:var(--jaune);border-color:var(--jaune);color:#3a2e00}
-.cday.rouge{background:var(--rouge);border-color:var(--rouge);color:#fff}
-.cday.today{outline:2px solid var(--brand);outline-offset:1px}
+.calhead{display:flex;align-items:center;gap:8px;margin:2px 0 11px}
+.calhead h1{flex:1;min-width:0}
+.calhead h1::first-letter{text-transform:uppercase}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .wd{text-align:center;font-size:.72rem;font-weight:500;color:var(--muted);padding-bottom:2px}
+.cday{aspect-ratio:1;border:0;background:none;border-radius:12px;padding:0;font-weight:500;font-size:.88rem;position:relative;display:grid;place-items:center;overflow:hidden}
+.cday.vert{background:color-mix(in srgb,var(--vert) 22%,transparent)}
+.cday.jaune{background:color-mix(in srgb,var(--jaune) 26%,transparent)}
+.cday.rouge{background:color-mix(in srgb,var(--rouge) 24%,transparent)}
+.cday.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:700}
+.cday.today.vert{background:var(--vert);color:var(--sur-jour);box-shadow:none}
+.cday.today.rouge{background:var(--rouge);color:var(--sur-jour);box-shadow:none}
+.cday.today.jaune{background:var(--jaune);color:var(--sur-jaune);box-shadow:none}
 .cday.future{opacity:.35}
-.cday .has{position:absolute;bottom:5px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--accent)}
-.cday.vert .has,.cday.rouge .has{background:#fff}.cday.jaune .has{background:#3a2e00}
+.cday .has{position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.55}
 /* Coin plié : note personnelle ce jour-là */
-.cday .nt{position:absolute;top:0;right:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--brand) transparent transparent}
-.cday.vert .nt,.cday.rouge .nt{border-right-color:#fff}.cday.jaune .nt{border-right-color:#3a2e00}
+.cday .nt{position:absolute;top:0;right:0;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--accent) transparent transparent}
+.cday.today .nt{border-right-color:currentColor}
 /* Filtre : la couleur du jour reste au centre, encadrée par la couleur du filtre (fin liseré pour séparer deux teintes proches) */
-.cday.hit{border:3px solid var(--fc);box-shadow:inset 0 0 0 2px var(--surface)}
-.cal.filtre .cday.today{outline:0;font-weight:800;text-decoration:underline;text-underline-offset:3px}   /* à ne pas confondre avec un cadre */
-.seg.two{grid-template-columns:1fr 1fr;margin:0 0 14px}
+.cal .cday.hit{box-shadow:inset 0 0 0 2.5px var(--fc)}
+.cal.filtre .cday.today{font-weight:800;text-decoration:underline;text-underline-offset:3px}   /* à ne pas confondre avec un cadre */
+.cal.filtre .cday.today:not(.hit){box-shadow:none}
+.seg.two{grid-template-columns:1fr 1fr;margin:0 0 12px}
 /* Vue liste */
-.lday{border-left:5px solid var(--dc,var(--border));padding-bottom:8px}
-.lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:0 0 8px;text-align:left;font-weight:800;color:var(--brand)}
-.colpill{flex:none;border-radius:99px;padding:3px 10px;font-size:.75rem;font-weight:700;background:var(--surface2);color:var(--muted)}
+.lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:0 0 8px;text-align:left;font-weight:600;color:var(--brand)}
+.colpill{flex:none;border-radius:99px;padding:3px 10px;font-size:.75rem;font-weight:600;background:var(--bg);color:var(--muted)}
 .colpill.vert{background:var(--vert-bg);color:var(--vert-fg)}.colpill.jaune{background:var(--jaune-bg);color:var(--jaune-fg)}.colpill.rouge{background:var(--rouge-bg);color:var(--rouge-fg)}
 .occ{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--border);padding:10px 0}
 .occ:first-of-type{border-top:0}
-.occ .meta{font-size:.8rem;color:var(--muted);font-weight:700}
+.occ .meta{font-size:.78rem;color:var(--muted);font-weight:500}
 .occ .txt{margin-top:2px;font-size:.92rem}
-.occ b{color:var(--fc)}
-.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:.8rem;color:var(--muted)}
+.occ b{color:var(--fc);font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:11px;font-size:.76rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:5px}
-.legend i{width:12px;height:12px;border-radius:4px;display:inline-block}
-.bar{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--surface2);margin:8px 0}
-.bar div{height:100%}
-.stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:.92rem}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.bar{display:flex;height:6px;gap:2px;margin:8px 0}
+.bar div{height:100%;border-radius:3px}
+.stat{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.92rem}
+.stat b{font-weight:600}
 .stat:last-child{border-bottom:0}
 
 /* Répertoire */
-.rep{border-left:5px solid var(--fc)}
-.rep h3{color:var(--fc);font-size:1.05rem}
+.rep h3{color:color-mix(in srgb,var(--fc) 85%,var(--text));font-size:1.02rem;font-weight:600}
 .rep .lvl{margin:8px 0 0;font-size:.92rem}
-.rep .lvl b{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;display:block}
-.key{background:color-mix(in srgb,var(--lav) 40%,var(--surface));border-color:transparent}
+.rep .lvl b{color:var(--muted);font-size:.78rem;font-weight:600;display:block}
+.key{background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
 
-/* Barre de navigation */
-nav.tabs{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;justify-content:center;padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
+/* Barre de navigation : l'onglet actif est marqué par un trait fin et un texte plus foncé */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);display:flex;justify-content:center;padding:7px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
 nav.tabs .in{display:flex;max-width:560px;width:100%}
-nav.tabs button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.7rem;font-weight:700;color:var(--muted);padding:6px 2px;border-radius:10px}
-nav.tabs button svg{width:24px;height:24px}
-nav.tabs button.on{color:var(--accent)}
+nav.tabs button{position:relative;flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:500;color:var(--muted);padding:4px 2px}
+nav.tabs button svg{width:23px;height:23px;stroke-width:1.4}
+nav.tabs button.on{color:var(--text);font-weight:700}
+nav.tabs button.on::before{content:"";position:absolute;top:-8px;left:28%;right:28%;height:2px;border-radius:2px;background:var(--text)}
+
+/* Menu Réglages */
+.sethead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 13px}
+.toggle{width:58px;height:32px;border-radius:99px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;padding:3px;color:var(--text)}
+[data-theme=dark] .toggle{justify-content:flex-end}
+.toggle b{width:24px;height:24px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
+.toggle svg,.ro svg{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.toggle svg{width:15px;height:15px}
+.whois{display:flex;align-items:center;gap:13px;margin-bottom:6px}
+.avatar{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:1.08rem;font-weight:600;flex:none;background:var(--accent);color:var(--on-accent)}
+.whois b{display:block;font-weight:600;font-size:1.05rem}
+.whois span{font-size:.82rem;color:var(--muted)}
+.gl{font-size:.85rem;font-weight:600;margin:15px 2px 6px;color:var(--brand)}
+.grp{background:var(--surface);border-radius:var(--r);overflow:hidden}
+.ro{display:flex;align-items:center;gap:13px;width:100%;min-height:46px;padding:0 15px;background:none;border:0;text-align:left;font-size:.94rem;font-weight:500;color:var(--text);text-decoration:none}
+.ro .ri{width:21px;height:21px}
+.ro .rn{flex:1 0 auto;white-space:nowrap}
+.ro em{flex:0 1 auto;min-width:0;font-style:normal;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ro .rc{width:15px;height:15px;color:var(--muted)}
+.ro.dan{color:var(--rouge-txt)}
+.subhead{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+.subhead h1{font-size:1.32rem;flex:1;min-width:0}
+.choix{display:flex;align-items:center;gap:10px;min-height:46px;width:100%;padding:0 15px;border:0;background:none;text-align:left;font-weight:500;color:var(--text)}
+.choix span{flex:1}
+.choix i{width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1.25px var(--muted)}
+.choix.on i{box-shadow:inset 0 0 0 5px var(--accent)}
 
 /* Dialogues */
-dialog{border:0;padding:0;background:var(--surface);color:var(--text);width:100%;max-width:560px;max-height:92dvh;border-radius:20px 20px 0 0;margin:auto auto 0;overflow:auto}
-dialog::backdrop{background:rgba(20,14,10,.45)}
-@media (min-width:600px){dialog{border-radius:20px;margin:auto}}
-.dlg-h{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:1}
+dialog{border:0;padding:0;background:var(--bg);color:var(--text);width:100%;max-width:560px;max-height:92dvh;border-radius:24px 24px 0 0;margin:auto auto 0;overflow:auto}
+dialog::backdrop{background:rgba(15,15,40,.4)}
+@media (min-width:600px){dialog{border-radius:24px;margin:auto}}
+.dlg-h{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:1}
 .dlg-b{padding:4px 16px 16px}
-.dlg-f{position:sticky;bottom:0;background:var(--surface);display:flex;gap:10px;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--border)}
+/* Politique de confidentialité : affichée dans l'app, car une app installée sur iPhone n'a pas de bouton Retour */
+dialog.pleine{width:100%;max-width:none;height:100dvh;max-height:none;margin:0;border-radius:0}
+dialog.pleine[open]{display:flex;flex-direction:column;overflow:hidden}
+.pleine .dlg-h{position:static;flex:none;padding-top:calc(env(safe-area-inset-top) + 14px)}
+.pleine iframe{flex:1;min-height:0;width:100%;border:0;background:var(--bg)}
+.dlg-f{position:sticky;bottom:0;background:var(--bg);display:flex;gap:10px;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--border)}
 .dlg-f .btn{flex:1}
-.err{color:var(--rouge);font-size:.88rem;min-height:1.3em;margin-top:8px}
+.err{color:var(--rouge-txt);font-size:.88rem;min-height:1.3em;margin-top:8px}
 
 /* Verrouillage */
-#lock{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+#lock{min-height:100dvh;display:grid;place-items:center;padding:24px 20px}
 .lockcard{width:100%;max-width:400px;text-align:center}
-.tagline{margin:6px 0 0;color:var(--accent);font-style:italic}
+.tagline{margin:6px 0 0;color:var(--muted)}
 .lockcard .logo{width:72px;height:72px;border-radius:20px;margin:0 auto 14px;display:block}
 .lockcard form{text-align:left;margin-top:18px}
 .lockcard ul{text-align:left;padding-left:18px;margin:14px 0;font-size:.9rem;color:var(--muted)}
-.warn{background:var(--jaune-bg);color:var(--jaune-fg);border-radius:12px;padding:10px 12px;font-size:.85rem;margin-top:12px;text-align:left}
-.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 86px);transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;font-weight:600;z-index:20;max-width:90vw;text-align:center}
+.warn{background:var(--jaune-bg);color:var(--jaune-fg);border-radius:14px;padding:10px 12px;font-size:.85rem;margin-top:12px;text-align:left}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 86px);transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:14px;font-size:.9rem;font-weight:600;z-index:20;max-width:90vw;text-align:center}
 .setrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0}
-.setrow>label{font-weight:600}
+.setrow>label{font-weight:500}
 .setrow select{width:auto}
 a{color:var(--accent)}
 
 /* Profils client / thérapeute */
 .roles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.role{display:flex;align-items:center;gap:8px;border:2px solid var(--border);border-radius:12px;padding:12px;font-weight:700;cursor:pointer}
-.role:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.role{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:14px;padding:12px;font-weight:600;cursor:pointer}
+.role:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--bg))}
 .role input{accent-color:var(--accent);width:18px;height:18px;margin:0}
 .fp{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.06em;color:var(--text)}
-.banner{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--lav) 35%,var(--surface));border-radius:var(--r);padding:12px 14px;margin:0 0 14px;font-size:.9rem}
+.banner{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--accent) 9%,var(--bg));border-radius:18px;padding:12px 14px;margin:0 0 12px;font-size:.88rem}
 .banner span{flex:1}
 .banner-actions{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
 .rgpd{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:.9rem}
 .safari-avis{text-align:left}
 .lockcard .safari-avis{margin:14px 0 0}
-.maj-banner{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:12px;right:12px;margin:0;z-index:30;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.maj-banner{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:12px;right:12px;margin:0;z-index:30;box-shadow:var(--shadow);background:var(--surface)}
 .clientbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
-.clientbar .who{font-weight:800;color:var(--brand);text-align:right}
-.clientrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.clientbar .who{font-weight:600;color:var(--brand);text-align:right}
+.clientrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;width:100%;text-align:left;background:var(--bg);border:0;border-radius:15px;padding:11px 13px;margin-bottom:7px}
 .clientrow .small{grid-column:1 / -1}
 .strip{display:flex;gap:3px}
-.strip i{width:12px;height:12px;border-radius:3px;background:var(--surface2)}
+.strip i{width:11px;height:11px;border-radius:50%;background:var(--surface2)}
 .strip i.vert{background:var(--vert)}.strip i.jaune{background:var(--jaune)}.strip i.rouge{background:var(--rouge)}
 .synth-ro{white-space:pre-wrap;margin:0}
 .colors.one{grid-template-columns:1fr}
@@ -234,33 +298,35 @@ a{color:var(--accent)}
 .envois li:last-child{border-bottom:0}
 
 /* Administration */
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 6px}
-.tile{background:var(--surface2);border-radius:12px;padding:10px 6px;text-align:center}
-.tile b{display:block;font-size:1.35rem;color:var(--brand);line-height:1.1}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0 6px}
+.tile{background:var(--bg);border-radius:14px;padding:10px 6px;text-align:center}
+.tile b{display:block;font-size:1.3rem;font-weight:600;color:var(--brand);line-height:1.1}
 .tile span{font-size:.72rem;color:var(--muted)}
+.heures{display:flex;align-items:baseline;gap:9px;margin-top:6px}
+.heures b{font-size:1.75rem;font-weight:600;letter-spacing:-.02em;color:var(--brand)}
 table.stats{width:100%;border-collapse:collapse;margin-top:10px;font-size:.9rem}
 table.stats th,table.stats td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right}
-table.stats th[scope=row],table.stats thead th:first-child{text-align:left;font-weight:600}
-table.stats thead th{font-size:.75rem;color:var(--muted);font-weight:700}
-table.stats td{font-variant-numeric:tabular-nums;font-weight:700}
+table.stats th[scope=row],table.stats thead th:first-child{text-align:left;font-weight:500}
+table.stats thead th{font-size:.75rem;color:var(--muted);font-weight:500}
+table.stats td{font-variant-numeric:tabular-nums;font-weight:600}
 table.stats tr:last-child>*{border-bottom:0}
 .lim-g{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}
-.lim-g h3{font-size:.92rem;margin:0}
+.lim-g h3{font-size:.92rem;font-weight:600;margin:0}
 .lim{margin-top:10px}
 .lim-h{display:flex;justify-content:space-between;gap:12px;font-size:.9rem}
-.lim-h b{white-space:nowrap}
-.meter{--m:var(--accent);height:8px;border-radius:99px;margin:5px 0 3px;overflow:hidden;background:color-mix(in srgb,var(--m) 20%,var(--surface))}
+.lim-h b{white-space:nowrap;font-weight:600}
+.meter{--m:var(--accent);height:6px;border-radius:99px;margin:5px 0 3px;overflow:hidden;background:color-mix(in srgb,var(--m) 18%,transparent)}
 .meter i{display:block;height:100%;min-width:4px;border-radius:99px;background:var(--m)}
 .meter.m-warn{--m:var(--jaune)}
 .meter.m-crit{--m:var(--rouge)}
 .lim-alerte{color:var(--text)}
-.urow{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;background:var(--bg)}
-.uhead{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:10px 12px}
+.urow{border-radius:15px;margin-bottom:7px;background:var(--bg)}
+.uhead{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:11px 13px}
 .uhead .ufoot{grid-column:1 / -1}
-.badge{font:700 .75rem/1 ui-monospace,Menlo,Consolas,monospace;padding:5px 7px;border-radius:7px;background:color-mix(in srgb,var(--accent) 15%,var(--surface));color:var(--brand)}
-.badge.th{background:color-mix(in srgb,var(--lav) 45%,var(--surface))}
-b.off{color:var(--rouge)}
-.udetail{padding:0 12px 12px;border-top:1px solid var(--border)}
+.badge{font:700 .75rem/1 ui-monospace,Menlo,Consolas,monospace;padding:5px 7px;border-radius:8px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--brand)}
+.badge.th{background:color-mix(in srgb,var(--lav) 40%,transparent)}
+b.off{color:var(--rouge-txt)}
+.udetail{padding:0 13px 13px;border-top:1px solid var(--border)}
 .udetail dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:.88rem}
 .udetail dt{color:var(--muted)}
 .udetail dd{margin:0;word-break:break-word}
@@ -278,6 +344,10 @@ b.off{color:var(--rouge)}
 <dialog id="entryDlg" aria-labelledby="entryTitle"></dialog>
 <dialog id="codeDlg"></dialog>
 <dialog id="clientDlg" aria-label="Fiche client"></dialog>
+<dialog id="polDlg" class="pleine" aria-label="Politique de confidentialité">
+  <div class="dlg-h"><h2>Politique de confidentialité</h2><button type="button" class="btn" data-act="closeDlg">Fermer</button></div>
+  <iframe id="polCadre" title="Politique de confidentialité"></iframe>
+</dialog>
 <input type="file" id="restoreFile" accept=".json,application/json" hidden>
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 
@@ -350,8 +420,9 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 20;   // même numéro que CACHE dans sw.js
-const RGPD_VERSION = 1;   // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
+const APP_VERSION = 21;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 13;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const RGPD_VERSION = 1;  // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
   therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données et à recevoir les envois de vos clients : il leur est transmis avec votre lien d’invitation. Un code vous sera envoyé pour le confirmer.',
@@ -480,7 +551,7 @@ function supabaseApi() {
       const c = j?.error_code || j?.code || '';
       const banni = /banned/i.test(j?.msg || j?.message || '');
       throw apiErr(banni ? 'desactive' : {invalid_credentials:'identifiants', user_banned:'desactive', user_already_exists:'pris', email_exists:'pris', weak_password:'faible',
-        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi', adresse:'adresse', limite:'limite',
+        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi', adresse:'adresse', limite:'limite', admin:'admin', action:'action', mot_de_passe:'mot_de_passe',
         refresh_token_not_found:'session', refresh_token_already_used:'session', session_not_found:'session', session_expired:'session', user_not_found:'session'}[c] || 'serveur', j?.msg || j?.message);
     }
     return j;
@@ -587,6 +658,17 @@ function demoApi() {
         const c = x.recup[session.id];
         if (!c?.effacer || c.effacer !== b.code) throw apiErr('code');
         delete c.effacer;
+      } else if (b.action === 'supprimer_demande') {
+        const c = x.recup[session.id];
+        if (moi(x)?.est_admin) throw apiErr('admin');
+        if (!c?.email || c.email !== e) throw apiErr('adresse');
+        c.supprimer = '123456';
+      } else if (b.action === 'supprimer_confirme' || b.action === 'supprimer_mdp') {
+        const c = x.recup[session.id];
+        if (moi(x)?.est_admin) throw apiErr('admin');
+        if (b.action === 'supprimer_mdp' ? (c?.email || x.comptes[session.id].mdp !== await hash(b.mot_de_passe)) : (!c?.supprimer || c.supprimer !== b.code)) throw apiErr(b.action === 'supprimer_mdp' ? 'mot_de_passe' : 'code');
+        delete x.recup[session.id]; delete x.comptes[session.id];
+        for (const k of Object.keys(x.usage)) if (x.usage[k].id === session.id) delete x.usage[k];
       } else {
         if (!l?.code || l.code !== b.code) throw apiErr('code');
         x.comptes[id].mdp = await hash(b.mot_de_passe); delete l.code; put(x);
@@ -731,7 +813,7 @@ function showLock(mode = 'login') {
         <div class="small muted" id="sMailAide" style="margin-top:4px">${MAIL_AIDE.client}</div>
         <label class="label" for="sMail2">Confirmez le mail</label>
         <input type="email" id="sMail2" autocomplete="off" autocapitalize="none">
-        <label class="rgpd"><input type="checkbox" id="sRgpd"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
+        <label class="rgpd"><input type="checkbox" id="sRgpd"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
         <div class="err" id="lockErr"></div>
         <button class="btn primary block" id="signupBtn">Créer mon compte</button>
       </form>
@@ -917,7 +999,7 @@ function exigerRgpd() {
       <div class="dlg-h"><h2>Politique de confidentialité</h2></div>
       <div class="dlg-b">
         <p class="small muted">Pour continuer à utiliser Motus, merci de lire et d’accepter notre politique de confidentialité. Sans cet accord, vous serez déconnecté(e) ; vos notes restent sur ce téléphone.</p>
-        <label class="rgpd"><input type="checkbox" id="rgOui"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
+        <label class="rgpd"><input type="checkbox" id="rgOui"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
         <div class="err" id="rgErr"></div>
       </div>
       <div class="dlg-f"><button type="button" class="btn" id="rgNon">Se déconnecter</button><button class="btn primary">Accepter</button></div>
@@ -1072,13 +1154,16 @@ function openRecupCode(oblig) {
 /* Effacer ses données : code reçu par e-mail si une adresse est confirmée, sinon mot de passe.
    L'adresse n'est connue du serveur que par son empreinte : l'utilisateur la retape pour recevoir le code. */
 const EFFACER_ERR = {reseau:'Pas de connexion internet.', patience:'Attendez une minute avant un nouvel envoi.', envoi:'L’e-mail n’a pas pu être envoyé : réessayez dans un instant.',
-  adresse:'Cette adresse n’est pas votre adresse de récupération confirmée.', limite:'Trop de demandes aujourd’hui : réessayez demain.', code:'Code incorrect ou expiré. Vous pouvez en demander un nouveau.'};
-function effacerParCode() {
+  adresse:'Cette adresse n’est pas votre adresse de récupération confirmée.', limite:'Trop de demandes aujourd’hui : réessayez demain.', code:'Code incorrect ou expiré. Vous pouvez en demander un nouveau.',
+  admin:'Le compte administrateur ne peut pas être supprimé depuis l’app.', action:'Cette fonction n’est pas encore activée sur le serveur.'};
+const CODE_EFFACER = {titre:'Confirmer l’effacement', demande:'effacer_demande', confirme:'effacer_confirme', avertissement:'Saisir ce code effacera définitivement vos notes de ce téléphone.', bouton:'Effacer définitivement'};
+const CODE_SUPPRIMER = {titre:'Confirmer la suppression', demande:'supprimer_demande', confirme:'supprimer_confirme', avertissement:'Saisir ce code supprimera définitivement votre compte et les données de ce téléphone.', bouton:'Supprimer définitivement'};
+function effacerParCode(cfg = CODE_EFFACER) {
   return new Promise(resolve => {
     const dlg = $('#codeDlg');
     let mail = '', envoi = 0, enCours = false, minuteur;
     dlg.innerHTML = `<form method="dialog" id="efForm">
-      <div class="dlg-h"><h2>Confirmer l’effacement</h2></div>
+      <div class="dlg-h"><h2>${cfg.titre}</h2></div>
       <div class="dlg-b">
         <p class="small muted" id="efInfo">Pour vérifier que c’est bien vous, entrez votre adresse de récupération : un code à 6 chiffres vous sera envoyé.</p>
         <div id="efMailBloc"><label class="label" for="efMail">Adresse de récupération</label><input type="email" id="efMail" autocomplete="email" autocapitalize="none" placeholder="${esc(data.recupIndice || '')}">
@@ -1098,7 +1183,7 @@ function effacerParCode() {
       const b = $('#efResend'), s = Math.max(0, 60 - Math.floor((Date.now() - envoi) / 1000));
       if (b) { b.disabled = s > 0; b.textContent = s ? `Renvoyer le code dans ${s} s` : 'Renvoyer le code'; }
     };
-    const demander = () => API.recup({action:'effacer_demande', email:mail}).then(() => {
+    const demander = () => API.recup({action:cfg.demande, email:mail}).then(() => {
       envoi = Date.now(); maj();
       if (!data.recupIndice) { data.recupIndice = masque(mail); save(); syncIndice(); }   // compte confirmé avant l'existence de l'aide-mémoire
     });
@@ -1119,14 +1204,14 @@ function effacerParCode() {
           mail = m;
           try { await demander(); } catch (x) { mail = ''; throw x; }
           $('#efMailBloc').hidden = true; $('#efCodeBloc').hidden = false;
-          $('#efInfo').innerHTML = `Un code à 6 chiffres a été envoyé à <b>${esc(mail)}</b>. Il est valable 15 minutes. <b>Pensez à regarder dans vos courriers indésirables.</b><br>Saisir ce code effacera définitivement vos notes de ce téléphone.`;
-          $('#efOk').textContent = 'Effacer définitivement'; $('#efOk').className = 'btn danger';
+          $('#efInfo').innerHTML = `Un code à 6 chiffres a été envoyé à <b>${esc(mail)}</b>. Il est valable 15 minutes. <b>Pensez à regarder dans vos courriers indésirables.</b><br>${cfg.avertissement}`;
+          $('#efOk').textContent = cfg.bouton; $('#efOk').className = 'btn danger';
           minuteur = setInterval(maj, 1000);
           return;
         }
         const code = $('#efCode').value.trim();
         if (!/^\d{6}$/.test(code)) return err('Entrez les 6 chiffres du code.');
-        await API.recup({action:'effacer_confirme', code, email:mail});
+        await API.recup({action:cfg.confirme, code, email:mail});
         fin(true);
       } catch (x) { err(EFFACER_ERR[x.code] || 'Action impossible pour le moment.'); }
       finally { enCours = false; }
@@ -1148,6 +1233,42 @@ async function confirmerEffacement() {
   if (pw == null) return false;
   try { await saveNow(); await openVault(JSON.parse(localStorage.getItem(VKEY)), pw); return true; }
   catch { toast('Mot de passe incorrect : rien n’a été effacé.'); return false; }
+}
+/* Supprimer son compte : le serveur supprime d'abord le compte et ses données ; l'appareil n'est vidé qu'ensuite.
+   Si le serveur refuse ou ne répond pas, rien n'est effacé. */
+async function supprimerCompte() {
+  if (!session) return toast('Connexion internet nécessaire pour supprimer votre compte.');
+  if (data.account?.est_admin) return toast(EFFACER_ERR.admin);
+  const th = data.role === 'therapeute';
+  if (!confirm(`Supprimer définitivement votre compte Motus ?\n\nVotre compte, vos données sur le serveur et ${th ? 'vos fiches clients, les données reçues et votre clé de déchiffrement' : 'toutes vos notes'} sur ce téléphone seront effacés. Cette action est irréversible.`)) return;
+  let ok = false;
+  try {
+    if ((await API.rpc('ma_recuperation_etat'))?.confirmee) ok = await effacerParCode(CODE_SUPPRIMER);
+    else {
+      const pw = await askCode('Confirmer la suppression', {label:'Mot de passe', hint:'Votre mail de récupération n’est pas confirmé : entrez votre mot de passe pour supprimer définitivement votre compte.'});
+      if (pw == null) return;
+      await API.recup({action:'supprimer_mdp', mot_de_passe:pw});
+      ok = true;
+    }
+  } catch (x) { return toast(x.code === 'mot_de_passe' ? 'Mot de passe incorrect : rien n’a été supprimé.' : EFFACER_ERR[x.code] || 'Suppression impossible pour le moment : rien n’a été supprimé.'); }
+  if (!ok) return;
+  await oublierCompte();
+}
+/* Retire de cet appareil tout ce qui concerne le compte. Le choix d'apparence, qui ne concerne que l'appareil, reste. */
+async function oublierCompte() {
+  const id = data.account.identifiant;
+  clearTimeout(saveTimer); clearTimeout(profTimer);
+  key = null;   // plus aucun enregistrement ne peut recréer le fichier
+  await savePending.catch(() => {});
+  await forgetKey();
+  [vaultKey(id), 'journal-emotions.vault.' + id, secoursKey(id), indiceKey(id)].forEach(k => localStorage.removeItem(k));
+  if (localStorage.getItem(LAST_ID) === id) localStorage.removeItem(LAST_ID);
+  session = null; profil = null; salt = null; data = null; src = null; VKEY = null; mailPasse = false; adm = admInit();
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  $('#view').innerHTML = '';
+  showLock();
+  $('#lockErr').textContent = 'Votre compte et vos données ont été supprimés de ce téléphone et du serveur.';
+  $('#lockErr').style.color = 'var(--text)';
 }
 let recupId = '';
 async function onForgot(e) {
@@ -1302,7 +1423,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => { if (key) saveNow(); });
 
 /* ───────────── Application ───────────── */
-let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid';
+let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null;
 let src = null;               // thérapeute : données d'un client consultées en lecture seule
 let pendingInv = null;        // invitation reçue via un lien (#inv=…), proposée après déverrouillage
 const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
@@ -1311,7 +1432,7 @@ function showApp() {
   $('#lock').hidden = true; $('#lock').innerHTML = '';
   $('#app').hidden = false;
   view = data.role === 'therapeute' ? 'clients' : 'day'; src = null;
-  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calMode = 'grid';
+  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calMode = 'grid'; setPage = null;
   const t = new Date(); calY = t.getFullYear(); calM = t.getMonth();
   renderNav(); render();
   if (data.role === 'therapeute' && !data.keys) ensureKeys().then(render);
@@ -1319,18 +1440,30 @@ function showApp() {
 }
 
 const ICONS = {
-  day: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/>',
-  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  day: '<path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z"/><path d="M9 9h6M9 13h6"/>',
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   clients: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
-  rep: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
-  set: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  rep: '<path d="M12 6.5C10 5 7.5 4.5 3.5 4.5v14c4 0 6.5.5 8.5 2 2-1.5 4.5-2 8.5-2v-14c-4 0-6.5.5-8.5 2Z"/><path d="M12 6.5v14"/>',
+  set: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
   admin: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
 };
+const ICO = {
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>', mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7.5 8.5 6 8.5-6"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>', out:'<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="m15 8 4 4-4 4"/><path d="M19 12H9"/>',
+  heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/>', send:'<path d="M21 3 10 14"/><path d="m21 3-6.5 18-4.5-7-7-4.5L21 3Z"/>',
+  col:'<rect x="2.5" y="7" width="19" height="10" rx="3"/><circle cx="7.2" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="16.8" cy="12" r="1.6"/>', pin:'<path d="M12 21s7-6.1 7-11.5a7 7 0 1 0-14 0C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  save:'<path d="M12 3v12"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>', trash:'<path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="m6.5 7 1 13h9l1-13"/>',
+  usersup:'<circle cx="10" cy="8" r="4"/><path d="M3 21c1.3-4 3.8-6 7-6s4.2.7 5.5 2"/><path d="m17 15 4.5 4.500M21.5 15 17 19.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/>',
+  moon:'<path d="M20 14.500A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.500Z"/>', shield:'<path d="M12 3l7.5 3v5.500c0 4.7-3.2 8-7.5 9.5-4.3-1.5-7.5-4.8-7.5-9.500V6L12 3Z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>', phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.500h2"/>',
+  link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.400l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.400l1-1"/>', ch:'<path d="m9 5 7 7-7 7"/>',
+};
+const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
 const TABN = {day:'Journée', cal:'Calendrier', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Réglages'};
 function renderNav() {
   const tabs = data.role === 'therapeute' ? ['clients', 'rep', 'set'] : ['day', 'cal', 'rep', 'set'];
   if (data.account?.est_admin && session) tabs.splice(tabs.length - 1, 0, 'admin');
-  $('#tabs').innerHTML = tabs.map(v => `<button data-act="tab" data-v="${v}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[v]}</svg>${TABN[v]}</button>`).join('');
+  $('#tabs').innerHTML = tabs.map(v => `<button data-act="tab" data-v="${v}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${ICONS[v]}</svg>${TABN[v]}</button>`).join('');
 }
 
 function markTabs() {
@@ -1349,45 +1482,44 @@ function famSummary(entries) {
   entries.forEach(e => new Set(e.emos.map(x => x.f)).forEach(f => c[f] = (c[f]||0) + 1));
   return Object.entries(c).sort((a,b) => b[1]-a[1]);
 }
+/* Frise de la semaine du jour affiché, avec la couleur de chaque journée */
+function weekStrip() {
+  const lundi = mondayOf(cur), t = today();
+  return `<div class="week" role="group" aria-label="Semaine">${['L','M','M','J','V','S','D'].map((l, i) => {
+    const k = addDays(lundi, i), c = D().days[k]?.color || '';
+    return `<button class="w ${c} ${k === cur ? 'on' : ''}" data-act="openDay" data-k="${k}" aria-label="${fmtDay(k)}"${k === cur ? ' aria-current="date"' : ''} ${k > t ? 'disabled' : ''}>${l}<b>${parse(k).getDate()}</b><i></i></button>`;
+  }).join('')}</div>`;
+}
 function vDay() {
-  const d = getDay(cur), isT = cur === today();
+  const d = getDay(cur), isT = cur === today(), dj = parse(cur);
   const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
   const fs = famSummary(ents), ro = !!src;
   return `
   ${clientBar()}${ro ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
-    <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
     <div class="dayhead-t">
-      <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : '&nbsp;'}</div>
-      <h1>${JOURS[parse(cur).getDay()]} ${fmtLong(cur)}</h1>
+      <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : dj.getFullYear()}</div>
+      <h1>${JOURS[dj.getDay()]} ${dj.getDate()} ${MOIS[dj.getMonth()]}</h1>
       ${isT ? '' : '<button class="link small" data-act="goToday">Revenir à aujourd’hui</button>'}
     </div>
+    <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
     <button class="icon-btn" data-act="nextDay" aria-label="Jour suivant" ${isT ? 'disabled' : ''}>›</button>
   </div>
+  ${weekStrip()}
 
   <section class="card">
     <div class="card-h"><h2>${ro ? 'Émotions' : 'Mes émotions'}</h2><span class="count">${ents.length}</span></div>
     ${ents.length ? `<ul class="entries">${ents.map(e => `
       <li><${ro ? 'div' : 'button'} class="entry" style="--fc:${FAMK[e.emos[0].f].c}"${ro ? '' : ` data-act="editEntry" data-id="${e.id}"`}>
-        <div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div>
-        <p>${sentenceHtml(e)}</p>
+        <span class="edot"></span><span class="etxt">
+        <span class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</span>
+        <span class="txt">${sentenceHtml(e)}</span></span>
       </${ro ? 'div' : 'button'}></li>`).join('')}</ul>`
     : ro ? '<p class="empty">Aucune émotion notée ce jour-là.</p>'
     : `<p class="empty">Rien de noté ${isT ? 'pour l’instant' : 'ce jour-là'}. Prenez un instant : où êtes-vous, que ressentez-vous ?</p>`}
     ${ro ? '' : '<button class="btn primary block" data-act="newEntry">+ Noter une émotion</button>'}
   </section>
-
-  ${ro ? '' : `<section class="card">
-    <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
-    ${ns.length ? `<ul class="entries">${ns.map(n => `
-      <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
-        <div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</div>
-        <p class="note-txt">${esc(n.text)}</p>
-      </button></li>`).join('')}</ul>` : ''}
-    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
-    <button class="btn block" data-act="newNote">+ Ajouter une note</button>
-  </section>`}
 
   <section class="card">
     <h2>Synthèse de la journée</h2>
@@ -1405,7 +1537,19 @@ function vDay() {
     <label class="label" for="synth">En quelques mots</label>
     <textarea id="synth" rows="5" placeholder="Ce qui a marqué ma journée, ce que j’ai ressenti, ce que j’ai mis en place…">${esc(d.synth)}</textarea>
     <div class="saved" id="saved" aria-live="polite"></div>`}
-  </section>`;
+  </section>
+
+  ${ro ? '' : `<section class="card">
+    <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
+    ${ns.length ? `<ul class="entries">${ns.map(n => `
+      <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
+        <span class="edot"></span><span class="etxt">
+        <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
+        <span class="txt note-txt">${esc(n.text)}</span></span>
+      </button></li>`).join('')}</ul>` : ''}
+    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
+    <button class="btn block" data-act="newNote">+ Ajouter une note</button>
+  </section>`}`;
 }
 
 /* — Vue Calendrier — */
@@ -1418,7 +1562,7 @@ function vCal() {
   const cnt = {vert:0, jaune:0, rouge:0}, words = {}, fams = {};
   let nEntries = 0, pastDays = 0;
   const fam = calF && FAMK[calF], notesOnly = calF === 'notes', synthOnly = calF === 'synth', filtre = fam || notesOnly || synthOnly, occ = [], occN = [], occS = [], fWords = {};
-  const cadre = fam ? fam.c : 'var(--brand)';
+  const cadre = fam ? fam.c : 'var(--accent)';
   let fDays = 0, nNotes = 0;
   for (let i = 1; i <= nDays; i++) {
     const k = ymd(new Date(calY, calM, i)), d = D().days[k], fut = k > t, ns = dayNotes(d);
@@ -1448,9 +1592,9 @@ function vCal() {
   <section class="card">
     <h2>Afficher</h2>
     <div class="chips" style="margin-top:10px">
-      <button class="chip ${!filtre ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
-      ${src ? '' : `<button class="chip ${notesOnly ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>`}
-      <button class="chip ${synthOnly ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="synth" aria-pressed="${synthOnly}">Synthèses</button>
+      <button class="chip neutre ${!filtre ? 'on' : ''}" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
+      ${src ? '' : `<button class="chip neutre ${notesOnly ? 'on' : ''}" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>`}
+      <button class="chip neutre ${synthOnly ? 'on' : ''}" data-act="calFilter" data-f="synth" aria-pressed="${synthOnly}">Synthèses</button>
       ${FAM.map(f => `<button class="chip ${calF === f.k ? 'on' : ''}" style="--fc:${f.c}" data-act="calFilter" data-f="${f.k}" aria-pressed="${calF === f.k}">${f.n}</button>`).join('')}
     </div>
     ${fam ? `<p class="label">Émotion précise</p><div class="chips">
@@ -1460,8 +1604,8 @@ function vCal() {
   </section>`;
   const legend = COL.map(c => `<span><i style="background:var(--${c})"></i>${esc(D().labels[c])}</span>`).join('')
     + (filtre ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : notesOnly ? 'Note personnelle' : 'Synthèse')}</span>`
-      : '<span><i style="background:var(--accent);width:6px;height:6px;border-radius:50%"></i>émotions notées</span>'
-        + (src ? '' : '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--brand) transparent transparent"></i>note personnelle</span>'));
+      : '<span><i style="background:currentColor;width:4px;height:4px"></i>émotions notées</span>'
+        + (src ? '' : '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--accent) transparent transparent"></i>note personnelle</span>'));
   const occCard = fam ? `
   <section class="card">
     <h2>${esc(calW || fam.n)} · ${MOIS[calM]}</h2>
@@ -1500,7 +1644,7 @@ function vCal() {
       ].sort((a, b) => a.time.localeCompare(b.time));
       const synth = (!filtre || synthOnly) && d.synth?.trim();
       if (!lignes.length && !synth && (filtre || !d.color)) continue;
-      out.push(`<section class="card lday"${d.color ? ` style="--dc:var(--${d.color})"` : ''}>
+      out.push(`<section class="card lday">
         <button class="lhead" data-act="openDay" data-k="${k}"><span>${dayName(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
         ${lignes.map(l => `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
         ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${esc(d.synth)}</div></button>` : ''}
@@ -1515,8 +1659,8 @@ function vCal() {
   return `
   ${clientBar()}${srcImportCard()}
   <div class="calhead">
-    <button class="icon-btn" data-act="prevMonth" aria-label="Mois précédent">‹</button>
     <h1>${MOIS[calM]} ${calY}</h1>
+    <button class="icon-btn" data-act="prevMonth" aria-label="Mois précédent">‹</button>
     <button class="icon-btn" data-act="nextMonth" aria-label="Mois suivant" ${atCurrent ? 'disabled' : ''}>›</button>
   </div>
   <div class="seg two">
@@ -1563,19 +1707,105 @@ function vRep() {
   <p class="small muted" style="text-align:center">Source : Liberté pour Aimer — libertepouraimer.com</p>`;
 }
 
-/* — Vue Réglages — */
-function vSet() { return data.role === 'therapeute' ? vSetThera() : vSetClient(); }
+/* — Vue Réglages : un menu, puis une page par sujet — */
+const LOCK_N = {0:'Immédiate', 1:'1 min', 5:'5 min', 15:'15 min', '-1':'Jamais'};
+const THEME_N = {auto:'Automatique', clair:'Clair', sombre:'Sombre'};
+const appInstallee = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const ligneMenu = (icone, nom, {val, page, act, cl = ''} = {}) => `<button class="ro ${cl}" data-act="${act || 'setPage'}"${page ? ` data-p="${page}"` : ''}>${ico(icone)}<span class="rn">${nom}</span>${val ? `<em>${esc(val)}</em>` : ''}${ico('ch', 'rc')}</button>`;
+const groupeMenu = (titre, lignes) => `<div class="gl">${titre}</div><div class="grp">${lignes.join('')}</div>`;
 
-function vSetClient() {
-  const p = data.profile, t = today(), th = data.therapist;
+function vSet() {
+  const page = setPage && PAGES_REGLAGES[setPage];
+  if (!page) return vSetMenu();
+  return `<div class="subhead"><button class="icon-btn" data-act="setBack" aria-label="Retour aux réglages">‹</button><h1>${page[0]}</h1></div>${page[1]()}`;
+}
+
+function vSetMenu() {
+  const a = data.account || {}, p = data.profile, th = data.role === 'therapeute', t = data.therapist;
+  const nom = (th ? `${p.prenom} ${p.nom}` : `${p.prenom} ${initiale(p.nom)}`).trim() || a.identifiant || '';
+  const mail = a.recup === 'attente' ? 'À confirmer' : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter';
   return `
-  <div style="margin:4px 0 16px"><h1>Réglages</h1></div>
+  <div class="sethead">
+    <div>${th ? '<div class="eyebrow">Espace thérapeute</div>' : ''}<h1>Réglages</h1></div>
+    <button class="toggle" data-act="toggleTheme" aria-label="Passer en mode ${document.documentElement.dataset.theme === 'dark' ? 'clair' : 'sombre'}"><b>${ico(document.documentElement.dataset.theme === 'dark' ? 'moon' : 'sun', '')}</b></button>
+  </div>
+  <div class="whois"><div class="avatar" aria-hidden="true">${esc([...(p.prenom || a.identifiant || '?').trim()][0].toUpperCase())}</div><div><b>${esc(nom)}</b><span>${ROLE_N[data.role]}${a.numero ? ' · ' + esc(a.numero) : ''}</span></div></div>
+  ${groupeMenu('Mon compte', [
+    ligneMenu('user', 'Informations personnelles', {page:'infos'}),
+    ligneMenu('mail', MAIL_NOM[data.role], {val:mail, page:'mail'}),
+    ligneMenu('lock', 'Mot de passe et verrouillage', {val:LOCK_N[data.settings.autolock], page:'secu'}),
+    ligneMenu('out', 'Se déconnecter', {act:'lockNow'}),
+  ])}
+  ${th ? groupeMenu('Mon cabinet', [
+    ligneMenu('link', 'Mon lien d’invitation', {page:'invite'}),
+    ligneMenu('user', 'Mon profil professionnel', {page:'pro'}),
+  ]) : groupeMenu('Mon suivi', [
+    ligneMenu('heart', 'Mon thérapeute', {val:t ? `${initiale(t.prenom)} ${t.nom}`.trim() : 'À ajouter', page:'thera'}),
+    ligneMenu('send', 'Partager ma semaine', {page:'partage'}),
+    ligneMenu('col', 'Code couleur', {page:'couleurs'}),
+    ligneMenu('pin', 'Localisation', {val:data.settings.geoloc ? 'Activée' : 'Désactivée', page:'geo'}),
+  ])}
+  ${groupeMenu('Mes données', [
+    ligneMenu('save', 'Sauvegarde', {val:data.backupAt ? fmtFR(ymd(new Date(data.backupAt))) : 'Aucune', page:'sauvegarde'}),
+    ligneMenu('trash', 'Effacer mes données', {page:'effacer', cl:'dan'}),
+    ligneMenu('usersup', 'Supprimer mon compte', {page:'supprimer', cl:'dan'}),
+  ])}
+  ${groupeMenu('Application', [
+    ligneMenu('sun', 'Apparence', {val:THEME_N[themeChoisi()], page:'apparence'}),
+    ...(appInstallee() ? [] : [ligneMenu('phone', 'Installer sur l’écran d’accueil', {page:'installer'})]),
+    `<a class="ro" href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">${ico('shield')}<span class="rn">Confidentialité</span>${ico('ch', 'rc')}</a>`,
+    ligneMenu('info', 'À propos', {val:`Version ${APP_VERSION}`, page:'apropos'}),
+  ])}`;
+}
 
-  ${securityCard()}
+function pageInfos() {
+  const a = data.account || {}, p = data.profile, th = data.role === 'therapeute';
+  return `<section class="card">
+    ${th ? `<div class="stat"><span class="muted">Prénom</span><b>${esc(p.prenom || '—')}</b></div>
+    <div class="stat"><span class="muted">Nom</span><b>${esc(p.nom || '—')}</b></div>` : ''}
+    <div class="stat"><span class="muted">Identifiant</span><b>${esc(a.identifiant || '—')}</b></div>
+    <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
+    <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
+    ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
+  </section>
+  ${th ? '<p class="small muted" style="margin:0 2px">Votre nom et vos coordonnées se changent dans « Mon profil professionnel ».</p>' : `<section class="card">
+    <p class="small muted" style="margin:0">Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.</p>
+    <div class="row">
+      <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
+      <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
+    </div>
+    <label class="label" for="pStart">Date de début du suivi</label>
+    <input type="date" id="pStart" data-prof="start" value="${esc(p.start)}">
+  </section>`}`;
+}
 
-  <section class="card">
-    <h2>Partager ma semaine</h2>
-    <p class="small muted" style="margin:6px 0 0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (plus bas) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
+function pageMail() {
+  const a = data.account || {};
+  return `<section class="card">
+    <div class="stat"><span class="muted">${MAIL_NOM[data.role]}</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? `${data.recupIndiceNouveau || data.recupIndice || 'Adresse'} (à confirmer)` : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter')}</b></div>
+    <p class="small muted" style="margin:8px 0 0">${MAIL_AIDE[data.role]}</p>
+    ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
+    <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
+    <button class="btn ${a.recup ? '' : 'primary'} block" data-act="addRecovery">${a.recup ? (data.role === 'therapeute' ? 'Changer de mail professionnel' : 'Changer de mail de récupération') : 'Ajouter mon mail'}</button>
+  </section>`;
+}
+
+function pageSecu() {
+  return `<section class="card">
+    <p class="small muted" style="margin:0 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
+    <div class="setrow">
+      <label for="autolock">Déconnexion automatique</label>
+      <select id="autolock">${[[0,'Immédiate'],[1,'Après 1 minute'],[5,'Après 5 minutes'],[15,'Après 15 minutes'],[-1,'Jamais']].map(([v,n]) => `<option value="${v}" ${data.settings.autolock == v ? 'selected' : ''}>${n}</option>`).join('')}</select>
+    </div>
+    <p class="small muted" style="margin:0">Avec « Jamais », le journal s’ouvre sans mot de passe sur cet appareil, même après avoir fermé l’app, jusqu’à ce que vous cliquiez sur « Se déconnecter ».</p>
+    <button class="btn block" data-act="changeCode">Changer mon mot de passe</button>
+  </section>`;
+}
+
+function pagePartage() {
+  const t = today(), th = data.therapist;
+  return `<section class="card">
+    <p class="small muted" style="margin:0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (Réglages › Mon thérapeute) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
     <div class="weeknav">
       <button class="icon-btn" data-act="xPrevWeek" aria-label="7 jours plus tôt">‹</button>
       <div class="wk" id="wkLabel" aria-live="polite">${weekLabel()}</div>
@@ -1595,52 +1825,34 @@ function vSetClient() {
       <button class="btn ${th ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
       ${navigator.canShare ? '<button class="btn" data-act="shareXlsx">Partager…</button>' : ''}
     </div>
-  </section>
-
-  ${therapistCard()}
-
-  <section class="card">
-    <h2>Mon profil</h2>
-    <p class="small muted" style="margin:6px 0 0">Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.</p>
-    <div class="row">
-      <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
-      <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
-    </div>
-    <label class="label" for="pStart">Date de début du suivi</label>
-    <input type="date" id="pStart" data-prof="start" value="${esc(p.start)}">
-  </section>
-
-  <section class="card">
-    <h2>Code couleur</h2>
-    ${COL.map(c => `<label class="label" for="lab-${c}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--${c});margin-right:6px"></span>${COLNAME[c]}</label>
-      <input type="text" id="lab-${c}" data-label="${c}" value="${esc(data.labels[c])}" maxlength="40">`).join('')}
-  </section>
-
-  ${geoCard()}
-  ${commonCards('Si vous changez de téléphone ou effacez les données du navigateur, vos notes sont perdues. Faites régulièrement une sauvegarde : le fichier reste chiffré avec votre code.')}`;
+  </section>`;
 }
 
-function vSetThera() {
-  const p = data.profile, t = data.thera;
-  return `
-  <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Réglages</h1></div>
+function pageCouleurs() {
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Le nom de chaque couleur, dans votre journal et dans vos envois.</p>
+    ${COL.map(c => `<label class="label" for="lab-${c}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--${c});margin-right:6px"></span>${COLNAME[c]}</label>
+      <input type="text" id="lab-${c}" data-label="${c}" value="${esc(data.labels[c])}" maxlength="40">`).join('')}
+  </section>`;
+}
 
-  ${securityCard()}
-
-  <section class="card">
-    <h2>Mon lien d’invitation</h2>
-    <p class="small muted" style="margin:6px 0 0">Donnez ce lien à vos clients. Ils le collent dans leur app (Réglages › Mon thérapeute) et peuvent ensuite vous envoyer chaque semaine un fichier chiffré que vous seul(e) pouvez ouvrir.</p>
+function pageInvite() {
+  const t = data.thera;
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Donnez ce lien à vos clients. Ils le collent dans leur app (Réglages › Mon thérapeute) et peuvent ensuite vous envoyer chaque semaine un fichier chiffré que vous seul(e) pouvez ouvrir.</p>
     <div class="small" style="margin-top:10px">Code de sécurité à leur confirmer : <span class="fp">${esc(data.keys?.fp || '…')}</span></div>
     <textarea id="invField" rows="3" readonly aria-label="Lien d’invitation">${data.keys ? esc(inviteLink()) : ''}</textarea>
     <div class="row" style="margin-top:10px">
       <button class="btn primary" data-act="shareInvite">Partager</button>
       <button class="btn" data-act="copyInvite">Copier</button>
     </div>
-  </section>
+  </section>`;
+}
 
-  <section class="card">
-    <h2>Mon profil professionnel</h2>
-    <p class="small muted" style="margin:6px 0 0">Ces informations sont incluses dans votre lien d’invitation. Après une modification, renvoyez le lien à vos clients pour mettre à jour vos coordonnées.</p>
+function pagePro() {
+  const p = data.profile, t = data.thera;
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Ces informations sont incluses dans votre lien d’invitation. Après une modification, renvoyez le lien à vos clients pour mettre à jour vos coordonnées.</p>
     <div class="row">
       <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
       <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
@@ -1650,18 +1862,15 @@ function vSetThera() {
     <label class="label" for="tTel">Téléphone</label>
     <input type="text" id="tTel" data-thera="tel" inputmode="tel" value="${esc(t.tel)}">
     <div class="stat" style="margin-top:14px"><span class="muted">Mail professionnel</span><b style="overflow-wrap:anywhere;text-align:right">${esc(t.email || '—')}</b></div>
-    <p class="small muted" style="margin:4px 0 0">Il se change dans « Mon compte », après confirmation par un code.</p>
+    <p class="small muted" style="margin:4px 0 0">Il se change dans « Mail professionnel », après confirmation par un code.</p>
     <label class="label" for="tAdr">Adresse du cabinet</label>
     <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}">
-  </section>
-
-  ${commonCards('Votre clé de déchiffrement et les données reçues de vos clients sont dans cette sauvegarde. Sans elle, un nouvel appareil ne pourra plus ouvrir les fichiers de vos clients.')}`;
+  </section>`;
 }
 
-function geoCard() {
+function pageGeo() {
   return `<section class="card">
-    <h2>Localisation</h2>
-    <div class="setrow">
+    <div class="setrow" style="padding-top:0">
       <label for="geoloc">Remplir la ville automatiquement (GPS)</label>
       <input type="checkbox" id="geoloc" ${data.settings.geoloc ? 'checked' : ''}>
     </div>
@@ -1671,59 +1880,82 @@ function geoCard() {
   </section>`;
 }
 
-function securityCard() {
-  const a = data.account || {};
+function pageSauvegarde() {
   return `<section class="card">
-    <h2>Mon compte</h2>
-    <div class="stat"><span class="muted">Prénom</span><b>${esc(data.profile.prenom || '—')}</b></div>
-    <div class="stat"><span class="muted">Nom</span><b>${esc(data.profile.nom || '—')}</b></div>
-    <div class="stat"><span class="muted">Identifiant</span><b>${esc(a.identifiant || '—')}</b></div>
-    <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
-    <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
-    <div class="stat"><span class="muted">${MAIL_NOM[data.role]}</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? `${data.recupIndiceNouveau || data.recupIndice || 'Adresse'} (à confirmer)` : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter')}</b></div>
-    ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
-    <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
-    ${a.recup ? '<button class="btn block" data-act="addRecovery">' + (data.role === 'therapeute' ? 'Changer de mail professionnel' : 'Changer de mail de récupération') + '</button>' : ''}
-    ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
-    <p class="small muted" style="margin:12px 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
-    <div class="setrow">
-      <label for="autolock">Déconnexion automatique</label>
-      <select id="autolock">${[[0,'Immédiate'],[1,'Après 1 minute'],[5,'Après 5 minutes'],[15,'Après 15 minutes'],[-1,'Jamais']].map(([v,n]) => `<option value="${v}" ${data.settings.autolock == v ? 'selected' : ''}>${n}</option>`).join('')}</select>
-    </div>
-    <p class="small muted" style="margin:0">Avec « Jamais », le journal s’ouvre sans mot de passe sur cet appareil, même après avoir fermé l’app, jusqu’à ce que vous cliquiez sur « Se déconnecter ».</p>
-    <div class="row" style="margin-top:10px">
-      <button class="btn" data-act="changeCode">Changer mon mot de passe</button>
-      <button class="btn" data-act="lockNow">Se déconnecter</button>
-    </div>
-  </section>`;
-}
-
-function commonCards(backupNote) {
-  return `<section class="card">
-    <h2>Sauvegarde</h2>
-    <p class="small muted" style="margin:6px 0 0">${backupNote}</p>
+    <p class="small muted" style="margin:0">${data.role === 'therapeute' ? 'Votre clé de déchiffrement et les données reçues de vos clients sont dans cette sauvegarde. Sans elle, un nouvel appareil ne pourra plus ouvrir les fichiers de vos clients.' : 'Si vous changez de téléphone ou effacez les données du navigateur, vos notes sont perdues. Faites régulièrement une sauvegarde : le fichier reste chiffré avec votre mot de passe.'}</p>
     <div class="stat" style="margin-top:6px"><span class="muted">Dernière sauvegarde</span><b>${data.backupAt ? fmtFR(ymd(new Date(data.backupAt))) : 'Aucune'}</b></div>
     <div class="row" style="margin-top:12px">
       <button class="btn primary" data-act="backup">Sauvegarder</button>
       <button class="btn" data-act="restore">Restaurer</button>
     </div>
-  </section>
+  </section>`;
+}
 
+function pageEffacer() {
+  const th = data.role === 'therapeute';
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Efface ${th ? 'les données reçues de vos clients' : 'vos émotions, couleurs, synthèses et notes personnelles'} de ce téléphone. Votre compte et vos réglages${th ? ', ainsi que vos fiches clients,' : ''} sont conservés. Un code reçu par e-mail vous sera demandé.</p>
+    <button class="btn danger block" data-act="wipe">Effacer toutes mes données</button>
+  </section>`;
+}
+
+function pageSupprimer() {
+  const th = data.role === 'therapeute';
+  if (data.account?.est_admin) return `<section class="card"><p class="small muted" style="margin:0">${EFFACER_ERR.admin} Retirez d’abord son rôle d’administrateur dans Supabase.</p></section>`;
+  return `<section class="card">
+    <h2>Ce qui sera supprimé</h2>
+    <ul class="small muted" style="margin:8px 0 0;padding-left:18px">
+      <li>Votre compte et toutes vos données sur nos serveurs${th ? ', dont vos coordonnées professionnelles' : ''}.</li>
+      <li>${th ? 'Vos fiches clients, les données reçues et votre clé de déchiffrement' : 'Vos émotions, couleurs, synthèses et notes personnelles'} sur ce téléphone.</li>
+    </ul>
+  </section>
   <section class="card">
-    <h2>Installer sur l’écran d’accueil</h2>
-    <p class="small muted" style="margin:6px 0 0">Recommandé : l’app s’ouvre en plein écran, fonctionne hors connexion et vos données sont mieux conservées.<br>
+    <h2>Ce que l’app ne peut pas supprimer</h2>
+    <ul class="small muted" style="margin:8px 0 0;padding-left:18px">
+      <li>Les sauvegardes, fichiers Excel et envois au thérapeute déjà créés : à supprimer vous-même.</li>
+      <li>Les notes sur un autre appareil : effacez-y les données de l’app.</li>
+      <li>L’historique d’envoi des e-mails, conservé 1 mois par notre prestataire.</li>
+      ${th ? '<li>Vos clients gardent votre lien : ils ne sont pas prévenus et ne pourront plus vous envoyer de fichier lisible.</li>' : ''}
+    </ul>
+  </section>
+  <section class="card">
+    <p class="small muted" style="margin:0">Cette action est irréversible. Pour garder vos notes, faites d’abord une sauvegarde. Une connexion internet est nécessaire et un code reçu par e-mail vous sera demandé.</p>
+    <button class="btn danger block" data-act="deleteAccount">Supprimer définitivement mon compte</button>
+  </section>`;
+}
+
+function pageApparence() {
+  const c = themeChoisi();
+  return `<section class="card" style="padding:4px 0">${Object.entries(THEME_N).map(([k, n]) => `<button class="choix ${c === k ? 'on' : ''}" data-act="setTheme" data-t="${k}" aria-pressed="${c === k}"><span>${n}</span><i></i></button>`).join('')}</section>
+  <p class="small muted" style="margin:0 2px">« Automatique » suit le réglage clair ou sombre de votre téléphone. Ce choix ne concerne que cet appareil.</p>`;
+}
+
+function pageInstaller() {
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Recommandé : l’app s’ouvre en plein écran, fonctionne hors connexion et vos données sont mieux conservées.<br>
     <b>iPhone</b> : bouton Partager de Safari → « Sur l’écran d’accueil ». Notez ensuite uniquement depuis l’icône : Safari et l’app ne partagent pas leurs notes.<br>
     <b>Android</b> : menu ⋮ de Chrome → « Installer l’application ».</p>
     ${installEvt ? '<button class="btn primary block" data-act="install">Installer l’application</button>' : ''}
-  </section>
-
-  <section class="card">
-    <h2>Zone sensible</h2>
-    <p class="small muted" style="margin:6px 0 0">Efface ${data.role === 'therapeute' ? 'les données reçues de vos clients' : 'vos émotions, couleurs, synthèses et notes personnelles'} de ce téléphone. Votre compte et vos réglages${data.role === 'therapeute' ? ', ainsi que vos fiches clients,' : ''} sont conservés. Un code reçu par e-mail vous sera demandé.</p>
-    <button class="btn danger block" data-act="wipe">Effacer toutes mes données</button>
-  </section>
-  <p class="small muted" style="text-align:center"><a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a><br>Motus, version ${APP_VERSION}</p>`;
+  </section>`;
 }
+
+function pageAPropos() {
+  return `<section class="card">
+    <h2>Motus</h2>
+    <p class="small muted" style="margin:4px 0 0">Éclairer ce qui se passe en soi</p>
+    <div class="stat" style="margin-top:8px"><span class="muted">Version</span><b>${APP_VERSION}</b></div>
+    <div class="stat"><span class="muted">Répertoire des émotions</span><b>Liberté pour Aimer</b></div>
+  </section>
+  <p class="small muted" style="text-align:center"><a href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">Politique de confidentialité</a></p>`;
+}
+
+const PAGES_REGLAGES = {
+  infos:['Informations personnelles', pageInfos], mail:['Mon mail', pageMail], secu:['Mot de passe et verrouillage', pageSecu],
+  thera:['Mon thérapeute', therapistCard], partage:['Partager ma semaine', pagePartage], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
+  invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
+  sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
+  apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos],
+};
 
 /* ───────────── Lien client ↔ thérapeute (sans serveur) ─────────────
    Le thérapeute possède une paire de clés ECDH P-256 ; sa clé publique circule dans le lien d'invitation.
@@ -1811,15 +2043,14 @@ async function shareInvite() {
 function therapistCard() {
   const th = data.therapist;
   return `<section class="card">
-    <h2>Mon thérapeute</h2>
     ${th ? `
-      <p style="margin:10px 0 2px"><b>${esc(th.prenom)} ${esc(th.nom)}</b>${th.type ? ' · ' + esc(th.type) : ''}</p>
+      <p style="margin:0 0 2px"><b>${esc(th.prenom)} ${esc(th.nom)}</b>${th.type ? ' · ' + esc(th.type) : ''}</p>
       ${th.email ? `<div class="small"><a href="mailto:${esc(th.email)}">${esc(th.email)}</a></div>` : ''}
       ${th.tel ? `<div class="small"><a href="tel:${esc(th.tel.replace(/\s/g, ''))}">${esc(th.tel)}</a></div>` : ''}
       ${th.adresse ? `<div class="small muted">${esc(th.adresse)}</div>` : ''}
       <div class="small muted" style="margin-top:8px">Code de sécurité : <span class="fp">${esc(th.fp)}</span></div>
       <button class="btn danger block" data-act="removeTherapist">Retirer ce thérapeute</button>` : `
-      <p class="small muted" style="margin:6px 0 0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
+      <p class="small muted" style="margin:0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
       <textarea id="invCode" rows="3" placeholder="Lien ou code d’invitation" style="margin-top:10px"></textarea>
       <button class="btn primary block" data-act="addTherapist">Ajouter mon thérapeute</button>`}
   </section>`;
@@ -1836,7 +2067,7 @@ function sentStatus() {
 async function sendWeek() {
   const x = exportRange(); if (!x) return;
   const th = data.therapist, p = data.profile;
-  if (!p.prenom.trim() && !p.nom.trim()) return toast('Indiquez d’abord votre nom dans « Mon profil ».');
+  if (!p.prenom.trim() && !p.nom.trim()) return toast('Indiquez d’abord votre nom dans « Informations personnelles ».');
   const days = {};
   for (let k = x.from; k <= x.to; k = addDays(k, 1)) if (dayUsed(data.days[k])) { const {notes, ...partage} = data.days[k]; days[k] = partage; }
   if (!Object.keys(days).length && !confirm('Aucune note sur cette période. Envoyer quand même ?')) return;
@@ -2033,11 +2264,16 @@ function vAdmin() {
       <tbody>${act('Connexions', a.connexions)}${act('Notes saisies', a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
     </table>
     <p class="small muted" style="margin:8px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
-  </section>` : '') + limitsCard() + `
+  </section>` : '') + `
+  <section class="card">
+    <h2>Temps de travail sur Motus</h2>
+    <div class="heures"><b>≈ ${HEURES_TRAVAIL} h</b><span class="small muted">jusqu’à la version ${APP_VERSION}</span></div>
+    <p class="small muted" style="margin:6px 0 0">Estimation à partir des échanges avec Claude, sans les pauses de plus de 15 minutes. Mise à jour à chaque version.</p>
+  </section>` + limitsCard() + `
   <section class="card">
     <div class="card-h"><h2>Utilisateurs</h2><span class="count">${list.length}</span></div>
     <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Clients'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
-      `<button class="chip ${adm.filtre === k ? 'on' : ''}" style="--fc:var(--brand)" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
+      `<button class="chip neutre ${adm.filtre === k ? 'on' : ''}" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
     <input type="search" id="admSearch" placeholder="Rechercher : nom, n°, identifiant" aria-label="Rechercher un utilisateur" style="margin-bottom:10px">
     ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
   </section>`;
@@ -2571,7 +2807,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 
 const ACT = {
   tab: t => {
-    view = t.dataset.v; src = null;
+    view = t.dataset.v; src = null; setPage = null;
     if (view === 'day') cur = today();
     render();
     if (view === 'set' && (data.account?.recup === 'attente' || data.account?.recupChange)) ensureSecours();
@@ -2580,7 +2816,12 @@ const ACT = {
   addTherapist: () => offerInvite($('#invCode').value),
   removeTherapist: () => { if (!confirm('Retirer ce thérapeute ? Vous ne pourrez plus lui envoyer vos semaines.')) return; data.therapist = null; save(); render(); },
   sendWeek: () => sendWeek(),
-  goSend: () => { xStart = addDays(today(), -6); view = 'set'; render(); },
+  goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
+  setPage: t => { setPage = t.dataset.p; render(); },
+  setBack: () => { setPage = null; render(); },
+  setTheme: t => { try { localStorage.setItem(THEME_KEY, t.dataset.t); } catch {} appliquerTheme(); render(true); },
+  toggleTheme: () => { try { localStorage.setItem(THEME_KEY, document.documentElement.dataset.theme === 'dark' ? 'clair' : 'sombre'); } catch {} appliquerTheme(); render(true); },
+  deleteAccount: () => supprimerCompte(),
   shareInvite: () => shareInvite(),
   copyInvite: async () => {
     try { await navigator.clipboard.writeText(inviteLink()); toast('Lien copié'); }
@@ -2632,6 +2873,7 @@ const ACT = {
   newEntry: () => openEntry(null),
   editEntry: t => openEntry(t.dataset.id),
   closeDlg: t => t.closest('dialog').close(),
+  voirPolitique: () => { $('#polCadre').src = 'confidentialite.html'; $('#polDlg').showModal(); },
   newNote: () => openNote(null),
   editNote: t => openNote(t.dataset.id),
   saveNote: () => {
@@ -2707,7 +2949,7 @@ const ACT = {
     if (!confirm(`Effacer définitivement ${th ? 'toutes les données reçues de vos clients' : 'toutes vos notes'} de ce téléphone ?\n\nVotre compte et vos réglages${th ? ', ainsi que vos fiches clients,' : ''} sont conservés. Les sauvegardes, fichiers Excel et envois déjà créés ne sont pas concernés.`)) return;
     if (!await confirmerEffacement()) return;
     viderJournal(); await saveNow();
-    src = null; view = th ? 'clients' : 'day'; cur = today(); calF = calW = null; calMode = 'grid'; render();
+    src = null; setPage = null; view = th ? 'clients' : 'day'; cur = today(); calF = calW = null; calMode = 'grid'; render();
     toast(th ? 'Les données reçues ont été effacées de ce téléphone' : 'Vos notes ont été effacées de ce téléphone');
   },
   addRecovery: async () => {
