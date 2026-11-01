@@ -250,7 +250,7 @@ dialog::backdrop{background:rgba(15,15,40,.4)}
 /* Politique de confidentialité : affichée dans l'app, car une app installée sur iPhone n'a pas de bouton Retour */
 dialog.pleine{width:100%;max-width:none;height:100dvh;max-height:none;margin:0;border-radius:0}
 dialog.pleine[open]{display:flex;flex-direction:column;overflow:hidden}
-.pleine .dlg-h{position:static;flex:none;padding-top:calc(env(safe-area-inset-top) + 14px)}
+.pleine .dlg-h{position:static;flex:none;justify-content:flex-start;gap:10px;padding:calc(env(safe-area-inset-top) + 16px) 20px 12px}
 .pleine iframe{flex:1;min-height:0;width:100%;border:0;background:var(--bg)}
 .dlg-f{position:sticky;bottom:0;background:var(--bg);display:flex;gap:10px;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--border)}
 .dlg-f .btn{flex:1}
@@ -282,6 +282,11 @@ a{color:var(--accent)}
 .rgpd{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:.9rem}
 .safari-avis{text-align:left}
 .lockcard .safari-avis{margin:14px 0 0}
+.install{padding:8px 0}
+.install .card{text-align:left;margin-top:14px}
+.install>h1{font-size:1.32rem}
+.etapes{margin:8px 0 0;padding-left:20px;font-size:.9rem;color:var(--muted)}
+.etapes li{margin-bottom:6px}
 .maj-banner{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:12px;right:12px;margin:0;z-index:30;box-shadow:var(--shadow);background:var(--surface)}
 .clientbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
 .clientbar .who{font-weight:600;color:var(--brand);text-align:right}
@@ -345,7 +350,7 @@ b.off{color:var(--rouge-txt)}
 <dialog id="codeDlg"></dialog>
 <dialog id="clientDlg" aria-label="Fiche client"></dialog>
 <dialog id="polDlg" class="pleine" aria-label="Politique de confidentialité">
-  <div class="dlg-h"><h2>Politique de confidentialité</h2><button type="button" class="btn" data-act="closeDlg">Fermer</button></div>
+  <div class="dlg-h"><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer la politique">‹</button><h2>Politique de confidentialité</h2></div>
   <iframe id="polCadre" title="Politique de confidentialité"></iframe>
 </dialog>
 <input type="file" id="restoreFile" accept=".json,application/json" hidden>
@@ -420,8 +425,8 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 21;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 13;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const APP_VERSION = 22;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 14;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
 const RGPD_VERSION = 1;  // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
@@ -591,6 +596,14 @@ function demoApi() {
     ma_cle_secours(x) { return x.recup?.[session.id]?.cle ?? null; },
     ma_recuperation_etat(x) { const l = x.recup?.[session.id]; return {confirmee:!!l?.email, attente:!!l?.attente}; },
     retirer_recuperation(x) { if (x.recup) delete x.recup[session.id]; },
+    mon_lien_invitation(x, {p_pk}) {
+      const p = moi(x); if (p?.role !== 'therapeute' || !p.actif) return null;
+      p.cle_publique = p_pk; p.code_invitation ||= rid(15); return p.code_invitation;
+    },
+    lire_invitation(x, {p_code}) {
+      const p = Object.values(x.comptes).map(c => c.profil).find(q => q.code_invitation === p_code.toLowerCase() && q.role === 'therapeute' && q.actif);
+      return p ? {v:1, pk:p.cle_publique, nom:p.nom, prenom:p.prenom, type:p.therapie, tel:p.telephone, email:p.email_contact, adresse:p.adresse} : null;
+    },
     admin_ressources(x) {
       admin(x);
       return {base_octets:JSON.stringify(x).length, actifs_30j:Object.values(x.comptes).filter(c => c.profil.derniere_connexion && Date.now() - new Date(c.profil.derniere_connexion) < 30 * 864e5).length};
@@ -709,7 +722,93 @@ async function flushStats() {
 let fails = 0, blockedUntil = 0, busy = false, hiddenAt = 0;
 const LAST_ID = 'journal-emotions.dernier-identifiant';
 
+/* ───────────── Installation sur téléphone ─────────────
+   Le navigateur et l'app de l'écran d'accueil ne partagent pas leurs notes sur iPhone : sur téléphone, Motus s'utilise donc depuis l'écran d'accueil.
+   Un navigateur qui contient déjà des notes permet seulement de les sauvegarder, pour ne jamais les rendre inaccessibles.
+   Un lien ne peut pas ouvrir l'app installée sur iPhone : une invitation reçue se copie, puis se colle dans l'app. */
+const NAV_OK = 'journal-emotions.navigateur-accepte', INVIT = 'journal-emotions.invitation';
+let recupNotes = false;
+const surIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const surAndroid = () => /Android/.test(navigator.userAgent);
+const appInstallee = () => navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches || document.referrer.startsWith('android-app://');
+const doitInstaller = () => (surIOS() || surAndroid()) && !appInstallee() && !localStorage.getItem(NAV_OK);
+const notesIci = () => Object.keys(localStorage).some(k => k.startsWith('journal-emotions.donnees.') || k.startsWith('journal-emotions.vault.'));
+/* Navigateur intégré à une autre app (WhatsApp, Instagram, Gmail…) : on ne peut pas y installer Motus */
+function navIntegre() {
+  const u = navigator.userAgent;
+  return /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Snapchat|Line\/|MicroMessenger|LinkedInApp|GSA\/|; wv\)/.test(u) || (surIOS() && !/Safari\//.test(u));
+}
+const lienInvitation = () => `${location.origin}${location.pathname}${pendingInv ? `#${CODE_COURT.test(pendingInv) ? 'i' : 'inv'}=${pendingInv}` : ''}`;
+function etapesInstall() {
+  const u = navigator.userAgent, autre = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\//.test(u);
+  const e = surIOS() ? [
+    /FxiOS/.test(u) ? 'Touchez le menu ☰, puis « Partager ».' : 'Touchez le bouton Partager (le carré avec une flèche).',
+    'Choisissez « Sur l’écran d’accueil ». Faites défiler la liste si besoin.',
+    'Si c’est proposé, laissez « Ouvrir en tant qu’app web » activé, puis touchez « Ajouter ».',
+    'Ouvrez Motus depuis sa nouvelle icône.',
+  ] : [
+    'Ouvrez le menu de votre navigateur (⋮ ou ☰).',
+    'Choisissez « Installer l’application » ou « Ajouter à l’écran d’accueil ».',
+    'Confirmez, puis ouvrez Motus depuis sa nouvelle icône.',
+  ];
+  return `<ol class="etapes">${e.map(x => `<li>${x}</li>`).join('')}</ol>${surIOS() && autre ? '<p class="small muted">Vous ne trouvez pas cette option ? Ouvrez cette page dans Safari.</p>' : ''}`;
+}
+function blocInstall() {
+  if (navIntegre()) return `<section class="card">
+    <h2>Ouvrez d’abord votre navigateur</h2>
+    <p class="small muted" style="margin:6px 0 0">Motus ne peut pas s’installer depuis cette app. Ouvrez le menu (⋯ ou ⋮), puis « Ouvrir dans ${surIOS() ? 'Safari' : 'le navigateur'} ». Si cette option n’existe pas, copiez le lien et collez-le dans votre navigateur.</p>
+    <button class="btn block" data-act="copierLien">Copier le lien</button>
+  </section>`;
+  return `<section class="card">
+    <h2>Installer Motus</h2>
+    ${installEvt ? '<button class="btn primary block" data-act="install">Installer Motus</button>' : etapesInstall()}
+  </section>`;
+}
+function showInstall() {
+  $('#app').hidden = true;
+  if (pendingInv) localStorage.setItem(INVIT, pendingInv);
+  const L = $('#lock'); L.hidden = false;
+  L.innerHTML = `<div class="lockcard install">
+    <img class="logo" src="icon-192.png" alt="">
+    <h1>Motus s’utilise depuis votre écran d’accueil</h1>
+    <p class="muted">Cela protège vos notes et garde tout au même endroit.</p>
+    ${pendingInv ? `<section class="card">
+      <h2>Vous avez reçu une invitation</h2>
+      <p class="small muted" style="margin:6px 0 0">Motus est déjà installé ? Copiez l’invitation, ouvrez Motus depuis votre écran d’accueil, puis touchez « Coller l’invitation » dans Réglages › Mon thérapeute. Sinon, installez d’abord Motus.</p>
+      <button class="btn primary block" data-act="copierLien">Copier l’invitation</button>
+    </section>` : '<p class="small muted">Motus est déjà installé ? Fermez cette page et ouvrez-le depuis son icône.</p>'}
+    ${blocInstall()}
+    ${notesIci() ? `<section class="card">
+      <h2>Vous avez déjà des notes dans ce navigateur</h2>
+      <p class="small muted" style="margin:6px 0 0">Connectez-vous pour les sauvegarder, puis les retrouver dans l’app.</p>
+      <button class="btn block" data-act="recupNotes">Récupérer mes notes</button>
+    </section>` : ''}
+    <p class="small"><button class="link small" data-act="navQuandMeme">Impossible d’installer Motus sur ce téléphone ?</button></p>
+  </div>`;
+}
+/* Connecté depuis un navigateur de téléphone : seulement pour emporter ses notes vers l'app */
+function showTransfert() {
+  $('#app').hidden = true;
+  const L = $('#lock'); L.hidden = false;
+  L.innerHTML = `<div class="lockcard install">
+    <h1>Récupérez vos notes</h1>
+    <section class="card">
+      <h2>1. Sauvegardez vos notes</h2>
+      <p class="small muted" style="margin:6px 0 0">Enregistrez le fichier sur ce téléphone, par exemple dans Fichiers. Il reste chiffré avec votre mot de passe.</p>
+      <button class="btn primary block" data-act="backup">Sauvegarder mes notes</button>
+    </section>
+    ${blocInstall().replace('Installer Motus</h2>', '2. Installez Motus</h2>')}
+    <section class="card">
+      <h2>3. Retrouvez vos notes dans l’app</h2>
+      <p class="small muted" style="margin:6px 0 0">Connectez-vous depuis l’icône. Si vos notes n’y sont pas, ouvrez Réglages › Sauvegarde › Restaurer et choisissez le fichier.</p>
+    </section>
+    <button class="btn block" data-act="lockNow">Se déconnecter</button>
+    <p class="small"><button class="link small" data-act="navQuandMeme">Impossible d’installer Motus sur ce téléphone ?</button></p>
+  </div>`;
+}
+
 function showLock(mode = 'login') {
+  if (doitInstaller() && !recupNotes) return showInstall();
   $('#app').hidden = true;
   const L = $('#lock'); L.hidden = false;
   if (!window.crypto?.subtle) {
@@ -778,7 +877,7 @@ function showLock(mode = 'login') {
         <div class="err" id="lockErr"></div>
         <button class="btn primary block" id="loginBtn">Se connecter</button>
       </form>
-      <p style="margin-top:20px">Pas encore de compte ? <button class="link" data-act="goSignup">Créer un compte</button></p>
+      <p style="margin-top:20px">${recupNotes ? '<button class="link" data-act="retourInstall">Retour</button>' : 'Pas encore de compte ? <button class="link" data-act="goSignup">Créer un compte</button>'}</p>
       <p class="small" style="margin-top:4px"><button class="link small" data-act="forgot">Mot de passe oublié ?</button></p>
       ${demo}
     </div>` : `
@@ -803,7 +902,7 @@ function showLock(mode = 'login') {
         </div>
         <label class="label" for="sId">Identifiant</label>
         <input type="text" id="sId" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ex. julie.d">
-        <div class="small muted" style="margin-top:4px">3 à 30 caractères : lettres minuscules, chiffres, point, tiret.</div>
+        <div class="small muted" style="margin-top:4px">3 à 30 caractères, sans espace : lettres minuscules, chiffres, point, tiret.</div>
         <label class="label" for="sPw">Mot de passe (8 caractères minimum)</label>
         <input type="password" id="sPw" autocomplete="new-password">
         <label class="label" for="sPw2">Confirmez le mot de passe</label>
@@ -822,6 +921,7 @@ function showLock(mode = 'login') {
     </div>`;
   $('#loginForm')?.addEventListener('submit', onLogin);
   $('#signupForm')?.addEventListener('submit', onSignup);
+  if ($('#sId')) $('#sId').oninput = e => { const v = e.target.value.replace(/\s/g, ''); if (v !== e.target.value) e.target.value = v; };
   document.querySelectorAll('input[name=role]').forEach(r => r.onchange = () => { $('#sMailAide').textContent = MAIL_AIDE[r.value]; $('#sMailNom').textContent = MAIL_NOM[r.value]; });
   (mode === 'login' ? ($('#lId').value ? $('#lPw') : $('#lId')) : $('#sPrenom')).focus();
 }
@@ -882,8 +982,44 @@ async function onSignup(e) {
   differeMail = true;   // le mail vient d'être saisi : rien à redemander
   try {
     await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}, consentement:{...f.rgpd, envoye:true}});
+    await choixInitiaux();
     if (await setRecovery(mail, f.password, true) !== true) { mailPasse = true; majRappelRecup(); }
   } finally { differeMail = false; }
+}
+const optionsVerrou = () => [[0,'Immédiate'],[1,'Après 1 minute'],[5,'Après 5 minutes'],[15,'Après 15 minutes'],[-1,'Jamais']].map(([v,n]) => `<option value="${v}" ${data.settings.autolock == v ? 'selected' : ''}>${n}</option>`).join('');
+/* À la création du compte : temps de verrouillage et, pour un client, ville automatique */
+function choixInitiaux() {
+  return new Promise(resolve => {
+    const D = $('#codeDlg'), th = data.role === 'therapeute';
+    D.innerHTML = `<form method="dialog" id="chForm">
+      <div class="dlg-h"><h2>Vos préférences</h2></div>
+      <div class="dlg-b">
+        <p class="small muted">Vous pourrez les changer à tout moment dans les Réglages.</p>
+        <label class="label" for="chLock">Temps de verrouillage</label>
+        <select id="chLock">${optionsVerrou()}</select>
+        <p class="small muted" style="margin:6px 0 0">Après ce délai hors de l’app, votre mot de passe est redemandé.</p>
+        ${th ? '' : `<p class="label">Remplir la ville automatiquement (GPS)</p>
+        <div class="roles">
+          <label class="role"><input type="radio" name="chGeo" value="oui" checked> Oui</label>
+          <label class="role"><input type="radio" name="chGeo" value="non"> Non</label>
+        </div>
+        <p class="small muted" style="margin:6px 0 0">La position est convertie en nom de ville directement sur le téléphone. Elle n’est ni envoyée ni enregistrée : seule la ville est notée.</p>`}
+      </div>
+      <div class="dlg-f"><button class="btn primary" id="chOk">Continuer</button></div>
+    </form>`;
+    D.oncancel = e => e.preventDefault();
+    $('#chForm').onsubmit = async e => {
+      e.preventDefault();
+      const sel = $('#chLock'), v = +sel.value;
+      if (!th) data.settings.geoloc = $('input[name=chGeo]:checked').value === 'oui';
+      await setAutolock(sel);
+      if (data.settings.autolock !== v) return;   // « Jamais » refusé : le choix reste à faire
+      await saveNow();
+      busy = false; D.oncancel = null; D.close(); resolve();
+    };
+    busy = true;
+    D.showModal();
+  });
 }
 
 /* Ouvre (ou crée) le journal chiffré de ce compte sur cet appareil */
@@ -914,7 +1050,7 @@ async function openJournal(id, pw, init) {
   navigator.storage?.persist?.();
   showApp();
   if (!await exigerRgpd()) return;
-  pushProfile(); flushStats(); ensureSecours(pw).then(ok => ok && exigerMail());
+  pushProfile(); flushStats(); assurerLienCourt(); ensureSecours(pw).then(ok => ok && exigerMail());
 }
 
 function applyProfil() {
@@ -1335,6 +1471,10 @@ async function setAutolock(t) {
 /* À l'ouverture : journal rouvert sans mot de passe si l'utilisateur a choisi de rester connecté */
 async function boot() {
   migrerStockage();
+  if (!doitInstaller()) {   // sur Android, l'app installée peut retrouver une invitation ouverte dans le navigateur
+    pendingInv ||= localStorage.getItem(INVIT);
+    localStorage.removeItem(INVIT);
+  }
   const s = await keyDb('readonly', st => st.get('courante')).catch(() => null);
   if (!s) return showLock();
   try {
@@ -1362,7 +1502,8 @@ async function syncSession() {
       const rappel = !src && (view === 'day' || view === 'clients') && !$('.admin-rappel') ? adminReminder() : '';
       if (rappel) $('#view').insertAdjacentHTML('afterbegin', rappel);
     }
-    pushProfile(); flushStats(); envoyerConsentement(); ensureSecours().then(ok => ok && exigerMail());
+    pushProfile(); flushStats(); envoyerConsentement(); assurerLienCourt(); ensureSecours().then(ok => ok && exigerMail());
+    if (pendingInv && !doitInstaller()) { const c = pendingInv; pendingInv = null; offerInvite(c); }   // lien court ouvert avant la reprise de la connexion
   } catch (x) {
     if (!data) return;
     if (x.code === 'desactive') lock(LOGIN_ERR.desactive);
@@ -1411,7 +1552,7 @@ async function lock(msg) {
   document.querySelectorAll('dialog[open]').forEach(d => d.close());
   $('#view').innerHTML = '';
   showLock();
-  if (msg) $('#lockErr').textContent = msg;
+  if (msg) { const e = $('#lockErr'); if (e) e.textContent = msg; else toast(msg); }
 }
 
 let swReg = null;
@@ -1429,6 +1570,7 @@ let pendingInv = null;        // invitation reçue via un lien (#inv=…), propo
 const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
 
 function showApp() {
+  if (doitInstaller()) { mailPasse = true; return showTransfert(); }
   $('#lock').hidden = true; $('#lock').innerHTML = '';
   $('#app').hidden = false;
   view = data.role === 'therapeute' ? 'clients' : 'day'; src = null;
@@ -1436,7 +1578,7 @@ function showApp() {
   const t = new Date(); calY = t.getFullYear(); calM = t.getMonth();
   renderNav(); render();
   if (data.role === 'therapeute' && !data.keys) ensureKeys().then(render);
-  if (pendingInv) { const c = pendingInv; pendingInv = null; offerInvite(c); }
+  if (pendingInv && (session || !CODE_COURT.test(pendingInv))) { const c = pendingInv; pendingInv = null; offerInvite(c); }
 }
 
 const ICONS = {
@@ -1710,7 +1852,6 @@ function vRep() {
 /* — Vue Réglages : un menu, puis une page par sujet — */
 const LOCK_N = {0:'Immédiate', 1:'1 min', 5:'5 min', 15:'15 min', '-1':'Jamais'};
 const THEME_N = {auto:'Automatique', clair:'Clair', sombre:'Sombre'};
-const appInstallee = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 const ligneMenu = (icone, nom, {val, page, act, cl = ''} = {}) => `<button class="ro ${cl}" data-act="${act || 'setPage'}"${page ? ` data-p="${page}"` : ''}>${ico(icone)}<span class="rn">${nom}</span>${val ? `<em>${esc(val)}</em>` : ''}${ico('ch', 'rc')}</button>`;
 const groupeMenu = (titre, lignes) => `<div class="gl">${titre}</div><div class="grp">${lignes.join('')}</div>`;
 
@@ -1795,7 +1936,7 @@ function pageSecu() {
     <p class="small muted" style="margin:0 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
     <div class="setrow">
       <label for="autolock">Déconnexion automatique</label>
-      <select id="autolock">${[[0,'Immédiate'],[1,'Après 1 minute'],[5,'Après 5 minutes'],[15,'Après 15 minutes'],[-1,'Jamais']].map(([v,n]) => `<option value="${v}" ${data.settings.autolock == v ? 'selected' : ''}>${n}</option>`).join('')}</select>
+      <select id="autolock">${optionsVerrou()}</select>
     </div>
     <p class="small muted" style="margin:0">Avec « Jamais », le journal s’ouvre sans mot de passe sur cet appareil, même après avoir fermé l’app, jusqu’à ce que vous cliquiez sur « Se déconnecter ».</p>
     <button class="btn block" data-act="changeCode">Changer mon mot de passe</button>
@@ -1819,12 +1960,15 @@ function pagePartage() {
       </div>
     </details>
     ${th ? `<button class="btn primary block" data-act="sendWeek">Envoyer à ${esc(th.prenom || 'mon thérapeute')}</button>
+    <p class="small muted" style="margin:6px 0 0">${aideEnvoi(th.email)}</p>
     <div class="small muted" id="sentSt" style="margin-top:6px;text-align:center">${sentStatus()}</div>` : ''}
     <p class="label">Fichier Excel</p>
     <div class="row">
       <button class="btn ${th ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
       ${navigator.canShare ? '<button class="btn" data-act="shareXlsx">Partager…</button>' : ''}
     </div>
+    ${th ? '' : `<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>
+    <p class="small muted" style="margin:6px 0 0"><b>Ce fichier n’est pas chiffré :</b> vos émotions y sont lisibles. ${aideEnvoi('')}</p>`}
   </section>`;
 }
 
@@ -2005,20 +2149,36 @@ function inviteCode() {
   const o = {v:1, pk:data.keys.pub, nom:p.nom, prenom:p.prenom, type:t.type, tel:t.tel, email:t.email, adresse:t.adresse};
   return b64url(toB64(enc.encode(JSON.stringify(o))));
 }
-const inviteLink = () => `${location.origin}${location.pathname}#inv=${inviteCode()}`;
+const inviteLink = () => `${location.origin}${location.pathname}#${data.invCode ? 'i=' + data.invCode : 'inv=' + inviteCode()}`;
 const refreshInvite = () => { const f = $('#invField'); if (f && data.keys) f.value = inviteLink(); };
+/* Lien court : le serveur garde la clé publique et un code de 30 caractères. Sans réponse du serveur, le lien long reste valable. */
+const CODE_COURT = /(?:#i=|^)([0-9a-f]{30})$/i;
+async function assurerLienCourt() {
+  if (!session || !data?.keys || data.role !== 'therapeute') return;
+  try {
+    const c = await API.rpc('mon_lien_invitation', {p_pk:data.keys.pub});
+    if (c && data && c !== data.invCode) { data.invCode = c; save(); refreshInvite(); }
+  } catch {}
+}
 async function readInvite(text) {
-  const m = String(text).trim().match(/(?:#inv=)?([A-Za-z0-9_-]{40,})\s*$/);
-  if (!m) throw new Error('format');
-  const o = JSON.parse(dec.decode(fromB64(unb64url(m[1]))));
-  if (o.v !== 1 || !o.pk) throw new Error('format');
+  const s = String(text).trim(), court = s.match(CODE_COURT);
+  let o;
+  if (court) {
+    if (!session) throw apiErr('reseau');
+    o = await API.rpc('lire_invitation', {p_code:court[1]});
+  } else {
+    const m = s.match(/(?:#inv=)?([A-Za-z0-9_-]{40,})\s*$/);
+    if (!m) throw new Error('format');
+    o = JSON.parse(dec.decode(fromB64(unb64url(m[1]))));
+  }
+  if (o?.v !== 1 || !o.pk) throw new Error('format');
   await crypto.subtle.importKey('raw', fromB64(o.pk), ECDH, false, []); // clé valide ?
   o.fp = await fingerprint(o.pk);
   return o;
 }
 async function offerInvite(text) {
   let o;
-  try { o = await readInvite(text); } catch { return toast('Lien d’invitation non reconnu.'); }
+  try { o = await readInvite(text); } catch (x) { return toast(x.code === 'reseau' ? 'Connexion internet nécessaire pour lire cette invitation.' : 'Lien d’invitation non reconnu.'); }
   if (data.role === 'therapeute') return toast('Ce lien est destiné à vos clients.');
   const who = `${o.prenom || ''} ${o.nom || ''}`.trim() || 'ce thérapeute', old = data.therapist;
   if (old?.fp === o.fp) { Object.assign(old, o); await saveNow(); render(); return toast('Coordonnées du thérapeute mises à jour'); }
@@ -2051,8 +2211,9 @@ function therapistCard() {
       <div class="small muted" style="margin-top:8px">Code de sécurité : <span class="fp">${esc(th.fp)}</span></div>
       <button class="btn danger block" data-act="removeTherapist">Retirer ce thérapeute</button>` : `
       <p class="small muted" style="margin:0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
-      <textarea id="invCode" rows="3" placeholder="Lien ou code d’invitation" style="margin-top:10px"></textarea>
-      <button class="btn primary block" data-act="addTherapist">Ajouter mon thérapeute</button>`}
+      <button class="btn primary block" data-act="collerInvit">Coller l’invitation</button>
+      <textarea id="invCode" rows="3" placeholder="Ou collez le lien ici" style="margin-top:10px"></textarea>
+      <button class="btn block" data-act="addTherapist">Ajouter mon thérapeute</button>`}
   </section>`;
 }
 /* data.sent : début de période → {to, at} */
@@ -2072,19 +2233,43 @@ async function sendWeek() {
   for (let k = x.from; k <= x.to; k = addDays(k, 1)) if (dayUsed(data.days[k])) { const {notes, ...partage} = data.days[k]; days[k] = partage; }
   if (!Object.keys(days).length && !confirm('Aucune note sur cette période. Envoyer quand même ?')) return;
   const pkg = await sealFor(th, {client:{id:data.uid, nom:p.nom, prenom:p.prenom}, from:x.from, to:x.to, sentAt:new Date().toISOString(), labels:data.labels, days});
-  const name = `motus-envoi_${x.from}.json`, file = new File([JSON.stringify(pkg)], name, {type:'application/json'});
-  busy = true;
-  try {
-    if (navigator.canShare?.({files:[file]})) await navigator.share({files:[file], title:'Motus', text:`Ma semaine du ${fmtFR(x.from)} au ${fmtFR(x.to)} (fichier chiffré, à importer dans Motus).`});
-    else download(file, name);
-  } catch (err) {
-    if (err.name === 'AbortError') return;
-    download(file, name);
-  } finally { setTimeout(() => busy = false, 1500); }
-  data.sent[x.from] = {to:x.to, at:new Date().toISOString()}; countStat('envois');
-  const st = $('#sentSt'); if (st) st.textContent = sentStatus();
-  toast(th.email ? `Fichier prêt : à envoyer à ${th.email}` : 'Fichier prêt à envoyer');
+  const name = `motus-envoi_${x.from}.json`;
+  envoyerParMail({file:new File([JSON.stringify(pkg)], name, {type:'application/json'}), from:x.from, to:x.to, chiffre:true, fait:() => {
+    data.sent[x.from] = {to:x.to, at:new Date().toISOString()}; countStat('envois');
+    const st = $('#sentSt'); if (st) st.textContent = sentStatus();
+  }});
 }
+/* Mail prérempli : seulement la période et le nom, jamais le contenu des notes */
+function mailEnvoi(from, to, chiffre) {
+  const p = data.profile, periode = `du ${fmtFR(from)} au ${fmtFR(to)}`, signe = `${p.prenom} ${p.nom}`.trim();
+  return {
+    objet:`Motus : ma ${to === addDays(from, 6) ? 'semaine' : 'période'} ${periode}`,
+    corps:`Bonjour,\n\nVous trouverez en pièce jointe mon ${chiffre ? 'fichier Motus' : 'tableau Excel Motus'} pour la période ${periode}.${chiffre ? ' Il est chiffré : il s’ouvre dans Motus, depuis ma fiche (Importer un fichier reçu).' : ''}\n\nBien cordialement,\n${signe}`,
+  };
+}
+const lienMail = (a, {objet, corps}) => `mailto:${encodeURIComponent(a || '').replace(/%40/g, '@')}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps.replace(/\n/g, '\r\n'))}`;
+/* Dans l'ordre : joindre le fichier, puis le destinataire, puis le texte. Le menu de partage joint le fichier et le texte, mais aucune app web ne peut y
+   indiquer de destinataire : son adresse est copiée pour être collée. Sans menu de partage (PC), le fichier est téléchargé et la messagerie s'ouvre préremplie. */
+async function envoyerParMail({file, from, to, chiffre, fait}) {
+  const a = data.therapist?.email || '', mail = mailEnvoi(from, to, chiffre);
+  if (navigator.canShare?.({files:[file]})) {
+    if (a) navigator.clipboard?.writeText(a).catch(() => {});
+    busy = true;
+    try {
+      await navigator.share({files:[file], title:mail.objet, text:mail.corps});
+      fait?.();
+      return toast(a ? `Pensez à coller l’adresse de votre thérapeute : ${a}` : 'Fichier prêt à envoyer');
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+    } finally { setTimeout(() => busy = false, 1500); }
+  }
+  download(file, file.name); fait?.();
+  location.href = lienMail(a, mail);
+  toast('Joignez au mail le fichier téléchargé.');
+}
+const aideEnvoi = a => navigator.canShare
+  ? `Choisissez votre messagerie : le fichier est joint et le texte prérempli.${a ? ' L’adresse de votre thérapeute est copiée : collez-la dans « À ».' : ''}`
+  : 'Le fichier se télécharge et votre messagerie s’ouvre, préremplie : joignez-y le fichier.';
 /* Rappel si rien n'a été envoyé depuis 7 jours (ou depuis l'ajout du thérapeute) et qu'il y a des notes non envoyées */
 function sendReminder() {
   if (!data.therapist) return '';
@@ -2803,7 +2988,10 @@ function askCode(title, {confirm = false, hint = '', label = 'Mot de passe', min
 
 /* ───────────── Actions ───────────── */
 let installEvt = null;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+/* Le navigateur propose l'installation en un appui (Android) : la page affichée se met à jour */
+function majPageInstall() { if (doitInstaller() && !$('#lock').hidden) { if (key) showTransfert(); else if (!recupNotes) showInstall(); } }
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; majPageInstall(); });
+window.addEventListener('appinstalled', () => toast('Motus est installé : ouvrez-le depuis son icône.'));
 
 const ACT = {
   tab: t => {
@@ -2816,6 +3004,10 @@ const ACT = {
   addTherapist: () => offerInvite($('#invCode').value),
   removeTherapist: () => { if (!confirm('Retirer ce thérapeute ? Vous ne pourrez plus lui envoyer vos semaines.')) return; data.therapist = null; save(); render(); },
   sendWeek: () => sendWeek(),
+  mailXlsx: () => {
+    const x = exportRange(); if (!x) return;
+    envoyerParMail({file:new File([buildXlsx(x.from, x.to)], x.name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), from:x.from, to:x.to, chiffre:false});
+  },
   goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
   setPage: t => { setPage = t.dataset.p; render(); },
   setBack: () => { setPage = null; render(); },
@@ -2943,7 +3135,28 @@ const ACT = {
   backupLater: () => { data.backupPlusTard = today(); save(); $('.sauvegarde-rappel')?.remove(); },
   majApp: async () => { if (key) await saveNow(); location.reload(); },
   restore: () => { busy = true; $('#restoreFile').value = ''; $('#restoreFile').click(); setTimeout(() => busy = false, 60000); },
-  install: () => { if (installEvt) { installEvt.prompt(); installEvt = null; } },
+  install: async () => {
+    if (!installEvt) return;
+    const e = installEvt; e.prompt(); await e.userChoice?.catch(() => {}); installEvt = null; majPageInstall();
+  },
+  copierLien: async () => {
+    const l = lienInvitation();
+    try { await navigator.clipboard.writeText(l); toast(pendingInv ? 'Invitation copiée' : 'Lien copié'); }
+    catch { window.prompt('Copiez ce lien :', l); }
+  },
+  recupNotes: () => { recupNotes = true; showLock('login'); },
+  retourInstall: () => { recupNotes = false; showLock(); },
+  navQuandMeme: () => {
+    if (!confirm('Continuer dans ce navigateur ?\n\nVos notes y seront séparées de celles de l’app installée, et le navigateur peut les effacer après quelques jours sans visite. Faites des sauvegardes régulières.')) return;
+    localStorage.setItem(NAV_OK, '1'); recupNotes = false;
+    if (key) showApp(); else showLock('login');
+  },
+  collerInvit: async () => {
+    let t = '';
+    try { t = (await navigator.clipboard.readText()).trim(); } catch {}
+    if (!t) { $('#invCode').focus(); return toast('Collez l’invitation dans le champ ci-dessous.'); }
+    $('#invCode').value = t; offerInvite(t);
+  },
   wipe: async () => {
     const th = data.role === 'therapeute';
     if (!confirm(`Effacer définitivement ${th ? 'toutes les données reçues de vos clients' : 'toutes vos notes'} de ce téléphone ?\n\nVotre compte et vos réglages${th ? ', ainsi que vos fiches clients,' : ''} sont conservés. Les sauvegardes, fichiers Excel et envois déjà créés ne sont pas concernés.`)) return;
@@ -3029,7 +3242,7 @@ $('#importFile').addEventListener('change', e => { busy = false; const f = e.tar
 
 /* Lien d'invitation ouvert directement : on le garde pour après le déverrouillage et on l'efface de l'adresse */
 {
-  const m = location.hash.match(/inv=([A-Za-z0-9_-]+)/);
+  const m = location.hash.match(/(?:inv|i)=([A-Za-z0-9_-]+)/);
   if (m) { pendingInv = m[1]; history.replaceState(null, '', location.pathname + location.search); }
 }
 
