@@ -215,6 +215,7 @@ a{color:var(--accent)}
 .banner{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--lav) 35%,var(--surface));border-radius:var(--r);padding:12px 14px;margin:0 0 14px;font-size:.9rem}
 .banner span{flex:1}
 .banner-actions{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
+.rgpd{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:.9rem}
 .safari-avis{text-align:left}
 .lockcard .safari-avis{margin:14px 0 0}
 .maj-banner{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:12px;right:12px;margin:0;z-index:30;box-shadow:0 4px 16px rgba(0,0,0,.2)}
@@ -349,7 +350,13 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 19;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 20;   // même numéro que CACHE dans sw.js
+const RGPD_VERSION = 1;   // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
+const MAIL_AIDE = {
+  client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
+  therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données et à recevoir les envois de vos clients : il leur est transmis avec votre lien d’invitation. Un code vous sera envoyé pour le confirmer.',
+};
+const MAIL_NOM = {client:'Mail de récupération', therapeute:'Mail professionnel'};
 let toastTimer;
 function toast(msg) {
   document.querySelector('.toast')?.remove();
@@ -361,8 +368,7 @@ function toast(msg) {
 
 /* ───────────── Chiffrement (AES-GCM 256, clé dérivée du code par PBKDF2) ───────────── */
 let VKEY = null;                                  // journal de l'utilisateur connecté sur cet appareil
-const vaultKey = id => 'journal-emotions.vault.' + id;
-const LEGACY_VKEY = 'journal-emotions.vault';     // journal créé avant les comptes
+const vaultKey = id => 'journal-emotions.donnees.' + id;
 const ITER = 250000;
 let key = null, salt = null, data = null;
 
@@ -392,13 +398,35 @@ function saveNow() {
   if (!key) return savePending;
   const snapshot = data, k = key, s = salt, vk = VKEY;
   savePending = savePending.then(async () => {
-    localStorage.setItem(vk, JSON.stringify(await sealData(snapshot, k, s)));
+    localStorage.setItem(vk, JSON.stringify(await sealData(versFichier(snapshot), k, s)));
   }).catch(err => { console.error(err); toast('Erreur d’enregistrement'); });
   return savePending;
 }
 
-/* ───────────── Données ───────────── */
+/* ───────────── Données ─────────────
+   Fichier « données utilisateur », chiffré, en sections. Effacer ses données ne vide que le journal et les données reçues des clients : les fiches clients restent. */
+function versFichier(d) {
+  const {days, backupAt, backupPlusTard, clients, ...parametres} = d;
+  return {v:2, journal:{days, backupAt, backupPlusTard}, donneesClients:{clients}, parametres};
+}
+function depuisFichier(o) { return o.parametres ? {...o.parametres, ...o.journal, ...o.donneesClients} : o; }   // sans sections : ancien format ou ancienne sauvegarde
+function viderJournal() {
+  data.days = {}; delete data.backupAt; delete data.backupPlusTard;
+  for (const c of Object.values(data.clients)) { c.days = {}; c.envois = []; c.labels = {...DEF_LABELS}; }
+}
+/* Les versions précédentes ne savent pas lire les sections : le fichier change d'emplacement pour qu'elles ne puissent jamais l'écraser.
+   L'ancienne copie n'est retirée qu'après vérification de la nouvelle. */
+function migrerStockage() {
+  const P = 'journal-emotions.vault.';
+  Object.keys(localStorage).filter(k => k.startsWith(P)).forEach(k => {
+    const n = vaultKey(k.slice(P.length)), v = localStorage.getItem(k);
+    if (localStorage.getItem(n) != null) return;
+    localStorage.setItem(n, v);
+    if (localStorage.getItem(n) === v) localStorage.removeItem(k);
+  });
+}
 function defaults(d = {}) {
+  d = depuisFichier(d);
   d.profile = Object.assign({nom:'', prenom:'', start:today()}, d.profile);
   d.labels = Object.assign({}, DEF_LABELS, d.labels);
   d.settings = Object.assign({autolock:1, geoloc:true}, d.settings);
@@ -459,7 +487,7 @@ function supabaseApi() {
   }
   return {
     async signUp(f) {
-      const j = await call('/auth/v1/signup', {email:email(f.identifiant), password:f.password, data:{identifiant:f.identifiant, role:f.role, nom:f.nom, prenom:f.prenom}});
+      const j = await call('/auth/v1/signup', {email:email(f.identifiant), password:f.password, data:{identifiant:f.identifiant, role:f.role, nom:f.nom, prenom:f.prenom, rgpd:f.rgpd}});
       if (!j?.access_token) throw apiErr('confirmation');
       session = j;
     },
@@ -469,6 +497,7 @@ function supabaseApi() {
     rpc: (fn, args) => call('/rest/v1/rpc/' + fn, args),
     recup: body => call('/functions/v1/recuperation', body),
     setPassword: pw => call('/auth/v1/user', {password:pw}, 'PUT'),
+    setConsent: rgpd => call('/auth/v1/user', {data:{rgpd}}, 'PUT'),
     signOut() { if (session) call('/auth/v1/logout', {}).catch(() => {}); session = null; },
   };
 }
@@ -566,6 +595,7 @@ function demoApi() {
       put(x); return {ok:true};
     },
     async setPassword(pw) { const x = db(); x.comptes[session.id].mdp = await hash(pw); put(x); },
+    async setConsent() {},
     signOut() { session = null; },
   };
 }
@@ -696,11 +726,12 @@ function showLock(mode = 'login') {
         <input type="password" id="sPw" autocomplete="new-password">
         <label class="label" for="sPw2">Confirmez le mot de passe</label>
         <input type="password" id="sPw2" autocomplete="new-password">
-        <label class="label" for="sMail">Mail de récupération</label>
+        <label class="label" for="sMail" id="sMailNom">${MAIL_NOM.client}</label>
         <input type="email" id="sMail" autocomplete="email" autocapitalize="none">
-        <div class="small muted" style="margin-top:4px">Pour recevoir un code si vous oubliez votre mot de passe ou si vous effacez vos données. Un code vous sera envoyé pour le confirmer. Personne ne peut le lire, pas même l’administrateur ; vous devrez le retaper à l’identique.</div>
+        <div class="small muted" id="sMailAide" style="margin-top:4px">${MAIL_AIDE.client}</div>
         <label class="label" for="sMail2">Confirmez le mail</label>
         <input type="email" id="sMail2" autocomplete="off" autocapitalize="none">
+        <label class="rgpd"><input type="checkbox" id="sRgpd"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
         <div class="err" id="lockErr"></div>
         <button class="btn primary block" id="signupBtn">Créer mon compte</button>
       </form>
@@ -709,6 +740,7 @@ function showLock(mode = 'login') {
     </div>`;
   $('#loginForm')?.addEventListener('submit', onLogin);
   $('#signupForm')?.addEventListener('submit', onSignup);
+  document.querySelectorAll('input[name=role]').forEach(r => r.onchange = () => { $('#sMailAide').textContent = MAIL_AIDE[r.value]; $('#sMailNom').textContent = MAIL_NOM[r.value]; });
   (mode === 'login' ? ($('#lId').value ? $('#lPw') : $('#lId')) : $('#sPrenom')).focus();
 }
 
@@ -752,6 +784,8 @@ async function onSignup(e) {
   const mail = v('#sMail').toLowerCase();
   if (!EMAIL_RE.test(mail)) return err.textContent = 'Indiquez un mail de récupération valide.';
   if (mail !== v('#sMail2').toLowerCase()) return err.textContent = 'Les deux mails de récupération ne correspondent pas.';
+  if (!$('#sRgpd').checked) return err.textContent = 'Cochez la case pour accepter la politique de confidentialité.';
+  f.rgpd = {version:RGPD_VERSION, date:new Date().toISOString()};   // preuve du consentement, côté compte et côté appareil
   btn.disabled = true; btn.textContent = 'Création…'; err.textContent = '';
   try { await API.signUp({...f, nom:f.role === 'therapeute' ? f.nom : initiale(f.nom)}); profil = await API.rpc('ouvrir_session'); }
   catch (x) {
@@ -765,7 +799,7 @@ async function onSignup(e) {
   }
   differeMail = true;   // le mail vient d'être saisi : rien à redemander
   try {
-    await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}});
+    await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}, consentement:{...f.rgpd, envoye:true}});
     if (await setRecovery(mail, f.password, true) !== true) { mailPasse = true; majRappelRecup(); }
   } finally { differeMail = false; }
 }
@@ -796,7 +830,9 @@ async function openJournal(id, pw, init) {
   if (data.settings.autolock === -1) { await rememberKey().catch(() => {}); rememberSession(); }
   if (data.role === 'therapeute') await ensureKeys(); else await saveNow();
   navigator.storage?.persist?.();
-  showApp(); pushProfile(); flushStats(); ensureSecours(pw).then(ok => ok && exigerMail());
+  showApp();
+  if (!await exigerRgpd()) return;
+  pushProfile(); flushStats(); ensureSecours(pw).then(ok => ok && exigerMail());
 }
 
 function applyProfil() {
@@ -831,7 +867,11 @@ async function ensureSecours(pw) {
     if (!data) return;
     data.account.recup = etat?.confirmee ? 'confirmee' : etat?.attente ? 'attente' : false;
     data.account.recupChange = !!(etat?.confirmee && etat.attente);
-    if (data.account.recup !== 'attente' && !data.account.recupChange) { delete data.recupMail; delete data.recupEnvoi; }
+    if (data.account.recup !== 'attente' && !data.account.recupChange) {
+      // thérapeute : un seul mail, celui qui vient d'être confirmé devient aussi celui transmis aux clients
+      if (data.role === 'therapeute' && data.account.recup && data.recupMail) { data.thera.email = data.recupMail; pushProfile(); }
+      delete data.recupMail; delete data.recupEnvoi;
+    }
     if (!cle) { delete data.recupIndice; delete data.recupIndiceNouveau; }
     else if (etat?.confirmee && !etat.attente && data.recupIndiceNouveau) { data.recupIndice = data.recupIndiceNouveau; delete data.recupIndiceNouveau; }
     syncIndice();
@@ -862,6 +902,40 @@ async function rescueJournal(id, cle, newPw) {
     return true;
   } catch (x) { console.warn('Journal non repris', x); return false; }
 }
+/* Politique de confidentialité : acceptation demandée à l'ouverture aux comptes plus anciens et à chaque nouvelle version.
+   Refuser déconnecte, sans toucher aux notes de l'appareil. La preuve est gardée sur l'appareil et, dès que possible, sur le compte. */
+function envoyerConsentement() {
+  const c = data?.consentement;
+  if (!c || c.envoye || !session) return;
+  API.setConsent({version:c.version, date:c.date}).then(() => { c.envoye = true; if (data?.consentement === c) save(); }).catch(() => {});
+}
+function exigerRgpd() {
+  if (data.consentement?.version === RGPD_VERSION) { envoyerConsentement(); return Promise.resolve(true); }
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="rgForm">
+      <div class="dlg-h"><h2>Politique de confidentialité</h2></div>
+      <div class="dlg-b">
+        <p class="small muted">Pour continuer à utiliser Motus, merci de lire et d’accepter notre politique de confidentialité. Sans cet accord, vous serez déconnecté(e) ; vos notes restent sur ce téléphone.</p>
+        <label class="rgpd"><input type="checkbox" id="rgOui"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
+        <div class="err" id="rgErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="rgNon">Se déconnecter</button><button class="btn primary">Accepter</button></div>
+    </form>`;
+    D.onclose = null;
+    D.oncancel = e => e.preventDefault();
+    $('#rgNon').onclick = async () => { busy = false; D.oncancel = null; D.close(); await lock(); resolve(false); };
+    $('#rgForm').onsubmit = async e => {
+      e.preventDefault();
+      if (!$('#rgOui').checked) return $('#rgErr').textContent = 'Cochez la case pour accepter la politique de confidentialité.';
+      data.consentement = {version:RGPD_VERSION, date:new Date().toISOString(), envoye:false};
+      await saveNow();
+      busy = false; D.oncancel = null; D.close(); envoyerConsentement(); resolve(true);
+    };
+    busy = true;   // le temps de lire la politique, sans que l'app se verrouille
+    D.showModal();
+  });
+}
 /* Mail de récupération obligatoire : il est demandé à l'ouverture tant qu'il n'est pas confirmé.
    Sans internet ou si l'envoi échoue, le journal reste accessible : un compte ne perd jamais l'accès à ses notes pour cette raison. */
 let differeMail = false, mailPasse = false;
@@ -882,10 +956,10 @@ function askRecovery(oblig) {
   return new Promise(resolve => {
     const D = $('#codeDlg');
     D.innerHTML = `<form method="dialog" id="recForm">
-      <div class="dlg-h"><h2>${data.account?.recup ? 'Changer de mail de récupération' : 'Ajouter un mail de récupération'}</h2></div>
+      <div class="dlg-h"><h2>${data.account?.recup ? 'Changer de' : 'Ajouter un'} ${MAIL_NOM[data.role].toLowerCase()}</h2></div>
       <div class="dlg-b">
         ${data.recupIndice ? `<p class="small muted">Mail actuel : <b>${esc(data.recupIndice)}</b></p>` : ''}
-        <p class="small muted">${oblig ? 'Il est obligatoire pour continuer. ' : ''}Il sert uniquement à recevoir un code si vous oubliez votre mot de passe ou si vous effacez vos données. Vous recevrez un code pour le confirmer. Seule une empreinte illisible est conservée : personne ne peut le lire, pas même l’administrateur. Vous devrez le retaper à l’identique en cas de besoin.</p>
+        <p class="small muted">${oblig ? 'Il est obligatoire pour continuer. ' : ''}${MAIL_AIDE[data.role] || MAIL_AIDE.client}</p>
         <label class="label" for="rMail">Adresse e-mail</label>
         <input type="email" id="rMail" autocomplete="email" autocapitalize="none">
         <label class="label" for="rMail2">Confirmez l’adresse</label>
@@ -1139,6 +1213,7 @@ async function setAutolock(t) {
 }
 /* À l'ouverture : journal rouvert sans mot de passe si l'utilisateur a choisi de rester connecté */
 async function boot() {
+  migrerStockage();
   const s = await keyDb('readonly', st => st.get('courante')).catch(() => null);
   if (!s) return showLock();
   try {
@@ -1147,7 +1222,7 @@ async function boot() {
     VKEY = vaultKey(s.id); key = s.key; salt = fromB64(v.salt); data = defaults(JSON.parse(dec.decode(pt)));
   } catch { await forgetKey(); return showLock(); }
   showApp();
-  syncSession();
+  if (await exigerRgpd()) syncSession();
 }
 /* En arrière-plan : reprend la connexion au serveur. Sans internet, le journal reste simplement ouvert. */
 async function syncSession() {
@@ -1166,7 +1241,7 @@ async function syncSession() {
       const rappel = !src && (view === 'day' || view === 'clients') && !$('.admin-rappel') ? adminReminder() : '';
       if (rappel) $('#view').insertAdjacentHTML('afterbegin', rappel);
     }
-    pushProfile(); flushStats(); ensureSecours().then(ok => ok && exigerMail());
+    pushProfile(); flushStats(); envoyerConsentement(); ensureSecours().then(ok => ok && exigerMail());
   } catch (x) {
     if (!data) return;
     if (x.code === 'desactive') lock(LOGIN_ERR.desactive);
@@ -1204,49 +1279,6 @@ async function sauvegarder() {
   $('.sauvegarde-rappel')?.remove();
   if (view === 'set' && !src) render(true);
   toast('Sauvegarde créée. Elle s’ouvre avec votre mot de passe actuel.');
-}
-
-/* Journal créé avant les comptes : proposé tant qu'il n'est pas récupéré, et jamais effacé sans demande explicite */
-const hasLegacy = () => !!localStorage.getItem(LEGACY_VKEY);
-function mergeJournal(cur, old) {
-  for (const [k, d] of Object.entries(old.days)) {
-    const c = cur.days[k];
-    if (!c) { cur.days[k] = d; continue; }
-    const ids = new Set(c.entries.map(e => e.id));
-    c.entries.push(...d.entries.filter(e => !ids.has(e.id)));
-    const nids = new Set(dayNotes(c).map(n => n.id)), nouvelles = dayNotes(d).filter(n => !nids.has(n.id));
-    if (nouvelles.length) c.notes = [...dayNotes(c), ...nouvelles];
-    c.color ||= d.color;
-    if (d.synth?.trim() && c.synth !== d.synth) c.synth = c.synth?.trim() ? `${c.synth}\n${d.synth}` : d.synth;
-  }
-  if (!cur.therapist && old.therapist) { cur.therapist = old.therapist; cur.uid = old.uid; }
-  cur.keys ||= old.keys;
-  cur.sent = {...old.sent, ...cur.sent};
-  cur.clients = {...old.clients, ...cur.clients};
-  if (old.profile.start && old.profile.start < cur.profile.start) cur.profile.start = old.profile.start;
-  return cur;
-}
-async function adoptLegacy() {
-  const code = await askCode('Récupérer l’ancien journal', {label:'Code de l’ancien journal', hint:'C’est le code que vous tapiez pour ouvrir l’app avant la création des comptes. Ce n’est ni votre nouveau mot de passe, ni un code reçu par e-mail. Vous pouvez essayer autant de fois que nécessaire.'});
-  if (code == null) return;
-  let r;
-  try { r = await openVault(JSON.parse(localStorage.getItem(LEGACY_VKEY)), code); }
-  catch { return toast('Code incorrect : l’ancien journal reste conservé, vous pourrez réessayer.'); }
-  data = mergeJournal(data, defaults(r.obj));
-  await saveNow();
-  // l'ancien journal n'est retiré qu'après avoir relu et vérifié la nouvelle copie enregistrée
-  try {
-    const v = JSON.parse(localStorage.getItem(VKEY));
-    const relu = JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(v.iv)}, key, fromB64(v.ct))));
-    if (!Object.keys(r.obj.days || {}).every(k => relu.days[k])) throw new Error('copie incomplète');
-    localStorage.removeItem(LEGACY_VKEY);
-  } catch (x) { console.error(x); render(); return toast('Enregistrement à vérifier : l’ancien journal est conservé.'); }
-  render(); toast('Ancien journal récupéré : vos notes ont été ajoutées à ce compte');
-}
-function legacyReminder() {
-  if (!hasLegacy()) return '';
-  return `<div class="banner"><span>Un ancien journal, créé avant les comptes, est conservé sur cet appareil. Pour récupérer ses notes, il vous faut le code que vous utilisiez pour l’ouvrir.</span>
-    <button class="btn primary" data-act="adoptLegacy">Récupérer</button></div>`;
 }
 
 async function lock(msg) {
@@ -1323,7 +1355,7 @@ function vDay() {
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
   const fs = famSummary(ents), ro = !!src;
   return `
-  ${clientBar()}${ro ? '' : safariAvis() + legacyReminder() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
+  ${clientBar()}${ro ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
     <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
     <div class="dayhead-t">
@@ -1385,7 +1417,7 @@ function vCal() {
   cells += '<div></div>'.repeat(off);
   const cnt = {vert:0, jaune:0, rouge:0}, words = {}, fams = {};
   let nEntries = 0, pastDays = 0;
-  const fam = calF && FAMK[calF], notesOnly = calF === 'notes', filtre = fam || notesOnly, occ = [], occN = [], fWords = {};
+  const fam = calF && FAMK[calF], notesOnly = calF === 'notes', synthOnly = calF === 'synth', filtre = fam || notesOnly || synthOnly, occ = [], occN = [], occS = [], fWords = {};
   const cadre = fam ? fam.c : 'var(--brand)';
   let fDays = 0, nNotes = 0;
   for (let i = 1; i <= nDays; i++) {
@@ -1393,6 +1425,7 @@ function vCal() {
     if (!fut) pastDays++;
     nNotes += ns.length;
     if (notesOnly) ns.forEach(n => occN.push({k, n}));
+    if (synthOnly && d?.synth?.trim()) occS.push(k);
     if (d?.color) cnt[d.color]++;
     let maxI = -1; // intensité la plus forte de l'émotion filtrée ce jour-là
     (d?.entries || []).forEach(e => {
@@ -1401,7 +1434,7 @@ function vCal() {
       const hit = fam ? e.emos.filter(x => x.f === calF && (!calW || x.w === calW)) : [];
       if (hit.length) { occ.push({k, e}); maxI = Math.max(maxI, ...hit.map(x => INT.findIndex(([c]) => c === x.i))); }
     });
-    const hit = fam ? maxI >= 0 : notesOnly && ns.length > 0;
+    const hit = fam ? maxI >= 0 : notesOnly ? ns.length > 0 : synthOnly && !!d?.synth?.trim();
     if (hit) fDays++;
     const lab = (d?.color ? ', ' + esc(D().labels[d.color]) : '') + (maxI >= 0 ? `, ${fam.n} ${INT[maxI][1].toLowerCase()}` : '') + (ns.length ? ', note personnelle' : '');
     cells += `<button class="cday ${d?.color || ''} ${hit ? 'hit' : ''} ${k === t ? 'today' : ''} ${fut ? 'future' : ''}"${hit ? ` style="--fc:${cadre}"` : ''} data-act="openDay" data-k="${k}" ${fut ? 'disabled' : ''}
@@ -1417,6 +1450,7 @@ function vCal() {
     <div class="chips" style="margin-top:10px">
       <button class="chip ${!filtre ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
       ${src ? '' : `<button class="chip ${notesOnly ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>`}
+      <button class="chip ${synthOnly ? 'on' : ''}" style="--fc:var(--brand)" data-act="calFilter" data-f="synth" aria-pressed="${synthOnly}">Synthèses</button>
       ${FAM.map(f => `<button class="chip ${calF === f.k ? 'on' : ''}" style="--fc:${f.c}" data-act="calFilter" data-f="${f.k}" aria-pressed="${calF === f.k}">${f.n}</button>`).join('')}
     </div>
     ${fam ? `<p class="label">Émotion précise</p><div class="chips">
@@ -1425,7 +1459,7 @@ function vCal() {
     </div>` : ''}
   </section>`;
   const legend = COL.map(c => `<span><i style="background:var(--${c})"></i>${esc(D().labels[c])}</span>`).join('')
-    + (filtre ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : 'Note personnelle')}</span>`
+    + (filtre ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : notesOnly ? 'Note personnelle' : 'Synthèse')}</span>`
       : '<span><i style="background:var(--accent);width:6px;height:6px;border-radius:50%"></i>émotions notées</span>'
         + (src ? '' : '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--brand) transparent transparent"></i>note personnelle</span>'));
   const occCard = fam ? `
@@ -1435,6 +1469,14 @@ function vCal() {
     ${occ.map(({k, e}) => `<button class="occ" data-act="openDay" data-k="${k}">
       <div class="meta">${dayName(k)} · ${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div>
       <div class="txt">${sentenceHtml(e)}</div>
+    </button>`).join('')}
+  </section>` : synthOnly ? `
+  <section class="card">
+    <h2>Synthèses · ${MOIS[calM]}</h2>
+    <p class="small muted" style="margin:6px 0 4px">${occS.length ? `${occS.length} synthèse${occS.length > 1 ? 's' : ''}` : 'Aucune synthèse ce mois-ci.'}</p>
+    ${occS.map(k => `<button class="occ" data-act="openDay" data-k="${k}">
+      <div class="meta">${dayName(k)}</div>
+      <div class="txt note-txt">${esc(D().days[k].synth.trim())}</div>
     </button>`).join('')}
   </section>` : `
   <section class="card">
@@ -1453,10 +1495,10 @@ function vCal() {
       if (!d || k > t) continue;
       const ents = (d.entries || []).filter(e => !fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW)));
       const lignes = [
-        ...(notesOnly ? [] : ents.map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`}))),
-        ...(fam ? [] : dayNotes(d).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''} · Note personnelle</div><div class="txt note-txt">${esc(n.text)}</div>`}))),
+        ...(notesOnly || synthOnly ? [] : ents.map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`}))),
+        ...(fam || synthOnly ? [] : dayNotes(d).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''} · Note personnelle</div><div class="txt note-txt">${esc(n.text)}</div>`}))),
       ].sort((a, b) => a.time.localeCompare(b.time));
-      const synth = !filtre && d.synth?.trim();
+      const synth = (!filtre || synthOnly) && d.synth?.trim();
       if (!lignes.length && !synth && (filtre || !d.color)) continue;
       out.push(`<section class="card lday"${d.color ? ` style="--dc:var(--${d.color})"` : ''}>
         <button class="lhead" data-act="openDay" data-k="${k}"><span>${dayName(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
@@ -1607,8 +1649,8 @@ function vSetThera() {
     <select id="tType" data-thera="type"><option value="">— Choisir —</option>${THERA_TYPES.map(x => `<option ${t.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
     <label class="label" for="tTel">Téléphone</label>
     <input type="text" id="tTel" data-thera="tel" inputmode="tel" value="${esc(t.tel)}">
-    <label class="label" for="tEmail">E-mail</label>
-    <input type="text" id="tEmail" data-thera="email" inputmode="email" value="${esc(t.email)}">
+    <div class="stat" style="margin-top:14px"><span class="muted">Mail professionnel</span><b style="overflow-wrap:anywhere;text-align:right">${esc(t.email || '—')}</b></div>
+    <p class="small muted" style="margin:4px 0 0">Il se change dans « Mon compte », après confirmation par un code.</p>
     <label class="label" for="tAdr">Adresse du cabinet</label>
     <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}">
   </section>
@@ -1638,11 +1680,10 @@ function securityCard() {
     <div class="stat"><span class="muted">Identifiant</span><b>${esc(a.identifiant || '—')}</b></div>
     <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
     <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
-    <div class="stat"><span class="muted">Mail de récupération</span><b>${a.recup === 'attente' ? 'À confirmer' : a.recup ? 'Confirmé' : 'À ajouter'}</b></div>
-    ${a.recup && (data.recupIndice || data.recupIndiceNouveau) ? `<div class="stat small"><span class="muted">Adresse</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? data.recupIndiceNouveau || data.recupIndice : data.recupIndice || data.recupIndiceNouveau)}</b></div>` : ''}
+    <div class="stat"><span class="muted">${MAIL_NOM[data.role]}</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? `${data.recupIndiceNouveau || data.recupIndice || 'Adresse'} (à confirmer)` : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter')}</b></div>
     ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
     <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
-    ${a.recup ? '<button class="btn block" data-act="addRecovery">Changer de mail de récupération</button>' : ''}
+    ${a.recup ? '<button class="btn block" data-act="addRecovery">' + (data.role === 'therapeute' ? 'Changer de mail professionnel' : 'Changer de mail de récupération') + '</button>' : ''}
     ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
     <p class="small muted" style="margin:12px 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
     <div class="setrow">
@@ -1666,11 +1707,6 @@ function commonCards(backupNote) {
       <button class="btn primary" data-act="backup">Sauvegarder</button>
       <button class="btn" data-act="restore">Restaurer</button>
     </div>
-    ${hasLegacy() ? `<p class="label">Ancien journal (créé avant les comptes)</p>
-    <div class="row">
-      <button class="btn" data-act="adoptLegacy">Récupérer</button>
-      <button class="btn danger" data-act="deleteLegacy">Supprimer</button>
-    </div>` : ''}
   </section>
 
   <section class="card">
@@ -1683,10 +1719,10 @@ function commonCards(backupNote) {
 
   <section class="card">
     <h2>Zone sensible</h2>
-    <p class="small muted" style="margin:6px 0 0">Un code reçu par e-mail vous sera demandé.</p>
+    <p class="small muted" style="margin:6px 0 0">Efface ${data.role === 'therapeute' ? 'les données reçues de vos clients' : 'vos émotions, couleurs, synthèses et notes personnelles'} de ce téléphone. Votre compte et vos réglages${data.role === 'therapeute' ? ', ainsi que vos fiches clients,' : ''} sont conservés. Un code reçu par e-mail vous sera demandé.</p>
     <button class="btn danger block" data-act="wipe">Effacer toutes mes données</button>
   </section>
-  <p class="small muted" style="text-align:center">Motus, version ${APP_VERSION}</p>`;
+  <p class="small muted" style="text-align:center"><a href="confidentialite.html" target="_blank" rel="noopener">Politique de confidentialité</a><br>Motus, version ${APP_VERSION}</p>`;
 }
 
 /* ───────────── Lien client ↔ thérapeute (sans serveur) ─────────────
@@ -1840,7 +1876,7 @@ function vClients() {
   const key = c => `${c.profile.nom} ${c.profile.prenom}`;
   const list = Object.values(data.clients).sort((a, b) => key(a).localeCompare(key(b), 'fr', {sensitivity:'base'}));
   return `
-  ${legacyReminder()}${sauvegardeReminder()}${recupReminder()}${adminReminder()}
+  ${sauvegardeReminder()}${recupReminder()}${adminReminder()}
   <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Mes clients</h1></div>
   <section class="card">
     <div class="card-h"><h2>Clients</h2><span class="count">${list.length}</span></div>
@@ -2667,11 +2703,12 @@ const ACT = {
   restore: () => { busy = true; $('#restoreFile').value = ''; $('#restoreFile').click(); setTimeout(() => busy = false, 60000); },
   install: () => { if (installEvt) { installEvt.prompt(); installEvt = null; } },
   wipe: async () => {
-    if (!confirm('Effacer définitivement toutes vos notes de ce téléphone ?\n\nVotre compte reste actif.')) return;
+    const th = data.role === 'therapeute';
+    if (!confirm(`Effacer définitivement ${th ? 'toutes les données reçues de vos clients' : 'toutes vos notes'} de ce téléphone ?\n\nVotre compte et vos réglages${th ? ', ainsi que vos fiches clients,' : ''} sont conservés. Les sauvegardes, fichiers Excel et envois déjà créés ne sont pas concernés.`)) return;
     if (!await confirmerEffacement()) return;
-    const vk = VKEY, sk = secoursKey(data.account.identifiant), ik = indiceKey(data.account.identifiant);
-    await lock(); localStorage.removeItem(vk); localStorage.removeItem(sk); localStorage.removeItem(ik);
-    toast('Vos notes ont été effacées de ce téléphone');
+    viderJournal(); await saveNow();
+    src = null; view = th ? 'clients' : 'day'; cur = today(); calF = calW = null; calMode = 'grid'; render();
+    toast(th ? 'Les données reçues ont été effacées de ce téléphone' : 'Vos notes ont été effacées de ce téléphone');
   },
   addRecovery: async () => {
     if (!session) return toast('Connexion internet nécessaire.');
@@ -2679,12 +2716,6 @@ const ACT = {
     if (r) await setRecovery(r.email, r.pw);
   },
   confirmRecovery: () => openRecupCode(),
-  adoptLegacy: () => adoptLegacy(),
-  deleteLegacy: () => {
-    if (!confirm('Supprimer définitivement l’ancien journal de cet appareil ?\n\nSes notes seront perdues.')) return;
-    if (!confirm('Dernière confirmation : cette action est irréversible. Continuer ?')) return;
-    localStorage.removeItem(LEGACY_VKEY); render(); toast('Ancien journal supprimé');
-  },
   /* connexion, inscription */
   goSignup: () => showLock('signup'),
   goLogin: () => showLock('login'),
@@ -2744,8 +2775,10 @@ $('#restoreFile').addEventListener('change', async e => {
   try {
     const r = await openVault(v, c);
     if (!confirm('Remplacer les notes actuelles par celles de la sauvegarde ?')) return;
-    const account = data.account, role = data.role;   // le compte et son type restent ceux du serveur
-    data = defaults(r.obj); data.account = account; data.role = role;
+    const account = data.account, role = data.role, indice = data.recupIndice, consentement = data.consentement;   // le compte, son type, son mail et l'accord donné restent ceux d'aujourd'hui
+    data = defaults(r.obj); data.account = account; data.role = role; data.consentement = consentement;
+    if (indice) data.recupIndice = indice;
+    syncIndice();
     if (role === 'therapeute') await ensureKeys();
     await saveNow(); showApp(); toast('Sauvegarde restaurée');
   } catch { toast('Mot de passe incorrect pour cette sauvegarde.'); }

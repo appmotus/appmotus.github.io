@@ -1,7 +1,7 @@
 // Service worker : met l'application en cache pour qu'elle fonctionne hors connexion.
 // Il ne voit jamais les notes (elles sont dans le localStorage chiffré, pas dans des requêtes réseau).
-const CACHE = 'journal-emotions-v19';   // même numéro que APP_VERSION dans index.html
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './communes.txt'];
+const CACHE = 'journal-emotions-v20';   // même numéro que APP_VERSION dans index.html
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './communes.txt', './confidentialite.html'];
 
 // cache:'reload' : va chercher les vrais fichiers, pas la copie que le navigateur garde 10 minutes
 self.addEventListener('install', e => {

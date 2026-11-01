@@ -233,7 +233,7 @@ async function effacerConfirme(req: Request, code: string, email: string) {
   // Mail de confirmation : un échec d'envoi ne doit pas empêcher l'effacement demandé
   if (l.email_empreinte === (await empreinte(`${id}|${email}`))) {
     await envoyer(email, "Vos notes ont bien été effacées",
-      `Vos notes Motus ont bien été effacées de votre téléphone. Votre compte reste actif.\n\nSi vous n'êtes pas à l'origine de cette demande, changez votre mot de passe sans attendre.`).catch(console.error);
+      `Vos notes Motus ont bien été effacées de votre téléphone. Votre compte et vos réglages sont conservés.\n\nLes sauvegardes, fichiers Excel et envois au thérapeute déjà créés ne sont pas concernés : pensez à supprimer vous-même ceux que vous ne souhaitez pas garder.\n\nSi vous n'êtes pas à l'origine de cette demande, changez votre mot de passe sans attendre.`).catch(console.error);
   }
   return rep(200, { ok: true });
 }

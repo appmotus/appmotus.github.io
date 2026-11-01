@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex, nofollow">
+<title>Confidentialité – Motus</title>
+<style>
+:root{--bg:#F9F6F0;--surface:#FFFFFF;--text:#3A2E26;--muted:#85766A;--brand:#8C5E3C;--accent:#C27B42;--border:#E7DCCD;--todo:#FFF3CD;--todo-fg:#856404}
+@media (prefers-color-scheme: dark){:root{--bg:#1E1915;--surface:#2A231D;--text:#F1E8DE;--muted:#B3A393;--brand:#E3AC7E;--accent:#D98E52;--border:#43382E;--todo:#3D3418;--todo-fg:#F1D27A}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:680px;margin:0 auto;padding:24px 16px 48px}
+h1{color:var(--brand);font-size:1.5rem;margin:0 0 4px}
+h2{color:var(--brand);font-size:1.05rem;margin:28px 0 8px}
+p,ul{margin:0 0 10px}
+ul{padding-left:20px}
+li{margin-bottom:5px}
+a{color:var(--accent)}
+.date{color:var(--muted);font-size:.9rem;margin-bottom:18px}
+.bref{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.bref ul{margin:0}
+.todo{background:var(--todo);color:var(--todo-fg);border-radius:5px;padding:1px 5px;font-weight:600}
+.table{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem;margin-bottom:10px}
+th,td{border:1px solid var(--border);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:var(--surface);color:var(--brand)}
+</style>
+</head>
+<body>
+<main>
+<h1>Politique de confidentialité</h1>
+<p class="date">Motus · Version 1 du 1er novembre 2026</p>
+
+<div class="bref">
+  <ul>
+    <li>Vos émotions, synthèses et notes restent sur votre téléphone, chiffrées avec votre mot de passe. Nous n'y avons pas accès.</li>
+    <li>Nos serveurs ne connaissent que votre compte et des compteurs d'utilisation, jamais le contenu de vos notes.</li>
+    <li>Rien n'est envoyé à votre thérapeute sans une action de votre part.</li>
+    <li>Pas de publicité, et aucun outil de suivi publicitaire.</li>
+  </ul>
+</div>
+
+<h2>1. Qui est responsable de vos données ?</h2>
+<p>Responsable du traitement : <span class="todo">[nom ou société, adresse]</span>.<br>
+Pour toute question ou demande : <span class="todo">[adresse e-mail de contact]</span>.</p>
+
+<h2>2. Quelles données, et où sont-elles ?</h2>
+<div class="table"><table>
+  <thead><tr><th>Où</th><th>Quelles données</th><th>Qui peut y accéder</th></tr></thead>
+  <tbody>
+    <tr><td>Votre téléphone, chiffré</td><td>Émotions, couleurs, synthèses, notes personnelles, villes et lieux notés, profil, réglages, coordonnées de votre thérapeute, historique des envois, date d'acceptation de cette politique. Pour un thérapeute : fiches clients et données reçues.</td><td>Vous</td></tr>
+    <tr><td>Votre téléphone, non chiffré</td><td>Dernier identifiant utilisé et forme masquée de votre mail de récupération (par exemple adre*******@domaine.fr).</td><td>Toute personne ayant votre téléphone en main</td></tr>
+    <tr><td>Nos serveurs (Supabase, région Europe)</td><td>Identifiant, numéro de compte, type de compte, prénom, initiale du nom de famille, dates et nombre de connexions, compteurs quotidiens (connexions, notes saisies, envois), empreinte du mot de passe, empreinte du mail de récupération, clé de secours, date d'acceptation de cette politique. Pour un thérapeute : nom complet, type de thérapie et coordonnées, dont son mail professionnel en clair.</td><td>L'administrateur de Motus</td></tr>
+    <tr><td>Service d'envoi d'e-mails (Brevo)</td><td>Votre mail de récupération et les messages envoyés (par exemple un code).</td><td>Brevo et l'administrateur de Motus, dans l'historique d'envoi conservé 1 mois</td></tr>
+    <tr><td>Hébergeur du site (GitHub)</td><td>Données techniques de connexion, comme l'adresse IP, lorsque vous ouvrez l'app.</td><td>GitHub</td></tr>
+  </tbody>
+</table></div>
+<p><b>Ville automatique :</b> si vous l'activez, votre position est convertie en nom de ville sur votre téléphone. Elle n'est ni envoyée ni enregistrée : seule la ville est notée. Vous pouvez désactiver cette option dans les Réglages.</p>
+
+<h2>3. Pourquoi, et sur quelle base ?</h2>
+<ul>
+  <li><b>Tenir votre journal :</b> votre consentement explicite, car vos notes peuvent révéler des informations sur votre santé. Ces données restent sur votre téléphone.</li>
+  <li><b>Créer et gérer votre compte :</b> l'exécution du service que vous demandez.</li>
+  <li><b>Récupérer votre compte, confirmer un effacement :</b> l'exécution du service. Ce mail est obligatoire pour ces deux usages.</li>
+  <li><b>Suivre l'utilisation et les limites du service :</b> notre intérêt légitime à le faire fonctionner, à partir de nombres uniquement.</li>
+  <li><b>Envoyer vos données à votre thérapeute :</b> votre décision, à chaque envoi.</li>
+</ul>
+
+<h2>4. Qui reçoit vos données ?</h2>
+<ul>
+  <li><b>Supabase</b> : hébergement des comptes, en région Europe.</li>
+  <li><b>Brevo</b> : envoi des e-mails.</li>
+  <li><b>GitHub</b> : hébergement du site. <span class="todo">[à vérifier : conditions et garanties pour les transferts hors de l'Union européenne, pour GitHub et Supabase]</span></li>
+  <li><b>Votre thérapeute</b> : uniquement ce que vous lui envoyez, dans un fichier chiffré que lui seul peut ouvrir. Vos notes personnelles n'en font pas partie. Une fois reçues, ces données sont sous sa responsabilité.</li>
+  <li><b>Vos clients, si vous êtes thérapeute</b> : votre nom, votre type de thérapie, votre mail professionnel et les autres coordonnées de votre profil figurent dans votre lien d'invitation, pour qu'ils puissent vous contacter et vous envoyer leurs données.</li>
+</ul>
+<p>Nous ne vendons pas vos données.</p>
+
+<h2>5. Combien de temps ?</h2>
+<ul>
+  <li><b>Sur votre téléphone :</b> jusqu'à ce que vous les effaciez.</li>
+  <li><b>Compte et compteurs :</b> tant que le compte existe. <span class="todo">[à définir : durée maximale pour un compte inactif]</span></li>
+  <li><b>Historique d'envoi des e-mails :</b> 1 mois.</li>
+  <li><b>Données techniques de connexion :</b> <span class="todo">[à vérifier : durées de Supabase et de GitHub]</span></li>
+</ul>
+
+<h2>6. Sécurité, et ce qui reste de votre responsabilité</h2>
+<p>Vos notes sont chiffrées (AES 256 bits) avec une clé issue de votre mot de passe. Choisissez-en un solide et ne le partagez pas.</p>
+<p><b>Effacer vos données</b> retire de votre téléphone vos émotions, couleurs, synthèses et notes personnelles (pour un thérapeute, les données reçues). Votre compte et vos réglages sont conservés.</p>
+<p>Nous ne pouvons pas agir sur les fichiers déjà sortis de l'app : <b>sauvegardes</b>, <b>fichiers Excel</b> (non chiffrés) et <b>envois au thérapeute</b>. Pensez à supprimer vous-même ceux que vous ne souhaitez pas garder, et à demander à votre thérapeute de supprimer ce qu'il a reçu.</p>
+
+<h2>7. Vos droits</h2>
+<p>Vous pouvez accéder à vos données, les rectifier, les effacer, en limiter le traitement, vous y opposer, en demander la portabilité et retirer votre consentement à tout moment. Pour supprimer votre compte ou exercer ces droits, écrivez à <span class="todo">[adresse e-mail de contact]</span>.</p>
+<p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL : <a href="https://www.cnil.fr" rel="noopener">www.cnil.fr</a>.</p>
+
+<h2>8. Âge minimum</h2>
+<p><span class="todo">[à décider : âge minimum pour utiliser Motus, et accord des parents en dessous]</span></p>
+
+<h2>9. Modifications</h2>
+<p>En cas de changement important de cette politique, nous vous en informerons dans l'app.</p>
+</main>
+</body>
+</html>
