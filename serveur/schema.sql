@@ -11,7 +11,7 @@
 create table public.profils (
   id                 uuid primary key references auth.users(id) on delete cascade,
   identifiant        text not null unique,
-  numero             text not null unique,            -- C-0001 (client) ou T-0001 (thérapeute)
+  numero             text not null unique,            -- code utilisateur : U-0001 (utilisateur, C-0001 avant novembre 2026) ou T-0001 (thérapeute)
   role               text not null default 'client' check (role in ('client', 'therapeute')),
   est_admin          boolean not null default false,
   actif              boolean not null default true,
@@ -48,7 +48,7 @@ create function public.nouveau_numero(r text) returns text
 language sql security definer set search_path = public as $$
   select case when r = 'therapeute'
     then 'T-' || lpad(nextval('public.seq_therapeute')::text, 4, '0')
-    else 'C-' || lpad(nextval('public.seq_client')::text, 4, '0') end
+    else 'U-' || lpad(nextval('public.seq_client')::text, 4, '0') end
 $$;
 
 -- ─── Création du profil à l'inscription ──────────────────────────────

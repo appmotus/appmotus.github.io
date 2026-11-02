@@ -223,6 +223,8 @@ nav.tabs button .badge-nav{position:absolute;top:0;left:calc(50% + 6px);min-widt
 .stat{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.92rem}
 .stat b{font-weight:600}
 .stat:last-child{border-bottom:0}
+button.stat{width:100%;background:none;border-width:0 0 1px;color:inherit;font:inherit;font-size:.92rem;text-align:left;padding:9px 0;align-items:baseline}
+button.stat b{text-align:right}
 
 /* Répertoire */
 .rep h3{color:color-mix(in srgb,var(--fc) 85%,var(--text));font-size:1.02rem;font-weight:600}
@@ -453,13 +455,13 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 26;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 20;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:428, cache:418, envoyes:7.8, ecrits:1.7};   // en millions, même script, même moment
+const APP_VERSION = 27;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 21;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:471, cache:461, envoyes:8, ecrits:1.8};   // en millions, même script, même moment
 const RGPD_VERSION = 2; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
-  client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
-  therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données et à recevoir les envois de vos clients : il leur est transmis avec votre lien d’invitation. Un code vous sera envoyé pour le confirmer.',
+  client:'Votre mail sert uniquement à récupérer votre compte, à effacer vos données ou à confirmer une modification de vos informations. Un code vous sera envoyé pour le confirmer.',
+  therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données, à confirmer une modification de vos informations et à recevoir les envois de vos clients : il leur est transmis une fois leur demande acceptée. Un code vous sera envoyé pour le confirmer.',
 };
 const MAIL_NOM = {client:'Mail de récupération', therapeute:'Mail professionnel'};
 let toastTimer;
@@ -543,7 +545,8 @@ function defaults(d = {}) {
   for (const [f, v] of Object.entries(d.sent)) if (typeof v === 'string') d.sent[f] = {to:addDays(f, 6), at:v};
   d.therapist ??= null;           // client : thérapeute lié (clé publique + coordonnées)
   d.clients ||= {};               // thérapeute : fiches clients (coordonnées + données reçues)
-  for (const c of Object.values(d.clients)) { if (!('uid' in c)) c.uid = c.id; c.contact ||= {}; c.note ??= ''; c.statut ||= 'actuel'; }
+  for (const c of Object.values(d.clients)) { if (!('uid' in c)) c.uid = c.id; c.contact ||= {}; c.note ??= ''; c.statut ||= 'actuel'; if (c.numero) c.numero = codeU(c.numero); }
+  if (d.account?.numero) d.account.numero = codeU(d.account.numero);
   d.thera = Object.assign({type:'', tel:'', email:'', adresse:''}, d.thera);
   d.pending ||= {notes:0, envois:0};   // compteurs pas encore transmis au serveur (hors connexion)
   return d;
@@ -586,7 +589,7 @@ function supabaseApi() {
       const c = j?.error_code || j?.code || '';
       const banni = /banned/i.test(j?.msg || j?.message || '');
       throw apiErr(banni ? 'desactive' : {invalid_credentials:'identifiants', user_banned:'desactive', user_already_exists:'pris', email_exists:'pris', weak_password:'faible',
-        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi', adresse:'adresse', limite:'limite', admin:'admin', action:'action', mot_de_passe:'mot_de_passe',
+        code_invalide:'code', mot_de_passe_faible:'faible', email_invalide:'email', session:'session', patience:'patience', envoi:'envoi', adresse:'adresse', limite:'limite', admin:'admin', action:'action', mot_de_passe:'mot_de_passe', pris:'pris', identifiant:'identifiant',
         refresh_token_not_found:'session', refresh_token_already_used:'session', session_not_found:'session', session_expired:'session', user_not_found:'session'}[c] || 'serveur', j?.msg || j?.message);
     }
     return j;
@@ -623,7 +626,7 @@ function demoApi() {
   const db = () => JSON.parse(localStorage.getItem(K) || '{"comptes":{},"seq":{"C":0,"T":0},"usage":{}}');
   const put = x => localStorage.setItem(K, JSON.stringify(x));
   const hash = async s => toB64(new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('demo|' + s))));
-  const numero = (x, role) => { const p = role === 'therapeute' ? 'T' : 'C'; return `${p}-${String(++x.seq[p]).padStart(4, '0')}`; };
+  const numero = (x, role) => { const p = role === 'therapeute' ? 'T' : 'C'; return `${p === 'C' ? 'U' : p}-${String(++x.seq[p]).padStart(4, '0')}`; };   // compteur « C » : celui des utilisateurs
   const bump = (x, id, champ, n) => { const u = x.usage[id + '|' + today()] ||= {id, jour:today(), connexions:0, notes:0, envois:0}; u[champ] += n; };
   const moi = x => x.comptes[session?.id]?.profil;
   const admin = x => { if (!moi(x)?.est_admin) throw apiErr('serveur', 'Réservé à l’administrateur'); };
@@ -730,6 +733,24 @@ function demoApi() {
         const c = x.recup[session.id];
         if (!c?.effacer || c.effacer !== b.code) throw apiErr('code');
         delete c.effacer;
+      } else if (b.action === 'identite_demande' || b.action === 'identite_confirme') {
+        const c = x.recup[session.id];
+        if (id && x.comptes[id] && id !== session.id) throw apiErr('pris');
+        if (b.action === 'identite_demande') {
+          if (!c?.email || c.email !== e) throw apiErr('adresse');
+          c.identite = '123456';
+        } else {
+          if (!c?.identite || c.identite !== b.code) throw apiErr('code');
+          delete c.identite;
+          if (id && id !== session.id) {   // les comptes de démonstration sont rangés sous leur identifiant
+            const ancien = session.id;
+            x.comptes[id] = x.comptes[ancien]; delete x.comptes[ancien];
+            Object.assign(x.comptes[id].profil, {id, identifiant:id});
+            x.recup[id] = c; delete x.recup[ancien];
+            for (const u of Object.values(x.usage || {})) if (u.id === ancien) u.id = id;
+            session.id = id;
+          }
+        }
       } else if (b.action === 'supprimer_demande') {
         const c = x.recup[session.id];
         if (moi(x)?.est_admin) throw apiErr('admin');
@@ -952,7 +973,7 @@ function showLock(mode = 'login') {
       <form id="signupForm">
         <p class="label">Je suis…</p>
         <div class="roles">
-          <label class="role"><input type="radio" name="role" value="client" checked> Client(e)</label>
+          <label class="role"><input type="radio" name="role" value="client" checked> Utilisateur</label>
           <label class="role"><input type="radio" name="role" value="therapeute" ${pendingInv ? 'disabled' : ''}> Thérapeute</label>
         </div>
         <div class="row">
@@ -1084,7 +1105,7 @@ function choixInitiaux() {
 /* Ouvre (ou crée) le journal chiffré de ce compte sur cet appareil */
 async function openJournal(id, pw, init) {
   VKEY = vaultKey(id);
-  const raw = localStorage.getItem(VKEY);
+  const raw = localStorage.getItem(VKEY) || (session && !init ? await reprendreJournal(id, pw) : null);
   if (raw) {
     let r;
     try { r = await openVault(JSON.parse(raw), pw); }
@@ -1115,7 +1136,7 @@ async function openJournal(id, pw, init) {
 function applyProfil() {
   if (!profil) return;
   data.role = profil.role;
-  data.account = {identifiant:profil.identifiant, numero:profil.numero, est_admin:!!profil.est_admin, recup:!!data.account?.recup};
+  data.account = {identifiant:profil.identifiant, numero:codeU(profil.numero), est_admin:!!profil.est_admin, recup:!!data.account?.recup, cree_le:profil.cree_le || data.account?.cree_le};
   if (!data.profile.nom && !data.profile.prenom) Object.assign(data.profile, {nom:profil.nom, prenom:profil.prenom});
 }
 
@@ -1350,7 +1371,8 @@ function openRecupCode(oblig) {
    L'adresse n'est connue du serveur que par son empreinte : l'utilisateur la retape pour recevoir le code. */
 const EFFACER_ERR = {reseau:'Pas de connexion internet.', patience:'Attendez une minute avant un nouvel envoi.', envoi:'L’e-mail n’a pas pu être envoyé : réessayez dans un instant.',
   adresse:'Cette adresse n’est pas votre adresse de récupération confirmée.', limite:'Trop de demandes aujourd’hui : réessayez demain.', code:'Code incorrect ou expiré. Vous pouvez en demander un nouveau.',
-  admin:'Le compte administrateur ne peut pas être supprimé depuis l’app.', action:'Cette fonction n’est pas encore activée sur le serveur.'};
+  admin:'Le compte administrateur ne peut pas être supprimé depuis l’app.', action:'Cette fonction n’est pas encore activée sur le serveur.',
+  pris:'Cet identifiant est déjà utilisé : annulez et choisissez-en un autre.', identifiant:'Identifiant non valable : annulez et choisissez-en un autre.'};
 const CODE_EFFACER = {titre:'Confirmer l’effacement', demande:'effacer_demande', confirme:'effacer_confirme', avertissement:'Saisir ce code effacera définitivement vos notes de ce téléphone.', bouton:'Effacer définitivement'};
 const CODE_SUPPRIMER = {titre:'Confirmer la suppression', demande:'supprimer_demande', confirme:'supprimer_confirme', avertissement:'Saisir ce code supprimera définitivement votre compte et les données de ce téléphone.', bouton:'Supprimer définitivement'};
 function effacerParCode(cfg = CODE_EFFACER) {
@@ -1378,12 +1400,12 @@ function effacerParCode(cfg = CODE_EFFACER) {
       const b = $('#efResend'), s = Math.max(0, 60 - Math.floor((Date.now() - envoi) / 1000));
       if (b) { b.disabled = s > 0; b.textContent = s ? `Renvoyer le code dans ${s} s` : 'Renvoyer le code'; }
     };
-    const demander = () => API.recup({action:cfg.demande, email:mail}).then(() => {
+    const demander = () => API.recup({action:cfg.demande, email:mail, ...cfg.extra}).then(() => {
       envoi = Date.now(); maj();
       if (!data.recupIndice) { data.recupIndice = masque(mail); save(); syncIndice(); }   // compte confirmé avant l'existence de l'aide-mémoire
     });
     $('#efCancel').onclick = () => fin(false);
-    dlg.onclose = () => fin(false);   // touche Échap
+    dlg.onclose = () => { if (!dlg.open) fin(false); };   // touche Échap ; la fermeture d'une fenêtre précédente, qui arrive en retard, est ignorée
     $('#efResend').onclick = async () => {
       err('');
       try { await demander(); toast('Nouveau code envoyé'); } catch (x) { err(EFFACER_ERR[x.code] || 'Envoi impossible pour le moment.'); }
@@ -1400,13 +1422,13 @@ function effacerParCode(cfg = CODE_EFFACER) {
           try { await demander(); } catch (x) { mail = ''; throw x; }
           $('#efMailBloc').hidden = true; $('#efCodeBloc').hidden = false;
           $('#efInfo').innerHTML = `Un code à 6 chiffres a été envoyé à <b>${esc(mail)}</b>. Il est valable 15 minutes. <b>Pensez à regarder dans vos courriers indésirables.</b><br>${cfg.avertissement}`;
-          $('#efOk').textContent = cfg.bouton; $('#efOk').className = 'btn danger';
+          $('#efOk').textContent = cfg.bouton; $('#efOk').className = `btn ${cfg.classe || 'danger'}`;
           minuteur = setInterval(maj, 1000);
           return;
         }
         const code = $('#efCode').value.trim();
         if (!/^\d{6}$/.test(code)) return err('Entrez les 6 chiffres du code.');
-        await API.recup({action:cfg.confirme, code, email:mail});
+        await API.recup({action:cfg.confirme, code, email:mail, ...cfg.extra});
         fin(true);
       } catch (x) { err(EFFACER_ERR[x.code] || 'Action impossible pour le moment.'); }
       finally { enCours = false; }
@@ -1428,6 +1450,71 @@ async function confirmerEffacement() {
   if (pw == null) return false;
   try { await saveNow(); await openVault(JSON.parse(localStorage.getItem(VKEY)), pw); return true; }
   catch { toast('Mot de passe incorrect : rien n’a été effacé.'); return false; }
+}
+
+/* Nom, prénom ou identifiant : un code envoyé au mail de récupération confirme la modification */
+const CODE_IDENTITE = {titre:'Confirmer la modification', demande:'identite_demande', confirme:'identite_confirme', avertissement:'Saisir ce code enregistre vos nouvelles informations.', bouton:'Confirmer', classe:'primary'};
+function formIdentite() {
+  return new Promise(resolve => {
+    const D = $('#codeDlg'), p = data.profile, a = data.account;
+    D.innerHTML = `<form method="dialog" id="idForm">
+      <div class="dlg-h"><h2>Modifier mes informations</h2></div>
+      <div class="dlg-b">
+        <div class="row">
+          <div><label class="label" for="idPrenom">Prénom</label><input type="text" id="idPrenom" value="${esc(p.prenom)}" autocomplete="given-name"></div>
+          <div><label class="label" for="idNom">Nom</label><input type="text" id="idNom" value="${esc(p.nom)}" autocomplete="family-name"></div>
+        </div>
+        <label class="label" for="idId">Identifiant de connexion</label>
+        <input type="text" id="idId" value="${esc(a.identifiant)}" autocapitalize="none" spellcheck="false" autocomplete="username">
+        <p class="small muted" style="margin:6px 0 0">Un nouvel identifiant remplace l’ancien pour vous connecter, sur tous vos appareils. Vos notes ne changent pas.</p>
+        <div class="err" id="idErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="idNon">Annuler</button><button class="btn primary">Continuer</button></div>
+    </form>`;
+    const fin = v => { D.oncancel = null; if (D.open) D.close(); resolve(v); };
+    $('#idNon').onclick = () => fin(null);
+    D.oncancel = () => resolve(null);
+    $('#idId').oninput = e => { const v = e.target.value.replace(/\s/g, '').toLowerCase(); if (v !== e.target.value) e.target.value = v; };
+    $('#idForm').onsubmit = e => {
+      e.preventDefault();
+      const v = {prenom:$('#idPrenom').value.trim(), nom:$('#idNom').value.trim(), identifiant:$('#idId').value.trim()}, err = m => $('#idErr').textContent = m;
+      if (!v.prenom || !v.nom) return err('Indiquez votre prénom et votre nom.');
+      if (!ID_RE.test(v.identifiant)) return err('Identifiant : 3 à 30 caractères, lettres minuscules, chiffres, point ou tiret.');
+      if (v.prenom === p.prenom && v.nom === p.nom && v.identifiant === a.identifiant) return err('Vous n’avez rien modifié.');
+      fin(v);
+    };
+    D.showModal();
+  });
+}
+/* Le journal de cet appareil est rangé sous l'identifiant : il change d'emplacement avec lui.
+   La copie est relue avec la clé du journal avant que l'ancien emplacement soit retiré. */
+async function renommerStockage(ancien, nouveau) {
+  if (ancien === nouveau) return;
+  for (const f of [secoursKey, indiceKey]) { const v = localStorage.getItem(f(ancien)); if (v != null) localStorage.setItem(f(nouveau), v); }
+  VKEY = vaultKey(nouveau); data.account.identifiant = nouveau;
+  await saveNow();
+  const v = JSON.parse(localStorage.getItem(VKEY));
+  await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(v.iv)}, key, fromB64(v.ct));   // échoue si la copie est illisible : l'ancienne reste
+  for (const k of [vaultKey(ancien), 'journal-emotions.vault.' + ancien, secoursKey(ancien), indiceKey(ancien)]) localStorage.removeItem(k);
+  if (localStorage.getItem(LAST_ID) === ancien) localStorage.setItem(LAST_ID, nouveau);
+  if (data.settings.autolock === -1) await rememberKey().catch(() => {});
+}
+/* Identifiant changé depuis un autre appareil (ou dans l'autre app de l'iPhone) : le journal d'ici est encore sous l'ancien.
+   On le reconnaît à son code utilisateur, après l'avoir ouvert avec le mot de passe. */
+async function reprendreJournal(id, pw) {
+  const P = 'journal-emotions.donnees.';
+  if (!profil?.numero) return null;
+  for (const k of Object.keys(localStorage).filter(k => k.startsWith(P) && k !== vaultKey(id))) {
+    let r;
+    try { r = await openVault(JSON.parse(localStorage.getItem(k)), pw); } catch { continue; }
+    if (!memeCode(depuisFichier(r.obj).account?.numero, profil.numero)) continue;
+    const ancien = k.slice(P.length);
+    localStorage.setItem(vaultKey(id), localStorage.getItem(k));
+    for (const f of [secoursKey, indiceKey]) { const v = localStorage.getItem(f(ancien)); if (v != null) localStorage.setItem(f(id), v); }
+    for (const x of [k, 'journal-emotions.vault.' + ancien, secoursKey(ancien), indiceKey(ancien)]) localStorage.removeItem(x);
+    return localStorage.getItem(vaultKey(id));
+  }
+  return null;
 }
 /* Supprimer son compte : le serveur supprime d'abord le compte et ses données ; l'appareil n'est vidé qu'ensuite.
    Si le serveur refuse ou ne répond pas, rien n'est effacé. */
@@ -1555,8 +1642,9 @@ async function syncSession() {
     profil = await API.rpc('ouvrir_session');
     if (!data) return;
     if (!profil?.actif) return lock(LOGIN_ERR.desactive);
-    const role = data.role;
+    const role = data.role, ici = VKEY.slice(vaultKey('').length);
     applyProfil(); rememberSession();
+    if (data.account.identifiant !== ici) await renommerStockage(ici, data.account.identifiant).catch(console.error);   // identifiant changé ailleurs
     if (data.role !== role) showApp();
     else {
       renderNav(); markTabs();
@@ -1627,7 +1715,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => { if (key) saveNow(); });
 
 /* ───────────── Application ───────────── */
-let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null, calQ = '';
+let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null, calQ = '', menuScroll = 0;
 let src = null;               // thérapeute : données d'un client consultées en lecture seule
 let pendingInv = null;        // invitation reçue via un lien (#inv=…), proposée après déverrouillage
 const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
@@ -1970,7 +2058,7 @@ function vSet() {
 function vSetMenu() {
   const a = data.account || {}, p = data.profile, th = data.role === 'therapeute', t = data.therapist;
   const nom = (th ? `${p.prenom} ${p.nom}` : `${p.prenom} ${initiale(p.nom)}`).trim() || a.identifiant || '';
-  const mail = a.recup === 'attente' ? 'À confirmer' : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter';
+  const mail = a.recup === 'attente' ? 'Mail à confirmer' : a.recup ? '' : 'Mail à ajouter';
   return `
   <div class="sethead">
     <div>${th ? '<div class="eyebrow">Espace thérapeute</div>' : ''}<h1>Paramètres</h1></div>
@@ -1978,8 +2066,7 @@ function vSetMenu() {
   </div>
   <div class="whois"><div class="avatar" aria-hidden="true">${esc([...(p.prenom || a.identifiant || '?').trim()][0].toUpperCase())}</div><div><b>${esc(nom)}</b><span>${ROLE_N[data.role]}${a.numero ? ' · ' + esc(a.numero) : ''}</span></div></div>
   ${groupeMenu('Mon compte', [
-    ligneMenu('user', 'Informations personnelles', {page:'infos'}),
-    ligneMenu('mail', MAIL_NOM[data.role], {val:mail, page:'mail'}),
+    ligneMenu('user', 'Informations personnelles', {val:mail, page:'infos'}),
     ligneMenu('lock', 'Mot de passe et verrouillage', {val:LOCK_N[data.settings.autolock], page:'secu'}),
     ligneMenu('out', 'Se déconnecter', {act:'lockNow'}),
   ])}
@@ -1988,9 +2075,8 @@ function vSetMenu() {
     ligneMenu('user', 'Mon profil professionnel', {page:'pro'}),
   ]) : groupeMenu('Mon suivi', [
     ligneMenu('thera', 'Mon thérapeute', {val:t ? (attenteAcceptation(t) ? 'En attente' : `${initiale(t.prenom)} ${t.nom}`.trim()) : 'À ajouter', page:'thera'}),
-    ligneMenu('send', 'Partager ma semaine', {page:'partage'}),
+    ligneMenu('send', 'Partage et export', {page:'partage'}),
     ligneMenu('shield', 'Données transmises', {val:resumePartage(), page:'donnees'}),
-    ligneMenu('mail', 'Mes envois', {val:String(Object.keys(data.sent).length), page:'envois'}),
     ligneMenu('col', 'Code couleur', {page:'couleurs'}),
     ligneMenu('pin', 'Localisation', {val:data.settings.geoloc ? 'Activée' : 'Désactivée', page:'geo'}),
   ])}
@@ -2011,28 +2097,24 @@ function vSetMenu() {
 function pageInfos() {
   const a = data.account || {}, p = data.profile, th = data.role === 'therapeute';
   return `<section class="card">
-    ${th ? `<div class="stat"><span class="muted">Prénom</span><b>${esc(p.prenom || '—')}</b></div>
-    <div class="stat"><span class="muted">Nom</span><b>${esc(p.nom || '—')}</b></div>` : ''}
+    <div class="stat"><span class="muted">Prénom</span><b>${esc(p.prenom || '—')}</b></div>
+    <div class="stat"><span class="muted">Nom</span><b>${esc(p.nom || '—')}</b></div>
     <div class="stat"><span class="muted">Identifiant</span><b>${esc(a.identifiant || '—')}</b></div>
-    <div class="stat"><span class="muted">Numéro</span><b>${esc(a.numero || '—')}</b></div>
+    <div class="stat"><span class="muted">Code utilisateur</span><b>${esc(a.numero || '—')}</b></div>
     <div class="stat"><span class="muted">Type de compte</span><b>${ROLE_N[data.role]}${a.est_admin ? ' · administrateur' : ''}</b></div>
+    <div class="stat"><span class="muted">Compte créé le</span><b>${a.cree_le ? fmtFR(ymd(new Date(a.cree_le))) : '—'}</b></div>
     ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
+    <button class="btn block" data-act="modifierIdentite">Modifier mon nom ou mon identifiant</button>
+    <p class="small muted" style="margin:6px 0 0">Un code envoyé à votre ${th ? 'mail professionnel' : 'mail de récupération'} confirme la modification.${th ? '' : ' Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.'}</p>
   </section>
-  ${th ? '<p class="small muted" style="margin:0 2px">Votre nom et vos coordonnées se changent dans « Mon profil professionnel ».</p>' : `<section class="card">
-    <p class="small muted" style="margin:0">Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.</p>
-    <div class="row">
-      <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
-      <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
-    </div>
-    <label class="label" for="pStart">Date de début du suivi</label>
-    <input type="date" id="pStart" data-prof="start" value="${esc(p.start)}">
-  </section>`}`;
+  ${pageMail()}`;
 }
 
 function pageMail() {
   const a = data.account || {};
   return `<section class="card">
-    <div class="stat"><span class="muted">${MAIL_NOM[data.role]}</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? `${data.recupIndiceNouveau || data.recupIndice || 'Adresse'} (à confirmer)` : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter')}</b></div>
+    <h2>${MAIL_NOM[data.role]}</h2>
+    <div class="stat"><span class="muted">Adresse</span><b style="overflow-wrap:anywhere;text-align:right">${esc(a.recup === 'attente' ? `${data.recupIndiceNouveau || data.recupIndice || 'Adresse'} (à confirmer)` : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter')}</b></div>
     <p class="small muted" style="margin:8px 0 0">${MAIL_AIDE[data.role]}</p>
     ${a.recup === 'attente' || a.recupChange ? `<p class="small muted" style="margin:6px 0 0">${a.recupChange ? 'Votre nouvelle adresse attend sa confirmation ; l’ancienne reste valable d’ici là.' : 'Tant qu’elle n’est pas confirmée, aucun code de récupération ne peut y être envoyé.'} Pas de message ? Regardez dans vos courriers indésirables.</p>
     <button class="btn primary block" data-act="confirmRecovery">Entrer le code</button>` : ''}
@@ -2042,20 +2124,25 @@ function pageMail() {
 
 function pageSecu() {
   return `<section class="card">
-    <p class="small muted" style="margin:0 0 4px">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
+    <h2>Mot de passe</h2>
+    <p class="small muted" style="margin:6px 0 0">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
+    <button class="btn block" data-act="changeCode">Changer mon mot de passe</button>
+  </section>
+  <section class="card">
+    <h2>Verrouillage</h2>
     <div class="setrow">
       <label for="autolock">Déconnexion automatique</label>
       <select id="autolock">${optionsVerrou()}</select>
     </div>
     <p class="small muted" style="margin:0">Avec « Jamais », le journal s’ouvre sans mot de passe sur cet appareil, même après avoir fermé l’app, jusqu’à ce que vous cliquiez sur « Se déconnecter ».</p>
-    <button class="btn block" data-act="changeCode">Changer mon mot de passe</button>
   </section>`;
 }
 
+/* La période choisie sert aux deux : l'envoi chiffré au thérapeute et le fichier Excel */
 function pagePartage() {
-  const t = today(), th = data.therapist;
+  const t = today(), th = data.therapist, attente = attenteAcceptation(th), peutEnvoyer = th && !attente, qui = esc(th?.prenom || 'votre thérapeute');
   return `<section class="card">
-    <p class="small muted" style="margin:0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (Paramètres › Mon thérapeute) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
+    <h2>Période</h2>
     <div class="weeknav">
       <button class="icon-btn" data-act="xPrevWeek" aria-label="7 jours plus tôt">‹</button>
       <div class="wk" id="wkLabel" aria-live="polite">${weekLabel()}</div>
@@ -2068,17 +2155,50 @@ function pagePartage() {
         <div><label class="label" for="xTo">Au</label><input type="date" id="xTo" value="${addDays(xStart, 6)}"><div class="wd-hint" id="xToWd">${weekday(addDays(xStart, 6))}</div></div>
       </div>
     </details>
-    ${th ? `<button class="btn primary block" data-act="sendWeek">Envoyer à ${esc(th.prenom || 'mon thérapeute')}</button>
+  </section>
+  <section class="card">
+    <h2>Partage à mon thérapeute</h2>
+    ${!th ? `<p class="small muted" style="margin:6px 0 0">Vous n’êtes lié(e) à aucun thérapeute : le partage n’est pas possible pour l’instant. Ajoutez d’abord votre thérapeute, avec le lien d’invitation qu’il vous a donné.</p>
+    <button class="btn primary block" data-act="voirThera">Ajouter mon thérapeute</button>`
+    : attente ? `<p class="small muted" style="margin:6px 0 0">${esc(nomDe(th) || 'Votre thérapeute')} n’a pas encore accepté votre demande : le partage sera possible dès qu’il l’aura acceptée.</p>`
+    : `<p class="small muted" style="margin:6px 0 0">Le fichier est chiffré : seul(e) ${qui} peut l’ouvrir.</p>
+    <button class="btn primary block" data-act="sendWeek">Envoyer à ${qui}</button>
     <p class="small muted" style="margin:6px 0 0">${aideEnvoi(th.email)}</p>
-    <div class="small muted" id="sentSt" style="margin-top:6px;text-align:center">${sentStatus()}</div>` : ''}
-    <p class="label">Fichier Excel</p>
-    <div class="row">
-      <button class="btn ${th ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
+    <div class="small muted" id="sentSt" style="margin-top:6px;text-align:center">${sentStatus()}</div>`}
+  </section>
+  <section class="card">
+    <h2>Export Excel</h2>
+    <div class="row" style="margin-top:10px">
+      <button class="btn ${peutEnvoyer ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
       ${navigator.canShare ? '<button class="btn" data-act="shareXlsx">Partager…</button>' : ''}
     </div>
-    ${th ? '' : '<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>'}
-    <p class="small muted" style="margin:6px 0 0"><b>Vos notes personnelles n’y figurent pas.</b>${th ? '' : ` <b>Il n’est pas chiffré :</b> vos émotions y sont lisibles. ${aideEnvoi('')}`}</p>
-  </section>`;
+    ${peutEnvoyer ? '' : '<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>'}
+    <p class="small muted" style="margin:6px 0 0"><b>Vos notes personnelles n’y figurent pas.</b> <b>Le fichier n’est pas chiffré :</b> vos émotions y sont lisibles.${peutEnvoyer ? '' : ` ${aideEnvoi('')}`}</p>
+  </section>
+  ${th || Object.keys(data.sent).length ? `<section class="card">
+    <h2>Mes semaines</h2>
+    <p class="small muted" style="margin:4px 0 6px">Ce que vous avez envoyé à votre thérapeute, de la semaine en cours à la création de votre compte. Touchez une semaine pour la choisir.</p>
+    <div id="listeSem">${listeSemaines()}</div>
+  </section>` : ''}`;
+}
+/* Semaines du lundi au dimanche, de la création du compte à aujourd'hui, avec la date de leur envoi.
+   Les périodes choisies à la main peuvent ne couvrir qu'une partie d'une semaine : on compte jour par jour. */
+function listeSemaines() {
+  const t = today(), couvert = {};   // jour → date d'envoi la plus récente
+  for (const [from, s] of Object.entries(data.sent)) for (let k = from; k <= s.to; k = addDays(k, 1)) if (!couvert[k] || s.at > couvert[k]) couvert[k] = s.at;
+  const premier = Object.keys(data.days).sort()[0], cree = data.account?.cree_le ? ymd(new Date(data.account.cree_le)) : t;
+  const debut = premier && premier < cree ? premier : cree, court = k => fmtFR(k).slice(0, k.slice(0, 4) === t.slice(0, 4) ? 5 : 10);
+  const lignes = [];
+  for (let lun = mondayOf(t); lun >= mondayOf(debut); lun = addDays(lun, -7)) {
+    const dim = addDays(lun, 6), jours = [];
+    for (let k = lun; k <= dim && k <= t; k = addDays(k, 1)) jours.push(k);
+    const faits = jours.filter(k => couvert[k]), dernier = faits.map(k => couvert[k]).sort().pop();
+    const etat = !faits.length ? '<span class="muted">Non envoyée</span>'
+      : faits.length === jours.length ? `Envoyée ${sentAt(dernier)}`
+      : `En partie (${faits.length} jour${faits.length > 1 ? 's' : ''} sur ${jours.length}), ${sentAt(dernier)}`;
+    lignes.push(`<button class="stat" data-act="choisirSemaine" data-k="${lun}"><span>Du ${court(lun)} au ${court(dim)}${dim > t ? '<br><span class="small muted">en cours</span>' : ''}</span><b class="small">${etat}</b></button>`);
+  }
+  return lignes.join('');
 }
 
 function pageCouleurs() {
@@ -2103,19 +2223,15 @@ function pageInvite() {
 }
 
 function pagePro() {
-  const p = data.profile, t = data.thera;
+  const t = data.thera;
   return `<section class="card">
-    <p class="small muted" style="margin:0">Ces informations sont incluses dans votre lien d’invitation. Après une modification, renvoyez le lien à vos clients pour mettre à jour vos coordonnées.</p>
-    <div class="row">
-      <div><label class="label" for="pNom">Nom</label><input type="text" id="pNom" data-prof="nom" value="${esc(p.nom)}"></div>
-      <div><label class="label" for="pPrenom">Prénom</label><input type="text" id="pPrenom" data-prof="prenom" value="${esc(p.prenom)}"></div>
-    </div>
+    <p class="small muted" style="margin:0">Vos clients reçoivent ces coordonnées une fois leur demande acceptée, et chaque modification leur parvient automatiquement. Votre nom se change dans « Informations personnelles ».</p>
     <label class="label" for="tType">Type de thérapeute</label>
     <select id="tType" data-thera="type"><option value="">— Choisir —</option>${THERA_TYPES.map(x => `<option ${t.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
     <label class="label" for="tTel">Téléphone</label>
     <input type="text" id="tTel" data-thera="tel" inputmode="tel" value="${esc(t.tel)}">
     <div class="stat" style="margin-top:14px"><span class="muted">Mail professionnel</span><b style="overflow-wrap:anywhere;text-align:right">${esc(t.email || '—')}</b></div>
-    <p class="small muted" style="margin:4px 0 0">Il se change dans « Mail professionnel », après confirmation par un code.</p>
+    <p class="small muted" style="margin:4px 0 0">Il se change dans « Informations personnelles », après confirmation par un code.</p>
     <label class="label" for="tAdr">Adresse du cabinet</label>
     <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}">
   </section>`;
@@ -2209,8 +2325,8 @@ function pageAPropos() {
 }
 
 const PAGES_REGLAGES = {
-  infos:['Informations personnelles', pageInfos], mail:['Mon mail', pageMail], secu:['Mot de passe et verrouillage', pageSecu],
-  thera:['Mon thérapeute', therapistCard], partage:['Partager ma semaine', pagePartage], donnees:['Données transmises', pageDonnees], envois:['Mes envois', pageEnvois], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
+  infos:['Informations personnelles', pageInfos], secu:['Mot de passe et verrouillage', pageSecu],
+  thera:['Mon thérapeute', therapistCard], partage:['Partage et export', pagePartage], donnees:['Données transmises', pageDonnees], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
   invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
   sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
   apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos],
@@ -2424,18 +2540,21 @@ async function synchroTherapeute() {
       change = true;
     } else if (r?.client) {
       const k = await dechiffrerCanal(S, r.client);
-      if (k.prenom !== c.profile.prenom || k.nom !== c.profile.nom || k.numero !== c.numero) { Object.assign(c.profile, {prenom:k.prenom, nom:k.nom}); c.numero = k.numero; change = true; }
+      if (k.prenom !== c.profile.prenom || k.nom !== c.profile.nom || codeU(k.numero) !== c.numero) { Object.assign(c.profile, {prenom:k.prenom, nom:k.nom}); c.numero = codeU(k.numero); change = true; }
     }
   }
   return change;
 }
-/* Reconnaître la fiche d'un client : par son app, puis par son numéro de compte. Le nom ne sert que pour une fiche créée à la main,
-   sans numéro, et seulement s'il n'y a aucun homonyme : deux clients du même nom ne sont jamais confondus. */
+/* Reconnaître la fiche d'un client : par son app, puis par son code utilisateur. Le nom ne sert que pour une fiche créée à la main,
+   sans code, et seulement s'il n'y a aucun homonyme : deux clients du même nom ne sont jamais confondus. */
 const ficheLibre = x => (!x.uid || x.uid === x.id) && !x.canal && !x.numero;
+// les codes utilisateur s'écrivaient C-0012 avant novembre 2026, U-0012 depuis : les deux désignent le même compte, toujours affiché en U-
+function codeU(n) { return n ? String(n).trim().toUpperCase().replace(/^C-/, 'U-') : n; }
+const memeCode = (a, b) => !!a && !!b && codeU(a) === codeU(b);
 function ficheConnue(k) {
   const tous = Object.values(data.clients), nom = nomDe(k).toLowerCase();
   const memeNom = tous.filter(x => fullName(x).toLowerCase() === nom);
-  return tous.find(x => k.uid && x.uid === k.uid) || tous.find(x => k.numero && x.numero?.toUpperCase() === k.numero.toUpperCase())
+  return tous.find(x => k.uid && x.uid === k.uid) || tous.find(x => memeCode(x.numero, k.numero))
     || (memeNom.length === 1 && ficheLibre(memeNom[0]) ? memeNom[0] : null);
 }
 /* Une personne a collé le lien du thérapeute : sa demande attend qu'il l'accepte, même s'il s'agit d'un ancien client.
@@ -2446,7 +2565,7 @@ function lierClient(o) {
   if (!c) { const id = 'c' + rid(6); c = data.clients[id] = {id, uid:null, profile:{nom:'', prenom:'', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[]}; }
   Object.assign(c.profile, {prenom:k.prenom || c.profile.prenom, nom:k.nom || c.profile.nom});
   if (c.statut !== 'attente') c.demande = {nouvelle, avant:nouvelle ? '' : c.statut || 'actuel', at:new Date().toISOString()};
-  Object.assign(c, {uid:k.uid || c.uid, numero:k.numero || c.numero, canal:o.secret, statut:'attente'});
+  Object.assign(c, {uid:k.uid || c.uid, numero:codeU(k.numero) || c.numero, canal:o.secret, statut:'attente'});
   delete c.rupture; delete c.ficheEnvoyee;
   return c;
 }
@@ -2474,7 +2593,7 @@ function montrerAvis() {
       : r.map(x => x.refus ? `${esc(x.nom)} n’a pas accepté votre demande de suivi.` : `${esc(x.nom)} a mis fin au suivi le ${quand(x)}. Vous ne pouvez plus lui envoyer vos données. Vos notes restent sur votre téléphone.`);
   } else if (a) {
     titre = 'Demande acceptée';
-    textes = [`${esc(a.nom)} a accepté votre demande de suivi.`, 'Ses coordonnées sont dans Paramètres › Mon thérapeute, et vous pouvez maintenant lui envoyer vos données depuis Paramètres › Partager ma semaine.'];
+    textes = [`${esc(a.nom)} a accepté votre demande de suivi.`, 'Ses coordonnées sont dans Paramètres › Mon thérapeute, et vous pouvez maintenant lui envoyer vos données depuis Paramètres › Partage et export.'];
   } else return;
   const D = $('#codeDlg');
   D.innerHTML = `<form method="dialog" id="rpForm">
@@ -2524,8 +2643,8 @@ function consentirLien(o, ancien) {
         ${o.type ? `<p class="small muted" style="margin-top:0">${esc(o.type)}</p>` : ''}
         <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(o.fp)}</b></div>
         <p class="small muted">Vérifiez qu’il correspond à celui que vous a donné votre thérapeute.</p>
-        <p class="small">En le rejoignant, vous partagez avec lui votre prénom, votre nom et votre numéro de compte${data.account?.numero ? ` (${esc(data.account.numero)})` : ''}. Votre thérapeute doit ensuite accepter votre demande : vous recevrez alors ses coordonnées, et celles de chacun se mettront à jour automatiquement.</p>
-        <p class="small">Par sécurité, les données de votre journal ne lui sont pas transmises automatiquement : vous les lui envoyez quand vous le souhaitez, depuis Paramètres › Partager ma semaine.${ancien ? ` <b>${esc(nomDe(ancien))} ne sera plus votre thérapeute</b>, et il en sera prévenu.` : ''}</p>
+        <p class="small">En le rejoignant, vous partagez avec lui votre prénom, votre nom et votre code utilisateur${data.account?.numero ? ` (${esc(data.account.numero)})` : ''}. Votre thérapeute doit ensuite accepter votre demande : vous recevrez alors ses coordonnées, et celles de chacun se mettront à jour automatiquement.</p>
+        <p class="small">Par sécurité, les données de votre journal ne lui sont pas transmises automatiquement : vous les lui envoyez quand vous le souhaitez, depuis Paramètres › Partage et export.${ancien ? ` <b>${esc(nomDe(ancien))} ne sera plus votre thérapeute</b>, et il en sera prévenu.` : ''}</p>
         <label class="rgpd"><input type="checkbox" id="lnOui"><span>J’accepte que ${esc(nom)} reçoive et lise les données que je lui enverrai.</span></label>
         <div class="err" id="lnErr"></div>
       </div>
@@ -2640,7 +2759,7 @@ function ficheDe(k, cibleId) {
     c = data.clients[id] = {id, uid:null, profile:{nom:k.nom || '', prenom:k.prenom || '', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[], statut:'attente', demande:{nouvelle:true, avant:'nouveau', at:new Date().toISOString()}};
   }
   if (k.id) c.uid = k.id;
-  if (k.numero && !c.numero) c.numero = k.numero;
+  if (k.numero && (!c.numero || memeCode(c.numero, k.numero))) c.numero = codeU(k.numero);
   return c;
 }
 function integrer(c, o) {
@@ -2660,14 +2779,6 @@ function pageDonnees() {
     ${formPartage()}
   </section>`;
 }
-function pageEnvois() {
-  const l = Object.entries(data.sent).sort((a, b) => b[1].at.localeCompare(a[1].at));
-  return `<section class="card">
-    ${l.length ? l.map(([from, s]) => `<div class="stat"><span>Du ${fmtFR(from)} au ${fmtFR(s.to)}${s.dest ? `<br><span class="small muted">à ${esc(s.dest)}</span>` : ''}</span><b class="small" style="text-align:right">Envoyé ${sentAt(s.at)}</b></div>`).join('')
-      : '<p class="empty">Aucun envoi pour l’instant.</p>'}
-  </section>`;
-}
-
 let retraitFait = null;
 function therapistCard() {
   const th = data.therapist, fait = retraitFait;
@@ -2719,6 +2830,7 @@ async function sendWeek() {
   envoyerParMail({file:new File([JSON.stringify(pkg)], name, {type:'application/json'}), from:x.from, to:x.to, chiffre:true, fait:() => {
     data.sent[x.from] = {to:x.to, at:new Date().toISOString(), dest:nomDe(th)}; countStat('envois');
     const st = $('#sentSt'); if (st) st.textContent = sentStatus();
+    const ls = $('#listeSem'); if (ls) ls.innerHTML = listeSemaines();
   }});
 }
 /* Mail prérempli : seulement la période et le nom, jamais le contenu des notes */
@@ -2842,12 +2954,15 @@ function srcImportCard() {
 function srcCard() {
   if (!src) return '';
   const k = src.contact || {};
+  // un client accepté avant que la date soit enregistrée garde celle de son premier envoi reçu
+  const debut = src.statut !== 'attente' && (src.debutSuivi || src.profile.start);
   const suivi = src.statut === 'ancien'
     ? `<p class="small muted" style="margin:6px 0 0">Ancien client : le suivi a pris fin${src.rupture ? ` le ${fmtFR(ymd(new Date(src.rupture.at)))}, ${src.rupture.par === 'client' ? 'à sa demande' : 'à votre demande'}` : ''}.</p>`
     : src.canal ? '<p class="small muted" style="margin:6px 0 0">Lié à votre compte : ses coordonnées se mettent à jour seules.</p>' : '';
   return `<section class="card">
     <h2>Fiche client</h2>
-    ${src.numero ? `<div class="stat" style="margin-top:6px"><span class="muted">Numéro</span><b>${esc(src.numero)}</b></div>` : ''}
+    ${src.numero ? `<div class="stat" style="margin-top:6px"><span class="muted">Code utilisateur</span><b>${esc(src.numero)}</b></div>` : ''}
+    ${debut ? `<div class="stat"><span class="muted">Début du suivi</span><b>${fmtFR(debut)}</b></div>` : ''}
     ${suivi}
     ${k.email ? `<div class="small" style="margin-top:8px"><a href="mailto:${esc(k.email)}">${esc(k.email)}</a></div>` : ''}
     ${k.tel ? `<div class="small"><a href="tel:${esc(k.tel.replace(/\s/g, ''))}">${esc(k.tel)}</a></div>` : ''}
@@ -2877,8 +2992,8 @@ function openClientForm(id) {
         <div><label class="label" for="cfPrenom">Prénom</label><input type="text" id="cfPrenom" value="${esc(c?.profile.prenom || '')}" autocomplete="off"></div>
         <div><label class="label" for="cfNom">Nom</label><input type="text" id="cfNom" value="${esc(c?.profile.nom || '')}" autocomplete="off"></div>
       </div>
-      <label class="label" for="cfNumero">Numéro de compte Motus</label>
-      <input type="text" id="cfNumero" value="${esc(c?.numero || '')}" placeholder="ex. C-0012" autocomplete="off" autocapitalize="characters" ${c?.canal ? 'readonly' : ''}>
+      <label class="label" for="cfNumero">Code utilisateur Motus</label>
+      <input type="text" id="cfNumero" value="${esc(c?.numero || '')}" placeholder="ex. U-0012" autocomplete="off" autocapitalize="characters" ${c?.canal ? 'readonly' : ''}>
       <div class="small muted" style="margin-top:4px">Il permet de reconnaître votre client sans le confondre avec un homonyme.</div>
       <label class="label" for="cfTel">Téléphone</label>
       <input type="text" id="cfTel" inputmode="tel" value="${esc(k.tel || '')}" autocomplete="off">
@@ -2897,7 +3012,7 @@ function openClientForm(id) {
    Données venant du serveur : comptes et compteurs, jamais le contenu des journaux. */
 const admInit = () => ({users:null, stats:null, err:'', filtre:'tous', ouvert:null});
 let adm = admInit();
-const ROLE_N = {client:'Client(e)', therapeute:'Thérapeute'};
+const ROLE_N = {client:'Utilisateur', therapeute:'Thérapeute'};   // le rôle interne reste « client » ; seul l'affichage change
 const fmtDT = iso => { if (!iso) return 'jamais'; const d = new Date(iso); return `${fmtFR(ymd(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const nomAdmin = u => u.role === 'therapeute' ? u.nom : initiale(u.nom);   // client : initiale seulement
 const who = u => `${u.prenom} ${nomAdmin(u)}`.trim() || u.identifiant;
@@ -2907,8 +3022,19 @@ async function loadAdmin() {
   catch (x) { adm.err = x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Erreur du serveur.'; adm.users ||= []; }
   if (view === 'admin') render(true);
 }
+/* Mes notes : un bloc-notes libre pour l'administrateur, chiffré avec son journal sur cet appareil */
+let admPage = null, admScroll = 0;
+function pageNotesAdmin() {
+  return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour au tableau de bord">‹</button><h1>Mes notes</h1></div>
+  <section class="card">
+    <p class="small muted" style="margin:0 0 10px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes.</p>
+    <textarea id="admNotesTxt" rows="18" placeholder="Idées, choses à faire, retours des utilisateurs…">${esc(data.notesAdmin || '')}</textarea>
+    <div class="small muted" id="admNotesEtat" style="margin-top:6px;text-align:right">${data.notesAdmin ? 'Enregistré ✓' : ''}</div>
+  </section>`;
+}
 function vAdmin() {
-  const head = '<div style="margin:4px 0 16px"><div class="eyebrow">Administration</div><h1>Tableau de bord</h1></div>';
+  if (admPage === 'notes') return pageNotesAdmin();
+  const head = `<div class="sethead" style="margin:4px 0 16px"><div><div class="eyebrow">Administration</div><h1>Tableau de bord</h1></div><button class="btn" data-act="admNotes">Mes notes</button></div>`;
   if (!session) return head + '<section class="card"><p class="empty">Hors connexion : l’administration nécessite internet.</p></section>';
   if (!adm.users) { loadAdmin(); return head + '<section class="card"><p class="empty">Chargement…</p></section>'; }
   if (!adm.limites && !adm.limEnCours) loadLimites();
@@ -2923,12 +3049,12 @@ function vAdmin() {
   + (s ? `
   <section class="card">
     <h2>Comptes</h2>
-    <div class="tiles">${tile(s.comptes, 'au total')}${tile(s.clients, 'clients')}${tile(s.therapeutes, 'thérapeutes')}${tile(s.desactives, 'désactivés')}</div>
+    <div class="tiles">${tile(s.comptes, 'au total')}${tile(s.clients, 'utilisateurs')}${tile(s.therapeutes, 'thérapeutes')}${tile(s.desactives, 'désactivés')}</div>
     <table class="stats">
       <thead><tr><th></th><th>7 jours</th><th>30 jours</th></tr></thead>
       <tbody>
         <tr><th scope="row">Nouveaux inscrits</th><td>${s.inscrits_7j}</td><td>${s.inscrits_30j}</td></tr>
-        <tr><th scope="row">Utilisateurs actifs</th><td>${s.actifs_7j}</td><td>${s.actifs_30j}</td></tr>
+        <tr><th scope="row">Comptes actifs</th><td>${s.actifs_7j}</td><td>${s.actifs_30j}</td></tr>
       </tbody>
     </table>
   </section>
@@ -2942,16 +3068,17 @@ function vAdmin() {
   </section>` : '') + `
   <section class="card">
     <h2>Travail sur Motus</h2>
-    <div class="heures"><b>≈ ${HEURES_TRAVAIL} h</b><span class="small muted">jusqu’à la version ${APP_VERSION}</span></div>
-    <div class="heures"><b>≈ ${JETONS_CONSOMMES.total.toLocaleString('fr-FR')} M</b><span class="small muted">de jetons consommés par Claude</span></div>
+    <div class="heures"><b>≈ ${HEURES_TRAVAIL} h</b><span class="small muted">de travail</span></div>
+    <p class="small muted" style="margin:6px 0 0">Estimation à partir des échanges avec Claude, sans les pauses de plus de 30 minutes.</p>
+    <div class="heures" style="margin-top:14px"><b>≈ ${JETONS_CONSOMMES.total.toLocaleString('fr-FR')} M</b><span class="small muted">de jetons consommés par Claude</span></div>
     <p class="small muted" style="margin:6px 0 0">Dont ${mio(JETONS_CONSOMMES.cache)} relus depuis le cache, ${mio(JETONS_CONSOMMES.envoyes)} envoyés à Claude et ${mio(JETONS_CONSOMMES.ecrits)} écrits par Claude.</p>
-    <p class="small muted" style="margin:6px 0 0">Estimation à partir des échanges avec Claude, sans les pauses de plus de 30 minutes. Mise à jour à chaque version.</p>
+    <p class="small muted" style="margin:10px 0 0">Jusqu’à la version ${APP_VERSION}, mis à jour à chaque version.</p>
   </section>` + limitsCard() + `
   <section class="card">
-    <div class="card-h"><h2>Utilisateurs</h2><span class="count">${list.length}</span></div>
-    <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Clients'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
+    <div class="card-h"><h2>Liste des comptes</h2><span class="count">${list.length}</span></div>
+    <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Utilisateurs'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
       `<button class="chip neutre ${adm.filtre === k ? 'on' : ''}" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
-    <input type="search" id="admSearch" placeholder="Rechercher : nom, n°, identifiant" aria-label="Rechercher un utilisateur" style="margin-bottom:10px">
+    <input type="search" id="admSearch" placeholder="Rechercher : nom, code, identifiant" aria-label="Rechercher un compte" style="margin-bottom:10px">
     ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
   </section>`;
 }
@@ -3015,7 +3142,7 @@ function limitsCard() {
 
     <div class="lim-g"><h3>Supabase (comptes et serveur)</h3>${limLien('https://supabase.com/dashboard/org/_/usage', 'Voir la consommation ↗')}</div>
     ${jauge('Base de données', res?.base_octets ?? null, LIMITES.base, fmtOctets)}
-    ${jauge('Utilisateurs actifs (30 jours)', res?.actifs_30j ?? null, LIMITES.actifs, fmtNombre, 'estimation : Supabase compte par mois de facturation')}
+    ${jauge('Comptes actifs (30 jours)', res?.actifs_30j ?? null, LIMITES.actifs, fmtNombre, 'estimation : Supabase compte par mois de facturation')}
     ${limInfo('Bande passante', '5 Go par mois')}
     ${limInfo('Appels de fonctions', '500 000 par mois')}
     <p class="small muted" style="margin:8px 0 0">Le projet est suspendu automatiquement après 1 semaine sans activité ; il se réactive depuis le tableau de bord Supabase.</p>
@@ -3033,10 +3160,10 @@ function limitsCard() {
 }
 function userRow(u) {
   const open = adm.ouvert === u.id, moi = u.id === profil?.id, th = u.role === 'therapeute';
-  return `<div class="urow" data-name="${esc(`${who(u)} ${u.numero} ${u.identifiant}`.toLowerCase())}">
+  return `<div class="urow" data-name="${esc(`${who(u)} ${codeU(u.numero)} ${u.identifiant}`.toLowerCase())}">
     <button class="uhead" data-act="admOpen" data-id="${esc(u.id)}" aria-expanded="${open}">
       <span><b>${esc(u.prenom)}</b> ${esc(nomAdmin(u))}</span>
-      <span class="badge ${th ? 'th' : ''}">${esc(u.numero)}</span>
+      <span class="badge ${th ? 'th' : ''}">${esc(codeU(u.numero))}</span>
       <span class="small muted ufoot">${ROLE_N[u.role]}${u.est_admin ? ' · administrateur' : ''}${u.actif ? '' : ' · <b class="off">désactivé</b>'} · dernière connexion : ${fmtDT(u.derniere_connexion)}</span>
     </button>
     ${open ? `<div class="udetail">
@@ -3052,7 +3179,7 @@ function userRow(u) {
       ${moi ? '<p class="small muted" style="margin:8px 0 0">C’est votre compte.</p>' : `
       <div class="row" style="margin-top:10px">
         <button class="btn" data-act="admActif" data-id="${esc(u.id)}">${u.actif ? 'Désactiver' : 'Réactiver'}</button>
-        <button class="btn" data-act="admType" data-id="${esc(u.id)}">Passer en ${th ? 'client(e)' : 'thérapeute'}</button>
+        <button class="btn" data-act="admType" data-id="${esc(u.id)}">Passer en ${th ? 'utilisateur' : 'thérapeute'}</button>
       </div>
       <button class="btn danger block" data-act="admSuppr" data-id="${esc(u.id)}">Supprimer le compte</button>`}
     </div>` : ''}
@@ -3353,7 +3480,8 @@ function buildXlsx(from, to) {
     xRow(10, [cS('A10', S.conf, 'Ce tableau est confidentiel et constitue une base de travail essentielle.')], 18),
     xRow(12, [cS('A12', S.head, 'Semaine / Date'), ...['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((j, i) => cS(H[i+1] + 12, S.head, j))], 28),
   ];
-  const base = p.start && p.start <= from ? mondayOf(p.start) : mondayOf(from);
+  const debut = D().debutSuivi || p.start;   // fiche client : semaines comptées depuis l'acceptation
+  const base = debut && debut <= from ? mondayOf(debut) : mondayOf(from);
   let r = 13;
   for (let mon = mondayOf(from); mon <= to; mon = addDays(mon, 7), r++) {
     const n = Math.round((parse(mon) - parse(base)) / 864e5 / 7) + 1;
@@ -3487,7 +3615,7 @@ window.addEventListener('appinstalled', () => toast('Motus est installé : ouvre
 
 const ACT = {
   tab: t => {
-    view = t.dataset.v; src = null; setPage = null;
+    view = t.dataset.v; src = null; setPage = null; admPage = null;
     if (view === 'clients') synchroCanaux();
     if (view === 'day') cur = today();
     render();
@@ -3513,6 +3641,7 @@ const ACT = {
   accepterClient: t => {
     const c = data.clients[t.dataset.id]; if (!c) return;
     c.statut = 'actuel'; delete c.demande; delete c.ficheEnvoyee; c.nouveauClient = true;
+    c.debutSuivi = today();   // fixée par l'acceptation, non modifiable
     save(); render(true); renderNav(); synchroCanaux(true);
     toast(`${fullName(c)} est maintenant votre client`);
   },
@@ -3555,8 +3684,23 @@ const ACT = {
   },
   goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
   voirThera: () => { view = 'set'; setPage = 'thera'; render(); synchroCanaux(true); },
-  setPage: t => { setPage = t.dataset.p; render(); if (setPage === 'thera') synchroCanaux(true); },
-  setBack: () => { setPage = null; render(); },
+  admNotes: () => { admScroll = scrollY; admPage = 'notes'; render(); },
+  admRetour: () => { admPage = null; render(true); window.scrollTo(0, admScroll); },
+  modifierIdentite: async () => {
+    const th = data.role === 'therapeute', a = data.account;
+    if (!session) return toast('Une connexion internet est nécessaire pour modifier vos informations.');
+    if (!a.recup || a.recup === 'attente') return toast(`Ajoutez et confirmez d’abord votre ${th ? 'mail professionnel' : 'mail de récupération'}, juste en dessous.`);
+    const v = await formIdentite(); if (!v) return;
+    const ancien = a.identifiant, nouveau = v.identifiant !== ancien ? v.identifiant : '';
+    if (!await effacerParCode({...CODE_IDENTITE, extra:{identifiant:nouveau}})) return;
+    Object.assign(data.profile, {prenom:v.prenom, nom:v.nom});
+    if (nouveau) await renommerStockage(ancien, nouveau);
+    await saveNow(); pushProfile(); planifierSynchro(); render(true);
+    toast(nouveau ? `C’est fait : connectez-vous désormais avec « ${nouveau} ».` : 'Vos informations sont modifiées');
+  },
+  // le retour au menu reprend la position où l'on était avant d'ouvrir la page
+  setPage: t => { if (!setPage) menuScroll = scrollY; setPage = t.dataset.p; render(); if (setPage === 'thera') synchroCanaux(true); },
+  setBack: () => { setPage = null; render(true); window.scrollTo(0, menuScroll); menuScroll = 0; },
   setTheme: t => { try { localStorage.setItem(THEME_KEY, t.dataset.t); } catch {} appliquerTheme(); render(true); },
   toggleTheme: () => { try { localStorage.setItem(THEME_KEY, document.documentElement.dataset.theme === 'dark' ? 'clair' : 'sombre'); } catch {} appliquerTheme(); render(true); },
   deleteAccount: () => supprimerCompte(),
@@ -3570,10 +3714,10 @@ const ACT = {
   newClient: () => openClientForm(null),
   editClient: () => openClientForm(src.id),
   saveClient: t => {
-    const prenom = $('#cfPrenom').value.trim(), nom = $('#cfNom').value.trim(), numero = $('#cfNumero').value.trim().toUpperCase();
+    const prenom = $('#cfPrenom').value.trim(), nom = $('#cfNom').value.trim(), numero = codeU($('#cfNumero').value.trim());
     if (!prenom && !nom) return $('#cfErr').textContent = 'Indiquez au moins un prénom ou un nom.';
-    if (numero && !/^C-\d{4,}$/.test(numero)) return $('#cfErr').textContent = 'Numéro de compte au format C-0012.';
-    if (numero && Object.values(data.clients).some(x => x.id !== t.dataset.id && x.numero === numero)) return $('#cfErr').textContent = 'Ce numéro est déjà celui d’un autre client.';
+    if (numero && !/^[UC]-\d{4,}$/.test(numero)) return $('#cfErr').textContent = 'Code utilisateur au format U-0012.';
+    if (numero && Object.values(data.clients).some(x => x.id !== t.dataset.id && memeCode(x.numero, numero))) return $('#cfErr').textContent = 'Ce code est déjà celui d’un autre client.';
     let c = data.clients[t.dataset.id];
     if (!c) { const id = 'c' + rid(6); c = data.clients[id] = {id, uid:null, profile:{nom:'', prenom:'', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[]}; }
     Object.assign(c.profile, {prenom, nom});
@@ -3604,6 +3748,14 @@ const ACT = {
   calFilter: t => { calF = t.dataset.f || null; calW = null; render(); },
   calWord: t => { calW = t.dataset.w || null; render(); },
   calMode: t => { calMode = t.dataset.m; render(); },
+  // une semaine de la liste devient la période à envoyer ; la semaine en cours va du lundi à aujourd'hui
+  choisirSemaine: t => {
+    const lun = t.dataset.k, fin = addDays(lun, 6) > today() ? today() : addDays(lun, 6), d = $('#xCustom');
+    if (fin === addDays(lun, 6)) { xStart = lun; d.open = false; setWeek(0); }
+    else { d.open = true; $('#xFrom').value = lun; $('#xTo').value = fin; $('#xFromWd').textContent = weekday(lun); $('#xToWd').textContent = weekday(fin); }
+    window.scrollTo({top:0, behavior:'smooth'});
+    toast(`Période choisie : du ${fmtFR(lun).slice(0, 5)} au ${fmtFR(fin).slice(0, 5)}`);
+  },
   xPrevWeek: () => setWeek(-1),
   xNextWeek: () => setWeek(1),
   // changer de mois garde la page au même niveau : la grille fait toujours six semaines
@@ -3684,7 +3836,16 @@ const ACT = {
     if (data.settings.autolock === -1) await rememberKey().catch(() => {});
     await saveNow(); await ensureSecours(c); toast('Mot de passe modifié');
   },
-  lockNow: () => lock(),
+  lockNow: () => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="decoForm">
+      <div class="dlg-h"><h2>Se déconnecter ?</h2></div>
+      <div class="dlg-f"><button type="button" class="btn" id="decoNon">Non</button><button class="btn primary">Oui</button></div>
+    </form>`;
+    $('#decoNon').onclick = () => D.close();
+    $('#decoForm').onsubmit = e => { e.preventDefault(); D.close(); lock(); };
+    D.showModal();
+  },
   backup: () => sauvegarder(),
   backupLater: () => { data.backupPlusTard = today(); save(); $('.sauvegarde-rappel')?.remove(); },
   majApp: async () => { if (key) await saveNow(); location.reload(); },
@@ -3732,7 +3893,7 @@ const ACT = {
     u => u.actif ? `Désactiver le compte de ${who(u)} ?\n\nIl ne pourra plus se connecter.` : `Réactiver le compte de ${who(u)} ?`,
     u => API.rpc('admin_activer', {p_id:u.id, p_actif:!u.actif})),
   admType: t => admAction(t.dataset.id,
-    u => `Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'client(e)'} ?\n\nUn nouveau numéro lui sera attribué.`,
+    u => `Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'utilisateur'} ?\n\nUn nouveau code utilisateur lui sera attribué.`,
     u => API.rpc('admin_type', {p_id:u.id, p_role:u.role === 'client' ? 'therapeute' : 'client'})),
   admSuppr: t => admAction(t.dataset.id,
     u => `Supprimer définitivement le compte de ${who(u)} ?\n\nSon journal reste sur son téléphone, mais il ne pourra plus se connecter.`,
@@ -3740,12 +3901,12 @@ const ACT = {
 };
 
 document.addEventListener('gesturestart', e => e.preventDefault());   // iPhone : ignore le zoom à deux doigts
-/* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le journal, change de mois ; dans une page des Paramètres,
-   vers la droite, revient au menu. Le geste doit faire 60 px, en moins d'une seconde et quart, et partir plutôt à l'horizontale
+/* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le journal, change de mois ; dans une page des Paramètres
+   ou dans « Mes notes » de l'admin, vers la droite, revient en arrière. Le geste doit faire 60 px, en moins d'une seconde et quart, et partir plutôt à l'horizontale
    (moins de 45°) : il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite. */
 let glisse = null;
 document.addEventListener('touchstart', e => {
-  const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || (view === 'set' && setPage) || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
+  const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || (view === 'set' && setPage) || (view === 'admin' && admPage) || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
     && e.touches.length === 1 && !$('dialog[open]') && !e.target.closest('input, textarea, select');
   glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null} : null;
 }, {passive:true});
@@ -3769,6 +3930,7 @@ document.addEventListener('touchend', e => {
     render(true);   // on reste au même endroit de la page
   }
   else if (view === 'set') { if (dx < 0) return; ACT.setBack(); }
+  else if (view === 'admin') { if (dx < 0) return; ACT.admRetour(); }
   else if (dx < 0 && calY === now.getFullYear() && calM === now.getMonth()) return;   // pas de mois à venir
   else if (dx < 0) ACT.nextMonth(); else ACT.prevMonth();
   const v = view === 'day' ? $('#view .week') : $('#view'), c = dx < 0 ? 'vers-g' : 'vers-d';
@@ -3792,6 +3954,9 @@ document.addEventListener('input', e => {
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
+  } else if (t.id === 'admNotesTxt') {
+    data.notesAdmin = t.value; $('#admNotesEtat').textContent = '…';
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#admNotesEtat'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
   } else if (t.id === 'invCode') {   // un lien d'invitation complet collé dans le champ s'ouvre aussitôt
     const v = t.value.trim();
     if (/#i=[0-9a-f]{30}$|#inv=[A-Za-z0-9_-]{40,}$/i.test(v) && v !== t.dataset.ouvert) { t.dataset.ouvert = v; offerInvite(v); }
