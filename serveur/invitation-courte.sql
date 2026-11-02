@@ -27,11 +27,11 @@ begin
   return c;
 end $$;
 
--- Un utilisateur connecté lit l'invitation correspondant à un code
+-- Un utilisateur connecté lit l'invitation correspondant à un code : nom et type de thérapie seulement.
+-- Les coordonnées n'arrivent qu'aux clients acceptés, par le canal (voir canal.sql).
 create or replace function public.lire_invitation(p_code text) returns json
 language sql stable security definer set search_path = public as $$
-  select json_build_object('v', 1, 'pk', cle_publique, 'nom', nom, 'prenom', prenom, 'type', therapie,
-                           'tel', telephone, 'email', email_contact, 'adresse', adresse)
+  select json_build_object('v', 1, 'pk', cle_publique, 'nom', nom, 'prenom', prenom, 'type', therapie)
     from public.profils
    where code_invitation = lower(p_code) and role = 'therapeute' and actif and cle_publique is not null
 $$;

@@ -301,6 +301,11 @@ a{color:var(--accent)}
 .fp{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.06em;color:var(--text)}
 .banner{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--accent) 9%,var(--bg));border-radius:18px;padding:12px 14px;margin:0 0 12px;font-size:.88rem}
 .banner span{flex:1}
+.liste-import{margin:6px 0 10px;padding-left:20px}
+.liste-import li{margin-bottom:4px}
+.banner.attente,.attente-th{background:color-mix(in srgb,var(--accent) 16%,var(--bg));border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+.banner .bi,.attente-th .bi{width:24px;height:24px;flex:none;fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.attente-th{display:flex;gap:10px;align-items:flex-start;border-radius:14px;padding:12px 14px;margin:0 0 12px;font-size:.9rem}
 .banner-actions{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none}
 .rgpd{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:.9rem}
 .safari-avis{text-align:left}
@@ -448,9 +453,9 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 25;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 26;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 20;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:410, cache:401, envoyes:7.7, ecrits:1.6};   // en millions, même script, même moment
+const JETONS_CONSOMMES = {total:428, cache:418, envoyes:7.8, ecrits:1.7};   // en millions, même script, même moment
 const RGPD_VERSION = 2; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
@@ -655,7 +660,7 @@ function demoApi() {
     canal_supprimer(x, {p_id, p_jeton}) { if (x.canaux?.[p_id]?.jeton === p_jeton && x.canaux[p_id].statut === 'rompu') delete x.canaux[p_id]; },
     lire_invitation(x, {p_code}) {
       const p = Object.values(x.comptes).map(c => c.profil).find(q => q.code_invitation === p_code.toLowerCase() && q.role === 'therapeute' && q.actif);
-      return p ? {v:1, pk:p.cle_publique, nom:p.nom, prenom:p.prenom, type:p.therapie, tel:p.telephone, email:p.email_contact, adresse:p.adresse} : null;
+      return p ? {v:1, pk:p.cle_publique, nom:p.nom, prenom:p.prenom, type:p.therapie} : null;
     },
     admin_ressources(x) {
       admin(x);
@@ -828,7 +833,7 @@ function showInstall() {
     <p class="muted">Cela protège vos notes et garde tout au même endroit.</p>
     ${pendingInv ? `<section class="card">
       <h2>Vous avez reçu une invitation</h2>
-      <p class="small muted" style="margin:6px 0 0">Motus est déjà installé ? Copiez l’invitation, ouvrez Motus depuis votre écran d’accueil, puis touchez « Coller l’invitation » dans Paramètres › Mon thérapeute. Sinon, installez d’abord Motus.</p>
+      <p class="small muted" style="margin:6px 0 0">Motus est déjà installé ? Copiez l’invitation, ouvrez Motus depuis votre écran d’accueil, puis collez-la dans Paramètres › Mon thérapeute. Sinon, installez d’abord Motus.</p>
       <button class="btn primary block" data-act="copierLien">Copier l’invitation</button>
     </section>` : '<p class="small muted">Motus est déjà installé ? Fermez cette page et ouvrez-le depuis son icône.</p>'}
     ${blocInstall()}
@@ -1650,7 +1655,7 @@ const ICONS = {
 const ICO = {
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>', mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7.5 8.5 6 8.5-6"/>',
   lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>', out:'<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="m15 8 4 4-4 4"/><path d="M19 12H9"/>',
-  heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/>', send:'<path d="M21 3 10 14"/><path d="m21 3-6.5 18-4.5-7-7-4.5L21 3Z"/>',
+  send:'<path d="M21 3 10 14"/><path d="m21 3-6.5 18-4.5-7-7-4.5L21 3Z"/>',
   col:'<rect x="2.5" y="7" width="19" height="10" rx="3"/><circle cx="7.2" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="16.8" cy="12" r="1.6"/>', pin:'<path d="M12 21s7-6.1 7-11.5a7 7 0 1 0-14 0C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
   save:'<path d="M12 3v12"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>', trash:'<path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="m6.5 7 1 13h9l1-13"/>',
   usersup:'<circle cx="10" cy="8" r="4"/><path d="M3 21c1.3-4 3.8-6 7-6s4.2.7 5.5 2"/><path d="m17 15 4.5 4.5M21.5 15 17 19.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
@@ -1658,6 +1663,8 @@ const ICO = {
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>', phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
   share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/>', loupe:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4.5-4.5"/>',
   link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>', ch:'<path d="m9 5 7 7-7 7"/>',
+  sablier:'<path d="M6.5 3h11M6.5 21h11"/><path d="M8 3v3.5L12 12l4-5.5V3M8 21v-3.5L12 12l4 5.5V21"/>',
+  thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
 };
 const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
 const TABN = {day:'Quotidien', cal:'Journal', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Paramètres'};
@@ -1676,7 +1683,7 @@ function render(keepScroll) {
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
   if (!keepScroll) window.scrollTo(0, 0);
   marquerEntete();
-  montrerRuptures();   // une fin de suivi reçue s'affiche quelle que soit la page
+  montrerAvis();   // une fin de suivi ou une acceptation reçue s'affiche quelle que soit la page
 }
 
 /* — Vue Journée — */
@@ -1739,7 +1746,6 @@ function vDay() {
         <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
         <span class="txt note-txt">${esc(n.text)}</span></span>
       </button></li>`).join('')}</ul>` : ''}
-    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">${data.settings.partage?.notes ? 'Ces notes sont incluses dans vos envois à votre thérapeute (Paramètres › Données transmises), mais pas dans le fichier Excel.' : 'Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.'}</p>
     <button class="btn block" data-act="newNote">+ Ajouter une note</button>
   </section>`}
 
@@ -1981,7 +1987,7 @@ function vSetMenu() {
     ligneMenu('link', 'Mon lien d’invitation', {page:'invite'}),
     ligneMenu('user', 'Mon profil professionnel', {page:'pro'}),
   ]) : groupeMenu('Mon suivi', [
-    ligneMenu('heart', 'Mon thérapeute', {val:t ? `${initiale(t.prenom)} ${t.nom}`.trim() : 'À ajouter', page:'thera'}),
+    ligneMenu('thera', 'Mon thérapeute', {val:t ? (attenteAcceptation(t) ? 'En attente' : `${initiale(t.prenom)} ${t.nom}`.trim()) : 'À ajouter', page:'thera'}),
     ligneMenu('send', 'Partager ma semaine', {page:'partage'}),
     ligneMenu('shield', 'Données transmises', {val:resumePartage(), page:'donnees'}),
     ligneMenu('mail', 'Mes envois', {val:String(Object.keys(data.sent).length), page:'envois'}),
@@ -2070,8 +2076,8 @@ function pagePartage() {
       <button class="btn ${th ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
       ${navigator.canShare ? '<button class="btn" data-act="shareXlsx">Partager…</button>' : ''}
     </div>
-    ${th ? '' : `<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>
-    <p class="small muted" style="margin:6px 0 0"><b>Ce fichier n’est pas chiffré :</b> vos émotions y sont lisibles. ${aideEnvoi('')}</p>`}
+    ${th ? '' : '<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>'}
+    <p class="small muted" style="margin:6px 0 0"><b>Vos notes personnelles n’y figurent pas.</b>${th ? '' : ` <b>Il n’est pas chiffré :</b> vos émotions y sont lisibles. ${aideEnvoi('')}`}</p>
   </section>`;
 }
 
@@ -2252,10 +2258,11 @@ async function openEnvoi(pkg) {
   return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(pkg.iv)}, k, fromB64(pkg.ct))));
 }
 
-/* — Invitation : clé publique + coordonnées du thérapeute, dans la partie « # » du lien (jamais envoyée à un serveur) — */
+/* — Invitation : clé publique, nom et type de thérapie, dans la partie « # » du lien (jamais envoyée à un serveur).
+   Le lien peut circuler : les coordonnées n'arrivent qu'aux clients acceptés, par le canal. — */
 function inviteCode() {
   const p = data.profile, t = data.thera;
-  const o = {v:1, pk:data.keys.pub, nom:p.nom, prenom:p.prenom, type:t.type, tel:t.tel, email:t.email, adresse:t.adresse};
+  const o = {v:1, pk:data.keys.pub, nom:p.nom, prenom:p.prenom, type:t.type};
   return b64url(toB64(enc.encode(JSON.stringify(o))));
 }
 const inviteLink = () => `${location.origin}${location.pathname}#${data.invCode ? 'i=' + data.invCode : 'inv=' + inviteCode()}`;
@@ -2280,18 +2287,18 @@ async function readInvite(text) {
   }
   if (o?.v !== 1 || !o.pk) throw new Error('format');
   await crypto.subtle.importKey('raw', fromB64(o.pk), ECDH, false, []); // clé valide ?
-  o.fp = await fingerprint(o.pk);
-  return o;
+  // les coordonnées d'un ancien lien ou d'un serveur pas encore mis à jour sont ignorées : elles arriveront après acceptation
+  return {v:1, pk:o.pk, fp:await fingerprint(o.pk), prenom:o.prenom || '', nom:o.nom || '', type:o.type || ''};
 }
 async function offerInvite(text) {
   let o;
   try { o = await readInvite(text); } catch (x) { return toast(x.code === 'reseau' ? 'Connexion internet nécessaire pour lire cette invitation.' : 'Lien d’invitation non reconnu.'); }
   if (data.role === 'therapeute') return toast('Ce lien est destiné à vos clients.');
   const who = nomDe(o) || 'ce thérapeute', old = data.therapist;
-  if (old?.fp === o.fp && old.canal) { Object.assign(old, o); await saveNow(); render(); return toast('Coordonnées du thérapeute mises à jour'); }
+  if (old?.fp === o.fp && old.canal) return toast(old.accepte ? `${who} est déjà votre thérapeute` : `Votre demande attend déjà l’acceptation de ${who}`);
   if (!await consentirLien(o, old?.fp === o.fp ? null : old)) return;
   if (old?.canal && old.fp !== o.fp && !await rompreCanal(old.canal, 'client')) data.ruptureAEnvoyer = old.canal;
-  data.therapist = {...o, addedAt:old?.fp === o.fp ? old.addedAt : new Date().toISOString(), canal:hexDe(crypto.getRandomValues(new Uint8Array(32)))};
+  data.therapist = {...o, addedAt:new Date().toISOString(), canal:hexDe(crypto.getRandomValues(new Uint8Array(32))), enAttente:true};
   delete data.ruptureRecue;
   await saveNow(); await synchroCanaux(true); render(); toast(`Demande envoyée : ${who} doit l’accepter`);
 }
@@ -2346,7 +2353,7 @@ async function synchroCanaux(force) {
   if (!change || !data) return;
   save(); renderNav(); markTabs();
   if (!$('dialog[open]') && !document.activeElement?.matches('input, textarea, select')) render(true);   // jamais pendant une saisie
-  montrerRuptures();
+  montrerAvis();
 }
 /* Coordonnées modifiées : l'autre côté les reçoit sans attendre la prochaine ouverture de l'app */
 const planifierSynchro = () => { clearTimeout(synchroTimer); synchroTimer = setTimeout(() => synchroCanaux(true), 1500); };
@@ -2370,9 +2377,17 @@ async function synchroClient() {
     return true;
   }
   if (c?.therapeute) {   // le thérapeute n'écrit sa fiche qu'après avoir accepté la demande
-    if (!th.accepte) { th.accepte = true; change = true; }
     const t = await dechiffrerCanal(S, c.therapeute);
     for (const k of ['prenom', 'nom', 'type', 'tel', 'email', 'adresse']) if (k in t && t[k] !== th[k]) { th[k] = t[k]; change = true; }
+    if (!th.accepte) {
+      th.accepte = true; change = true;
+      if (th.enAttente) data.accepteRecue = {nom:nomDe(th) || 'Votre thérapeute', at:new Date().toISOString()};   // un lien d'avant la v25 s'active sans message
+      delete th.enAttente;
+    }
+  } else if (c && !th.accepte) {
+    // Demande pas encore acceptée : seuls le nom et le type de thérapie sont connus, les coordonnées n'arrivent qu'après
+    if (!th.enAttente) { th.enAttente = true; change = true; }
+    for (const k of ['tel', 'email', 'adresse']) if (k in th) { delete th[k]; change = true; }
   }
   return change;
 }
@@ -2385,6 +2400,11 @@ async function synchroTherapeute() {
       lus.push(a.id);
     }
     if (lus.length) await API.rpc('supprimer_arrivees', {p_ids:lus});
+  }
+  if (data.canauxARompre?.length) {
+    const restent = [];
+    for (const S of data.canauxARompre) if (!await rompreCanal(S, 'therapeute')) restent.push(S);
+    if (restent.length !== data.canauxARompre.length) { data.canauxARompre = restent; change = true; }
   }
   const fiche = ficheTherapeute(), f = JSON.stringify(fiche);
   for (const c of Object.values(data.clients)) {
@@ -2440,22 +2460,30 @@ async function rompreCanal(S, par) {
   try { if (await API.rpcAnon('canal_rompre', {p_id:await idCanal(S), p_jeton:await jetonCanal(S), p_par:par})) return true; } catch {}
   return false;
 }
-/* Fin de suivi reçue : une fenêtre s'affiche, quelle que soit la page, jusqu'à ce qu'on l'ait lue */
-function montrerRuptures() {
+/* Côté thérapeute : rompre maintenant, ou dès le retour de la connexion, même si la fiche du client a disparu entre-temps */
+async function rompreOuPlusTard(S) { if (S && !await rompreCanal(S, 'therapeute')) (data.canauxARompre ||= []).push(S); }
+/* Nouvelle du lien (fin de suivi, demande refusée ou acceptée) : une fenêtre s'affiche, quelle que soit la page, jusqu'à ce qu'on l'ait lue */
+function montrerAvis() {
   if (!data || !key || $('#app').hidden || $('dialog[open]')) return;
   const th = data.role === 'therapeute', r = th ? data.rupturesRecues || [] : data.ruptureRecue ? [data.ruptureRecue] : [];
-  if (!r.length) return;
-  const quand = x => fmtFR(ymd(new Date(x.at)));
-  const textes = th ? r.map(x => `${esc(x.nom)} a mis fin au suivi le ${quand(x)}. ${r.length > 1 ? 'Ces clients sont' : 'Ce client est'} maintenant dans « Anciens clients », avec sa fiche et ses données reçues.`)
-    : r.map(x => x.refus ? `${esc(x.nom)} n’a pas accepté votre demande de suivi.` : `${esc(x.nom)} a mis fin au suivi le ${quand(x)}. Vous ne pouvez plus lui envoyer vos données. Vos notes restent sur votre téléphone.`);
+  const quand = x => fmtFR(ymd(new Date(x.at))), a = !th && data.accepteRecue;
+  let titre, textes;
+  if (r.length) {
+    titre = !th && r[0].refus ? 'Demande non acceptée' : 'Fin de suivi';
+    textes = th ? r.map(x => `${esc(x.nom)} a mis fin au suivi le ${quand(x)}. ${r.length > 1 ? 'Ces clients sont' : 'Ce client est'} maintenant dans « Anciens clients », avec sa fiche et ses données reçues.`)
+      : r.map(x => x.refus ? `${esc(x.nom)} n’a pas accepté votre demande de suivi.` : `${esc(x.nom)} a mis fin au suivi le ${quand(x)}. Vous ne pouvez plus lui envoyer vos données. Vos notes restent sur votre téléphone.`);
+  } else if (a) {
+    titre = 'Demande acceptée';
+    textes = [`${esc(a.nom)} a accepté votre demande de suivi.`, 'Ses coordonnées sont dans Paramètres › Mon thérapeute, et vous pouvez maintenant lui envoyer vos données depuis Paramètres › Partager ma semaine.'];
+  } else return;
   const D = $('#codeDlg');
   D.innerHTML = `<form method="dialog" id="rpForm">
-    <div class="dlg-h"><h2>${!th && r[0].refus ? 'Demande non acceptée' : 'Fin de suivi'}</h2></div>
+    <div class="dlg-h"><h2>${titre}</h2></div>
     <div class="dlg-b">${textes.map(t => `<p>${t}</p>`).join('')}</div>
     <div class="dlg-f"><button class="btn primary">J’ai compris</button></div>
   </form>`;
   D.oncancel = e => e.preventDefault();
-  $('#rpForm').onsubmit = e => { e.preventDefault(); D.oncancel = null; D.close(); ACT.ruptureLue(); };
+  $('#rpForm').onsubmit = e => { e.preventDefault(); D.oncancel = null; D.close(); ACT.avisLu(); };
   D.showModal();
 }
 
@@ -2496,7 +2524,7 @@ function consentirLien(o, ancien) {
         ${o.type ? `<p class="small muted" style="margin-top:0">${esc(o.type)}</p>` : ''}
         <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(o.fp)}</b></div>
         <p class="small muted">Vérifiez qu’il correspond à celui que vous a donné votre thérapeute.</p>
-        <p class="small">En le rejoignant, vous partagez avec lui votre prénom, votre nom et votre numéro de compte${data.account?.numero ? ` (${esc(data.account.numero)})` : ''}. Vos coordonnées et les siennes se mettent à jour automatiquement. Votre thérapeute doit ensuite accepter votre demande.</p>
+        <p class="small">En le rejoignant, vous partagez avec lui votre prénom, votre nom et votre numéro de compte${data.account?.numero ? ` (${esc(data.account.numero)})` : ''}. Votre thérapeute doit ensuite accepter votre demande : vous recevrez alors ses coordonnées, et celles de chacun se mettront à jour automatiquement.</p>
         <p class="small">Par sécurité, les données de votre journal ne lui sont pas transmises automatiquement : vous les lui envoyez quand vous le souhaitez, depuis Paramètres › Partager ma semaine.${ancien ? ` <b>${esc(nomDe(ancien))} ne sera plus votre thérapeute</b>, et il en sera prévenu.` : ''}</p>
         <label class="rgpd"><input type="checkbox" id="lnOui"><span>J’accepte que ${esc(nom)} reçoive et lise les données que je lui enverrai.</span></label>
         <div class="err" id="lnErr"></div>
@@ -2564,26 +2592,45 @@ const aEnvoyer = d => { const p = data.settings.partage || {}; return !!d && (!!
 
 /* Thérapeute : fichiers déposés en vrac, chacun rangé dans la fiche de son client */
 async function importerFichiers(fichiers, cibleId) {
-  const ranges = {}, refus = [];
+  const ranges = {}, refus = [], liaisons = [];
   for (const f of fichiers) {
     let pkg, o;
     try { pkg = JSON.parse(await f.text()); if (pkg.app !== 'journal-emotions' || pkg.type !== 'envoi') throw 0; }
     catch { refus.push(`${f.name} : ce n’est pas un envoi Motus`); continue; }
     if (pkg.to !== data.keys?.fp) { refus.push(`${f.name} : chiffré pour un autre thérapeute`); continue; }
     try { o = await openEnvoi(pkg); } catch { refus.push(`${f.name} : fichier abîmé`); continue; }
-    if (o.type === 'liaison') { lierClient(o); continue; }
+    if (o.type === 'liaison') { liaisons.push(fullName(lierClient(o))); continue; }
     const c = ficheDe(o.client || {}, cibleId);
     if (c.statut === 'ancien') { refus.push(`${f.name} : ${fullName(c)} n’est plus votre client`); continue; }
     integrer(c, o);
     ranges[c.id] = (ranges[c.id] || 0) + 1;
   }
   await saveNow();
-  const noms = Object.entries(ranges).map(([id, n]) => `${fullName(data.clients[id])} (${n})`);
+  montrerImport(fichiers.length, ranges, liaisons, refus);   // avant l'affichage : une autre fenêtre attendra qu'on ferme celle-ci
   if (cibleId && Object.keys(ranges).length === 1 && ranges[cibleId]) openClient(cibleId);
   else { src = null; view = 'clients'; render(); }
   renderNav(); markTabs();
-  if (refus.length) alert(`${noms.length ? `Rangé : ${noms.join(', ')}.\n\n` : ''}Non importé :\n${refus.join('\n')}`);
-  else toast(noms.length ? `Rangé : ${noms.join(', ')}` : 'Aucun fichier à ranger');
+}
+/* Fenêtre de bilan : combien de fichiers, de qui, et ce qui n'a pas pu être rangé */
+function montrerImport(n, ranges, liaisons, refus) {
+  const s = k => k > 1 ? 's' : '', D = $('#codeDlg');
+  const rangs = Object.entries(ranges).map(([id, k]) => [data.clients[id], k]).sort((a, b) => fullName(a[0]).localeCompare(fullName(b[0]), 'fr'));
+  const attente = rangs.some(([c]) => c.statut === 'attente') || liaisons.length;
+  if (D.open) D.close();
+  D.innerHTML = `<form method="dialog" id="imForm">
+    <div class="dlg-h"><h2>${n} fichier${s(n)} reçu${s(n)}</h2></div>
+    <div class="dlg-b">
+      ${rangs.length ? `<p style="margin-top:0">${rangs.length > 1 ? `De ${rangs.length} expéditeurs :` : 'Expéditeur :'}</p>
+      <ul class="liste-import">${rangs.map(([c, k]) => `<li><b>${esc(fullName(c))}</b> · ${k} fichier${s(k)}${c.statut === 'attente' ? ' <span class="muted">(demande à accepter)</span>' : ''}</li>`).join('')}</ul>` : ''}
+      ${liaisons.length ? `<p>Demande${s(liaisons.length)} de suivi : ${liaisons.map(esc).join(', ')}.</p>` : ''}
+      ${attente ? '<p class="small muted">Les personnes que vous ne suivez pas encore sont dans « Demandes en attente » : acceptez-les pour les compter parmi vos clients.</p>' : ''}
+      ${refus.length ? `<p class="label">Non importé${s(refus.length)}</p><ul class="liste-import small">${refus.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+    </div>
+    <div class="dlg-f"><button class="btn primary">OK</button></div>
+  </form>`;
+  $('#imForm').onsubmit = e => { e.preventDefault(); D.close(); };
+  D.onclose = () => { D.onclose = null; montrerAvis(); };
+  D.showModal();
 }
 function ficheDe(k, cibleId) {
   let c = ficheConnue({...k, uid:k.id});
@@ -2625,25 +2672,28 @@ let retraitFait = null;
 function therapistCard() {
   const th = data.therapist, fait = retraitFait;
   retraitFait = null;
+  const attente = attenteAcceptation(th);
   return `${fait ? `<div class="banner"><span>✓ ${esc(fait)} n’est plus votre thérapeute. Il en sera prévenu à sa prochaine ouverture de Motus. Vous pouvez en ajouter un autre ci-dessous.</span></div>` : ''}<section class="card">
     ${th ? `
+      ${attente ? `<div class="attente-th">${ico('sablier', 'bi')}<span><b>${th.arrivee ? 'En attente d’acceptation' : 'Demande prête à partir'}</b><br>${th.arrivee
+        ? `Votre demande a été envoyée${th.addedAt ? ` le ${fmtFR(ymd(new Date(th.addedAt)))}` : ''}. ${esc(nomDe(th) || 'Votre thérapeute')} doit l’accepter dans son app. Ses coordonnées s’afficheront alors ici, et vous pourrez lui envoyer vos données.`
+        : 'Elle partira dès que votre téléphone sera connecté à internet.'}</span></div>` : ''}
       <div class="stat"><span class="muted">Prénom</span><b>${esc(th.prenom || '—')}</b></div>
       <div class="stat"><span class="muted">Nom</span><b>${esc(th.nom || '—')}</b></div>
       <div class="stat"><span class="muted">Type de thérapie</span><b>${esc(th.type || '—')}</b></div>
-      <div class="stat"><span class="muted">Mail</span><b style="overflow-wrap:anywhere;text-align:right">${th.email ? `<a href="mailto:${esc(th.email)}">${esc(th.email)}</a>` : '—'}</b></div>
+      ${attente ? '' : `<div class="stat"><span class="muted">Mail</span><b style="overflow-wrap:anywhere;text-align:right">${th.email ? `<a href="mailto:${esc(th.email)}">${esc(th.email)}</a>` : '—'}</b></div>
       <div class="stat"><span class="muted">Téléphone</span><b>${th.tel ? `<a href="tel:${esc(th.tel.replace(/\s/g, ''))}">${esc(th.tel)}</a>` : '—'}</b></div>
-      <div class="stat"><span class="muted">Adresse du cabinet</span><b style="text-align:right">${esc(th.adresse || '—')}</b></div>
+      <div class="stat"><span class="muted">Adresse du cabinet</span><b style="text-align:right">${esc(th.adresse || '—')}</b></div>`}
       <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(th.fp)}</b></div>
-      ${th.addedAt ? `<div class="stat"><span class="muted">Ajouté le</span><b>${fmtFR(ymd(new Date(th.addedAt)))}</b></div>` : ''}
-      <div class="stat"><span class="muted">Lien</span><b>${th.canal ? (th.accepte ? 'Actif' : th.arrivee ? 'En attente d’acceptation' : 'En attente de connexion') : 'À activer'}</b></div>
-      ${th.canal && !th.accepte ? `<p class="small muted" style="margin:8px 0 0">${esc(th.prenom || 'Votre thérapeute')} doit accepter votre demande dans son app. Vous pourrez ensuite lui envoyer vos données.</p>` : ''}
+      ${th.addedAt && !attente ? `<div class="stat"><span class="muted">Ajouté le</span><b>${fmtFR(ymd(new Date(th.addedAt)))}</b></div>` : ''}
+      ${attente ? '' : `<div class="stat"><span class="muted">Lien</span><b>${th.canal ? 'Actif' : 'À activer'}</b></div>`}
       ${th.canal ? '' : `<p class="small muted" style="margin:8px 0 0">Activez le lien pour partager vos coordonnées avec votre thérapeute, les tenir à jour et être prévenu(e) si l’un de vous met fin au suivi.</p>
       <button class="btn primary block" data-act="activerLien">Activer le lien</button>`}
       <button class="btn danger block" data-act="removeTherapist">Retirer ce thérapeute</button>` : `
-      <p class="small muted" style="margin:0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
-      <button class="btn primary block" data-act="collerInvit">Coller l’invitation</button>
-      <textarea id="invCode" rows="3" placeholder="Ou collez le lien ici" style="margin-top:10px"></textarea>
-      <button class="btn block" data-act="addTherapist">Ajouter mon thérapeute</button>`}
+      <label class="label" for="invCode" style="margin-top:0">Lien d’invitation de votre thérapeute</label>
+      <textarea id="invCode" rows="3" placeholder="Touchez ici, puis Coller" autocapitalize="none" spellcheck="false"></textarea>
+      <p class="small muted" style="margin:6px 0 0">Copiez le lien qu’il vous a envoyé, puis collez-le dans ce champ : il s’ouvre aussitôt.</p>
+      <button class="btn primary block" data-act="addTherapist">Ajouter mon thérapeute</button>`}
   </section>`;
 }
 /* data.sent : début de période → {to, at} */
@@ -2704,8 +2754,12 @@ const aideEnvoi = a => navigator.canShare
   ? `Choisissez votre messagerie : le fichier est joint et le texte prérempli.${a ? ' L’adresse de votre thérapeute est copiée : collez-la dans « À ».' : ''}`
   : 'Le fichier se télécharge et votre messagerie s’ouvre, préremplie : joignez-y le fichier.';
 /* Rappel si rien n'a été envoyé depuis 7 jours (ou depuis l'ajout du thérapeute) et qu'il y a des notes non envoyées */
+const attenteAcceptation = th => !!(th?.canal && !th.accepte);
 function sendReminder() {
-  if (!data.therapist) return '';
+  const th = data.therapist;
+  if (!th) return '';
+  if (attenteAcceptation(th)) return `<div class="banner attente">${ico('sablier', 'bi')}<span><b>Demande envoyée à ${esc(nomDe(th) || 'votre thérapeute')}</b><br>En attente de son acceptation. Vous pourrez ensuite lui envoyer vos données.</span>
+    <button class="btn" data-act="voirThera">Voir</button></div>`;
   const l = lastSent(), ref = l ? l[1].at : data.therapist.addedAt;
   const since = Math.floor((Date.now() - new Date(ref)) / 864e5);
   const coveredTo = Object.values(data.sent).reduce((m, s) => s.to > m ? s.to : m, '');
@@ -3141,7 +3195,6 @@ function openNote(id) {
       ${lieuFields(n?.time || (cur === today() ? nowTime() : '12:00'), n ? n.ville : villeParDefaut(), n?.lieu)}
       <label class="label" for="nText">Ma note</label>
       <textarea id="nText" rows="6" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier…">${esc(n?.text || '')}</textarea>
-      <p class="small muted" style="margin:6px 0 0">Ni envoyée à votre thérapeute, ni incluse dans le fichier Excel.</p>
       <div class="err" id="nErr"></div>
     </div>
     <div class="dlg-f">
@@ -3453,10 +3506,10 @@ const ACT = {
   activerLien: async () => {
     const th = data.therapist;
     if (!await consentirLien(th, null)) return;
-    th.canal = hexDe(crypto.getRandomValues(new Uint8Array(32))); delete th.arrivee;
+    th.canal = hexDe(crypto.getRandomValues(new Uint8Array(32))); delete th.arrivee; th.enAttente = true;
     await saveNow(); await synchroCanaux(true); render();
   },
-  ruptureLue: () => { delete data.ruptureRecue; delete data.rupturesRecues; save(); render(true); },
+  avisLu: () => { delete data.ruptureRecue; delete data.rupturesRecues; delete data.accepteRecue; save(); render(true); },
   accepterClient: t => {
     const c = data.clients[t.dataset.id]; if (!c) return;
     c.statut = 'actuel'; delete c.demande; delete c.ficheEnvoyee; c.nouveauClient = true;
@@ -3465,7 +3518,7 @@ const ACT = {
   },
   refuserClient: async t => {
     const c = data.clients[t.dataset.id]; if (!c || !confirm(`Refuser la demande de ${fullName(c)} ?\n\nIl ou elle en sera prévenu(e) et ne pourra pas vous envoyer de données.`)) return;
-    if (c.canal && !await rompreCanal(c.canal, 'therapeute')) c.ruptureAEnvoyer = c.canal;
+    await rompreOuPlusTard(c.canal);
     finDemande(c); await saveNow(); render(true); renderNav();
   },
   effacerRecu: async () => {
@@ -3479,7 +3532,7 @@ const ACT = {
     const c = src;
     if (!await confirmerCode({titre:`Mettre fin au suivi de ${fullName(c)} ?`, bouton:'Mettre fin au suivi',
       texte:`${esc(c.profile.prenom || 'Votre client')} ne pourra plus vous envoyer de données, et en sera prévenu(e) à sa prochaine ouverture de Motus. Sa fiche et ses données reçues restent consultables dans « Anciens clients ».`})) return;
-    if (c.canal && !await rompreCanal(c.canal, 'therapeute')) c.ruptureAEnvoyer = c.canal;
+    await rompreOuPlusTard(c.canal);
     delete c.canal; c.statut = 'ancien'; c.rupture = {par:'therapeute', at:new Date().toISOString()};
     await saveNow(); render(); toast(`${fullName(c)} est maintenant dans « Anciens clients »`);
   },
@@ -3501,6 +3554,7 @@ const ACT = {
     envoyerParMail({file:new File([buildXlsx(x.from, x.to)], x.name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), from:x.from, to:x.to, chiffre:false});
   },
   goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
+  voirThera: () => { view = 'set'; setPage = 'thera'; render(); synchroCanaux(true); },
   setPage: t => { setPage = t.dataset.p; render(); if (setPage === 'thera') synchroCanaux(true); },
   setBack: () => { setPage = null; render(); },
   setTheme: t => { try { localStorage.setItem(THEME_KEY, t.dataset.t); } catch {} appliquerTheme(); render(true); },
@@ -3536,9 +3590,12 @@ const ACT = {
     const who = `${src.profile.prenom}-${src.profile.nom}`.replace(/[^\p{L}\p{N}-]+/gu, '');
     withBusy(() => download(buildXlsx(from, to), `Motus_${who}_${from}_${to}.xlsx`));
   },
-  removeClient: () => {
-    if (!confirm(`Supprimer la fiche de ${fullName(src)} et toutes les données reçues ?`)) return;
-    delete data.clients[src.id]; src = null; view = 'clients'; save(); render();
+  removeClient: async () => {
+    const c = src, lie = c.canal && c.statut !== 'ancien';
+    if (!confirm(`Supprimer la fiche de ${fullName(c)} et toutes les données reçues ?${lie ? `\n\n${c.statut === 'attente' ? 'Sa demande sera refusée' : 'Le suivi prendra fin'} : ${c.profile.prenom || 'votre client'} en sera prévenu(e) et ne pourra plus vous envoyer de données.` : ''}`)) return;
+    if (lie) await rompreOuPlusTard(c.canal);
+    delete data.clients[c.id]; src = null; view = 'clients'; await saveNow(); render(); renderNav();
+    toast(`Fiche de ${fullName(c)} supprimée`);
   },
   prevDay: () => { cur = addDays(cur, -1); render(); },
   nextDay: () => { if (cur < today()) { cur = addDays(cur, 1); render(); } },
@@ -3549,9 +3606,10 @@ const ACT = {
   calMode: t => { calMode = t.dataset.m; render(); },
   xPrevWeek: () => setWeek(-1),
   xNextWeek: () => setWeek(1),
-  prevMonth: () => { if (--calM < 0) { calM = 11; calY--; } render(); },
-  nextMonth: () => { if (++calM > 11) { calM = 0; calY++; } render(); },
-  moisEnCours: () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); render(); },
+  // changer de mois garde la page au même niveau : la grille fait toujours six semaines
+  prevMonth: () => { if (--calM < 0) { calM = 11; calY--; } render(true); },
+  nextMonth: () => { if (++calM > 11) { calM = 0; calY++; } render(true); },
+  moisEnCours: () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); render(true); },
   setColor: t => {
     const d = ensureDay(cur), c = t.dataset.c;
     d.color = d.color === c ? null : c;
@@ -3647,12 +3705,6 @@ const ACT = {
     localStorage.setItem(NAV_OK, '1'); recupNotes = false;
     if (key) showApp(); else showLock('login');
   },
-  collerInvit: async () => {
-    let t = '';
-    try { t = (await navigator.clipboard.readText()).trim(); } catch {}
-    if (!t) { $('#invCode').focus(); return toast('Collez l’invitation dans le champ ci-dessous.'); }
-    $('#invCode').value = t; offerInvite(t);
-  },
   wipe: async () => {
     const th = data.role === 'therapeute';
     if (!confirm(`Effacer définitivement ${th ? 'toutes les données reçues de vos clients' : 'toutes vos notes'} de ce téléphone ?\n\nVotre compte et vos réglages${th ? ', ainsi que vos fiches clients,' : ''} sont conservés. Les sauvegardes, fichiers Excel et envois déjà créés ne sont pas concernés.`)) return;
@@ -3689,8 +3741,8 @@ const ACT = {
 
 document.addEventListener('gesturestart', e => e.preventDefault());   // iPhone : ignore le zoom à deux doigts
 /* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le journal, change de mois ; dans une page des Paramètres,
-   vers la droite, revient au menu. Le geste doit être franc (70 px, nettement horizontal, en moins d'une seconde), pour ne jamais gêner
-   le défilement ni un simple appui. */
+   vers la droite, revient au menu. Le geste doit faire 60 px, en moins d'une seconde et quart, et partir plutôt à l'horizontale
+   (moins de 45°) : il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite. */
 let glisse = null;
 document.addEventListener('touchstart', e => {
   const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || (view === 'set' && setPage) || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
@@ -3701,19 +3753,20 @@ document.addEventListener('touchstart', e => {
 document.addEventListener('touchmove', e => {
   if (!glisse || e.touches.length !== 1) return;
   const dx = e.touches[0].clientX - glisse.x, dy = e.touches[0].clientY - glisse.y;
-  if (!glisse.sens && Math.abs(dx) + Math.abs(dy) > 8) glisse.sens = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+  if (!glisse.sens && Math.hypot(dx, dy) > 12) glisse.sens = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
   if (glisse.sens === 'h' && e.cancelable) e.preventDefault();
 }, {passive:false});
 document.addEventListener('touchend', e => {
   if (!glisse) return;
-  const p = e.changedTouches[0], dx = p.clientX - glisse.x, dy = p.clientY - glisse.y, lent = Date.now() - glisse.t > 1000, sens = glisse.sens;
+  const p = e.changedTouches[0], dx = p.clientX - glisse.x, dy = p.clientY - glisse.y, lent = Date.now() - glisse.t > 1250, sens = glisse.sens;
   glisse = null;
-  if (sens === 'v' || lent || Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy)) return;
+  // une fois le geste parti à l'horizontale, l'écran ne défile plus : le doigt peut alors dévier sans annuler le balayage
+  if (sens !== 'h' || lent || Math.abs(dx) < 60 || Math.abs(dy) > 1.2 * Math.abs(dx)) return;
   const now = new Date();
   if (view === 'day') {
     if (dx < 0 && mondayOf(cur) >= mondayOf(today())) return;   // pas de semaine à venir
     cur = addDays(cur, dx < 0 ? 7 : -7); if (cur > today()) cur = today();
-    render();
+    render(true);   // on reste au même endroit de la page
   }
   else if (view === 'set') { if (dx < 0) return; ACT.setBack(); }
   else if (dx < 0 && calY === now.getFullYear() && calM === now.getMonth()) return;   // pas de mois à venir
@@ -3739,6 +3792,9 @@ document.addEventListener('input', e => {
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
+  } else if (t.id === 'invCode') {   // un lien d'invitation complet collé dans le champ s'ouvre aussitôt
+    const v = t.value.trim();
+    if (/#i=[0-9a-f]{30}$|#inv=[A-Za-z0-9_-]{40,}$/i.test(v) && v !== t.dataset.ouvert) { t.dataset.ouvert = v; offerInvite(v); }
   } else if (t.id === 'eCar') updatePreview();
   else if (t.id === 'calQ') {   // seuls les résultats changent : le champ garde le clavier ouvert
     calQ = t.value;
