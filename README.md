@@ -28,6 +28,7 @@ Web app (PWA) pour les personnes suivies par un thérapeute : noter ses émotion
 - Verrouillage automatique quand l'app passe en arrière-plan (délai réglable).
 - Envoi par mail, en un appui : le menu de partage du téléphone joint le fichier et préremplit le texte, mais aucune app web ne peut y indiquer le destinataire ; le mail du thérapeute lié est donc copié pour être collé. Sans menu de partage (PC), le fichier est téléchargé et la messagerie s'ouvre avec le destinataire, l'objet et le texte, et le fichier s'y joint à la main. Le texte du mail ne contient que le nom et les dates de la période.
 - L'export Excel et la sauvegarde sont générés sur le téléphone ; l'utilisateur décide à qui les envoyer. La sauvegarde (`.json`) reste chiffrée ; le fichier Excel, lui, est en clair.
+- Recherche (Calendrier › Liste) : un mot est cherché dans tous les mois, sur l'appareil, sans tenir compte des accents ni des majuscules.
 - Les notes personnelles (texte libre, à côté des émotions) restent privées : elles sont dans le journal chiffré et la sauvegarde, mais jamais dans les envois au thérapeute ni dans le fichier Excel.
 
 ## Comptes et administration

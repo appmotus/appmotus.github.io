@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; frame-src 'self'; font-src 'self'; connect-src 'self' https://*.supabase.co https://api.github.com; form-action 'none'; base-uri 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
@@ -51,6 +51,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', appliquerT
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
+html{touch-action:pan-x pan-y}   /* pas de zoom à deux doigts ni par double appui */
 @font-face{font-family:'Plus Jakarta Sans';src:url(fonts/plus-jakarta-sans.woff2) format('woff2');font-weight:400 700;font-display:swap}
 body{font:500 15px/1.45 'Plus Jakarta Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;word-spacing:.05em;min-height:100dvh}
 button,input,textarea,select{font:inherit;color:inherit}
@@ -68,7 +69,7 @@ h2{font-size:.97rem;font-weight:600}
 .small{font-size:.85rem}
 .label{display:block;font-size:.84rem;font-weight:500;color:var(--muted);margin:13px 0 6px}
 input[type=text],input[type=password],input[type=email],input[type=search],input[type=time],input[type=date],textarea,select{
-  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:11px 12px;outline:none}
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:11px 12px;outline:none;font-size:16px}   /* 16px : sinon l'iPhone zoome en entrant dans le champ */
 input[type=time],input[type=date]{display:block;min-width:0;max-width:100%}
 /* iPhone : sans cela, les champs date et heure gardent leur largeur native et débordent de leur case */
 @supports (-webkit-touch-callout:none){
@@ -183,6 +184,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .cal.filtre .cday.today{font-weight:800;text-decoration:underline;text-underline-offset:3px}   /* à ne pas confondre avec un cadre */
 .cal.filtre .cday.today:not(.hit){box-shadow:none}
 .seg.two{grid-template-columns:1fr 1fr;margin:0 0 12px}
+input.recherche{margin:0 0 12px}
 /* Vue liste */
 .lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:0 0 8px;text-align:left;font-weight:600;color:var(--brand)}
 .colpill{flex:none;border-radius:99px;padding:3px 10px;font-size:.75rem;font-weight:600;background:var(--bg);color:var(--muted)}
@@ -425,7 +427,7 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 22;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 23;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 14;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
 const RGPD_VERSION = 1;  // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
@@ -1564,7 +1566,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => { if (key) saveNow(); });
 
 /* ───────────── Application ───────────── */
-let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null;
+let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null, calQ = '';
 let src = null;               // thérapeute : données d'un client consultées en lecture seule
 let pendingInv = null;        // invitation reçue via un lien (#inv=…), proposée après déverrouillage
 const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
@@ -1574,7 +1576,7 @@ function showApp() {
   $('#lock').hidden = true; $('#lock').innerHTML = '';
   $('#app').hidden = false;
   view = data.role === 'therapeute' ? 'clients' : 'day'; src = null;
-  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calMode = 'grid'; setPage = null;
+  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calMode = 'grid'; setPage = null; calQ = '';
   const t = new Date(); calY = t.getFullYear(); calM = t.getMonth();
   renderNav(); render();
   if (data.role === 'therapeute' && !data.keys) ensureKeys().then(render);
@@ -1595,10 +1597,11 @@ const ICO = {
   heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/>', send:'<path d="M21 3 10 14"/><path d="m21 3-6.5 18-4.5-7-7-4.5L21 3Z"/>',
   col:'<rect x="2.5" y="7" width="19" height="10" rx="3"/><circle cx="7.2" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="16.8" cy="12" r="1.6"/>', pin:'<path d="M12 21s7-6.1 7-11.5a7 7 0 1 0-14 0C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
   save:'<path d="M12 3v12"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>', trash:'<path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="m6.5 7 1 13h9l1-13"/>',
-  usersup:'<circle cx="10" cy="8" r="4"/><path d="M3 21c1.3-4 3.8-6 7-6s4.2.7 5.5 2"/><path d="m17 15 4.5 4.500M21.5 15 17 19.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.500v2M2.5 12h2M19.5 12h2M5.3 5.300l1.4 1.400M17.3 17.300l1.4 1.400M5.3 18.700l1.4-1.400M17.3 6.700l1.4-1.4"/>',
-  moon:'<path d="M20 14.500A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.500Z"/>', shield:'<path d="M12 3l7.5 3v5.500c0 4.7-3.2 8-7.5 9.5-4.3-1.5-7.5-4.8-7.5-9.500V6L12 3Z"/>',
-  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>', phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.500h2"/>',
-  link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.400l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.400l1-1"/>', ch:'<path d="m9 5 7 7-7 7"/>',
+  usersup:'<circle cx="10" cy="8" r="4"/><path d="M3 21c1.3-4 3.8-6 7-6s4.2.7 5.5 2"/><path d="m17 15 4.5 4.5M21.5 15 17 19.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  moon:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>', shield:'<path d="M12 3l7.5 3v5.5c0 4.7-3.2 8-7.5 9.5-4.3-1.5-7.5-4.8-7.5-9.5V6L12 3Z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>', phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/>',
+  link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>', ch:'<path d="m9 5 7 7-7 7"/>',
 };
 const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
 const TABN = {day:'Journée', cal:'Calendrier', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Réglages'};
@@ -1663,6 +1666,18 @@ function vDay() {
     ${ro ? '' : '<button class="btn primary block" data-act="newEntry">+ Noter une émotion</button>'}
   </section>
 
+  ${ro ? '' : `<section class="card">
+    <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
+    ${ns.length ? `<ul class="entries">${ns.map(n => `
+      <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
+        <span class="edot"></span><span class="etxt">
+        <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
+        <span class="txt note-txt">${esc(n.text)}</span></span>
+      </button></li>`).join('')}</ul>` : ''}
+    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
+    <button class="btn block" data-act="newNote">+ Ajouter une note</button>
+  </section>`}
+
   <section class="card">
     <h2>Synthèse de la journée</h2>
     ${fs.length ? `<p class="label">Émotions traversées</p><div class="chips">${fs.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n}${n > 1 ? ' ×' + n : ''}</span>`).join('')}</div>` : ''}
@@ -1679,19 +1694,7 @@ function vDay() {
     <label class="label" for="synth">En quelques mots</label>
     <textarea id="synth" rows="5" placeholder="Ce qui a marqué ma journée, ce que j’ai ressenti, ce que j’ai mis en place…">${esc(d.synth)}</textarea>
     <div class="saved" id="saved" aria-live="polite"></div>`}
-  </section>
-
-  ${ro ? '' : `<section class="card">
-    <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
-    ${ns.length ? `<ul class="entries">${ns.map(n => `
-      <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
-        <span class="edot"></span><span class="etxt">
-        <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
-        <span class="txt note-txt">${esc(n.text)}</span></span>
-      </button></li>`).join('')}</ul>` : ''}
-    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
-    <button class="btn block" data-act="newNote">+ Ajouter une note</button>
-  </section>`}`;
+  </section>`;
 }
 
 /* — Vue Calendrier — */
@@ -1809,7 +1812,8 @@ function vCal() {
     <button class="${calMode === 'grid' ? 'on' : ''}" data-act="calMode" data-m="grid" aria-pressed="${calMode === 'grid'}">Calendrier</button>
     <button class="${calMode === 'list' ? 'on' : ''}" data-act="calMode" data-m="list" aria-pressed="${calMode === 'list'}">Liste</button>
   </div>
-  ${filterCard}
+  ${calMode === 'list' ? `<input type="search" id="calQ" class="recherche" value="${esc(calQ)}" placeholder="Rechercher un mot dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search">` : ''}
+  <div id="listeMois" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>${filterCard}
   ${calMode === 'list' ? listCards() : `<section class="card">
     <div class="cal ${filtre ? 'filtre' : ''}">${cells}</div>
     <div class="legend">${legend}</div>
@@ -1828,8 +1832,35 @@ function vCal() {
     <div class="chips">${famS.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n} · ${Math.round(n/famTot*100)} %</span>`).join('')}</div>
     <p class="label">Les plus fréquentes</p>
     ${topW.map(([w,n]) => `<div class="stat"><span>${esc(w)}</span><b>${n}</b></div>`).join('')}
-  </section>` : ''}`}`}
+  </section>` : ''}`}`}</div>
+  ${calMode === 'list' ? `<div id="resRech">${calQ.trim() ? resultatsRecherche(calQ) : ''}</div>` : ''}
   ${srcCard()}`;
+}
+
+/* Recherche par mot, dans tous les mois : émotions, raisons, lieux, notes personnelles et synthèses, sans tenir compte des accents ni des majuscules */
+const sansAccent = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function resultatsRecherche(q) {
+  const m = sansAccent(q.trim()), contient = s => sansAccent(s).includes(m), t = today();
+  let n = 0;
+  const cartes = Object.keys(D().days).filter(k => k <= t).sort().reverse().map(k => {
+    const d = D().days[k];
+    const lignes = [
+      ...(d.entries || []).filter(e => contient(`${sentence(e)} ${where(e)} ${e.emos.map(x => FAMK[x.f].n).join(' ')}`))
+        .map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`})),
+      ...(src ? [] : dayNotes(d).filter(x => contient(`${x.text} ${where(x)}`))
+        .map(x => ({time:x.time, html:`<div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt">${esc(x.text)}</div>`}))),
+    ].sort((a, b) => a.time.localeCompare(b.time));
+    const synth = d.synth?.trim() && contient(d.synth);
+    if (!lignes.length && !synth) return '';
+    n += lignes.length + (synth ? 1 : 0);
+    return `<section class="card lday">
+      <button class="lhead" data-act="openDay" data-k="${k}"><span>${JOURS[parse(k).getDay()]} ${fmtLong(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
+      ${lignes.map(l => `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
+      ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${esc(d.synth)}</div></button>` : ''}
+    </section>`;
+  }).join('');
+  return cartes ? `<p class="small muted" style="margin:0 2px 10px">${n} résultat${n > 1 ? 's' : ''} pour « ${esc(q.trim())} »</p>${cartes}`
+    : `<section class="card"><p class="empty">Aucun résultat pour « ${esc(q.trim())} ».</p></section>`;
 }
 
 /* — Vue Répertoire — */
@@ -1893,6 +1924,7 @@ function vSetMenu() {
   ])}
   ${groupeMenu('Application', [
     ligneMenu('sun', 'Apparence', {val:THEME_N[themeChoisi()], page:'apparence'}),
+    ligneMenu('share', 'Partager Motus', {act:'partagerApp'}),
     ...(appInstallee() ? [] : [ligneMenu('phone', 'Installer sur l’écran d’accueil', {page:'installer'})]),
     `<a class="ro" href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">${ico('shield')}<span class="rn">Confidentialité</span>${ico('ch', 'rc')}</a>`,
     ligneMenu('info', 'À propos', {val:`Version ${APP_VERSION}`, page:'apropos'}),
@@ -2200,15 +2232,47 @@ async function shareInvite() {
 }
 
 /* — Client : carte « Mon thérapeute », envoi de la semaine, rappel — */
+/* Retirer le thérapeute : un code affiché à recopier évite une erreur de manipulation */
+let retraitFait = null;
+function confirmerRetrait() {
+  return new Promise(resolve => {
+    const D = $('#codeDlg'), th = data.therapist, nom = `${th.prenom || ''} ${th.nom || ''}`.trim() || 'ce thérapeute';
+    const code = String(1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000);
+    D.innerHTML = `<form method="dialog" id="rtForm">
+      <div class="dlg-h"><h2>Retirer ${esc(nom)} ?</h2></div>
+      <div class="dlg-b">
+        <p class="small muted">Vous ne pourrez plus lui envoyer vos semaines. Vos notes restent sur votre téléphone, et les fichiers déjà envoyés restent chez lui. Pour le rajouter, il faudra de nouveau son invitation.</p>
+        <label class="label" for="rtCode">Pour confirmer, saisissez le code <b class="fp">${code}</b></label>
+        <input type="text" id="rtCode" inputmode="numeric" maxlength="4" autocomplete="off">
+        <div class="err" id="rtErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="rtNon">Annuler</button><button class="btn danger">Retirer</button></div>
+    </form>`;
+    const fin = ok => { D.oncancel = null; if (D.open) D.close(); resolve(ok); };
+    $('#rtNon').onclick = () => fin(false);
+    D.oncancel = () => resolve(false);
+    $('#rtForm').onsubmit = e => {
+      e.preventDefault();
+      if ($('#rtCode').value.trim() !== code) return $('#rtErr').textContent = 'Code incorrect : recopiez le code affiché.';
+      fin(true);
+    };
+    D.showModal();
+    $('#rtCode').focus();
+  });
+}
 function therapistCard() {
-  const th = data.therapist;
-  return `<section class="card">
+  const th = data.therapist, fait = retraitFait;
+  retraitFait = null;
+  return `${fait ? `<div class="banner"><span>✓ ${esc(fait)} n’est plus votre thérapeute. Vous pouvez en ajouter un autre ci-dessous.</span></div>` : ''}<section class="card">
     ${th ? `
-      <p style="margin:0 0 2px"><b>${esc(th.prenom)} ${esc(th.nom)}</b>${th.type ? ' · ' + esc(th.type) : ''}</p>
-      ${th.email ? `<div class="small"><a href="mailto:${esc(th.email)}">${esc(th.email)}</a></div>` : ''}
-      ${th.tel ? `<div class="small"><a href="tel:${esc(th.tel.replace(/\s/g, ''))}">${esc(th.tel)}</a></div>` : ''}
-      ${th.adresse ? `<div class="small muted">${esc(th.adresse)}</div>` : ''}
-      <div class="small muted" style="margin-top:8px">Code de sécurité : <span class="fp">${esc(th.fp)}</span></div>
+      <div class="stat"><span class="muted">Prénom</span><b>${esc(th.prenom || '—')}</b></div>
+      <div class="stat"><span class="muted">Nom</span><b>${esc(th.nom || '—')}</b></div>
+      <div class="stat"><span class="muted">Type de thérapie</span><b>${esc(th.type || '—')}</b></div>
+      <div class="stat"><span class="muted">Mail</span><b style="overflow-wrap:anywhere;text-align:right">${th.email ? `<a href="mailto:${esc(th.email)}">${esc(th.email)}</a>` : '—'}</b></div>
+      <div class="stat"><span class="muted">Téléphone</span><b>${th.tel ? `<a href="tel:${esc(th.tel.replace(/\s/g, ''))}">${esc(th.tel)}</a>` : '—'}</b></div>
+      <div class="stat"><span class="muted">Adresse du cabinet</span><b style="text-align:right">${esc(th.adresse || '—')}</b></div>
+      <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(th.fp)}</b></div>
+      ${th.addedAt ? `<div class="stat"><span class="muted">Ajouté le</span><b>${fmtFR(ymd(new Date(th.addedAt)))}</b></div>` : ''}
       <button class="btn danger block" data-act="removeTherapist">Retirer ce thérapeute</button>` : `
       <p class="small muted" style="margin:0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
       <button class="btn primary block" data-act="collerInvit">Coller l’invitation</button>
@@ -2243,7 +2307,7 @@ async function sendWeek() {
 function mailEnvoi(from, to, chiffre) {
   const p = data.profile, periode = `du ${fmtFR(from)} au ${fmtFR(to)}`, signe = `${p.prenom} ${p.nom}`.trim();
   return {
-    objet:`Motus : ma ${to === addDays(from, 6) ? 'semaine' : 'période'} ${periode}`,
+    objet:`Export données Motus ${periode}`,
     corps:`Bonjour,\n\nVous trouverez en pièce jointe mon ${chiffre ? 'fichier Motus' : 'tableau Excel Motus'} pour la période ${periode}.${chiffre ? ' Il est chiffré : il s’ouvre dans Motus, depuis ma fiche (Importer un fichier reçu).' : ''}\n\nBien cordialement,\n${signe}`,
   };
 }
@@ -2256,7 +2320,8 @@ async function envoyerParMail({file, from, to, chiffre, fait}) {
     if (a) navigator.clipboard?.writeText(a).catch(() => {});
     busy = true;
     try {
-      await navigator.share({files:[file], title:mail.objet, text:mail.corps});
+      // la messagerie de l'iPhone prend la première ligne du texte comme objet
+      await navigator.share({files:[file], title:mail.objet, text:`${mail.objet}\n\n${mail.corps}`});
       fait?.();
       return toast(a ? `Pensez à coller l’adresse de votre thérapeute : ${a}` : 'Fichier prêt à envoyer');
     } catch (err) {
@@ -2674,7 +2739,7 @@ function openEntry(id) {
       <p class="label">Mes émotions</p>
       <div class="picked chips" id="picked"></div>
       <label class="label" for="eCar">… car</label>
-      <textarea id="eCar" rows="3" placeholder="Ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
+      <textarea id="eCar" rows="3" autocapitalize="none" placeholder="ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
       <div class="preview"><span class="k">Aperçu</span><span id="ePrev"></span></div>
       <div class="err" id="eErr"></div>
     </div>
@@ -3002,8 +3067,23 @@ const ACT = {
   },
   /* lien client ↔ thérapeute */
   addTherapist: () => offerInvite($('#invCode').value),
-  removeTherapist: () => { if (!confirm('Retirer ce thérapeute ? Vous ne pourrez plus lui envoyer vos semaines.')) return; data.therapist = null; save(); render(); },
+  removeTherapist: async () => {
+    if (!await confirmerRetrait()) return;
+    retraitFait = `${data.therapist.prenom || ''} ${data.therapist.nom || ''}`.trim() || 'Votre thérapeute';
+    data.therapist = null; await saveNow(); render();
+  },
   sendWeek: () => sendWeek(),
+  partagerApp: async () => {
+    const url = location.origin + location.pathname;
+    const text = 'Je vous recommande Motus, une app pour noter vos émotions au fil de la journée et les partager avec votre thérapeute. Vos notes restent chiffrées sur votre téléphone.';
+    busy = true;
+    try {
+      if (navigator.share) await navigator.share({title:'Motus', text, url});
+      else { await navigator.clipboard.writeText(url); toast('Lien de Motus copié'); }
+    } catch (err) {
+      if (err.name !== 'AbortError') { try { await navigator.clipboard.writeText(url); toast('Lien de Motus copié'); } catch { window.prompt('Copiez ce lien :', url); } }
+    } finally { setTimeout(() => busy = false, 1500); }
+  },
   mailXlsx: () => {
     const x = exportRange(); if (!x) return;
     envoyerParMail({file:new File([buildXlsx(x.from, x.to)], x.name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), from:x.from, to:x.to, chiffre:false});
@@ -3191,6 +3271,7 @@ const ACT = {
     u => API.rpc('admin_supprimer', {p_id:u.id})),
 };
 
+document.addEventListener('gesturestart', e => e.preventDefault());   // iPhone : ignore le zoom à deux doigts
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
@@ -3202,6 +3283,11 @@ document.addEventListener('input', e => {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
   } else if (t.id === 'eCar') updatePreview();
+  else if (t.id === 'calQ') {   // seuls les résultats changent : le champ garde le clavier ouvert
+    calQ = t.value;
+    $('#listeMois').hidden = !!calQ.trim();
+    $('#resRech').innerHTML = calQ.trim() ? resultatsRecherche(calQ) : '';
+  }
   else if (t.id === 'eVille') ed.villeTouched = true;
   else if (t.id === 'xFrom' || t.id === 'xTo') $('#' + t.id + 'Wd').textContent = weekday(t.value);
   else if (t.id === 'cliSearch') {
