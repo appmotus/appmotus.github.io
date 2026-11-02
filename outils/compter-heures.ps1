@@ -1,9 +1,10 @@
 # Estime les heures de travail passées sur Motus avec Claude Code, à partir des dates des échanges des sessions.
-# Deux échanges espacés de plus de 15 minutes comptent comme une pause : le temps entre les deux n'est pas compté.
+# Deux échanges espacés de plus de 30 minutes comptent comme une pause : le temps entre les deux n'est pas compté.
+# 30 minutes laissent le temps de lire, de réfléchir ou d'attendre un long traitement (choix de l'utilisateur, 2 novembre 2026).
 # Le résultat va dans HEURES_TRAVAIL (index.html), à chaque nouvelle version.
 param(
   [string]$Dossier = (Join-Path $env:USERPROFILE '.claude\projects\C--Users-User-Documents-10---Bricolages-WebApp'),
-  [int]$PauseMinutes = 15
+  [int]$PauseMinutes = 30
 )
 $motif = [regex]'"timestamp":"([0-9T:.\-]+Z)"'
 $dates = New-Object 'System.Collections.Generic.List[datetime]'

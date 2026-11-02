@@ -51,7 +51,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', appliquerT
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-html{touch-action:pan-x pan-y}   /* pas de zoom à deux doigts ni par double appui */
+html{touch-action:pan-x pan-y;overscroll-behavior-x:none}   /* pas de zoom, et glisser sur le côté ne fait pas « page précédente » */
 @font-face{font-family:'Plus Jakarta Sans';src:url(fonts/plus-jakarta-sans.woff2) format('woff2');font-weight:400 700;font-display:swap}
 body{font:500 15px/1.45 'Plus Jakarta Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;word-spacing:.05em;min-height:100dvh}
 button,input,textarea,select{font:inherit;color:inherit}
@@ -184,7 +184,20 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .cal.filtre .cday.today{font-weight:800;text-decoration:underline;text-underline-offset:3px}   /* à ne pas confondre avec un cadre */
 .cal.filtre .cday.today:not(.hit){box-shadow:none}
 .seg.two{grid-template-columns:1fr 1fr;margin:0 0 12px}
-input.recherche{margin:0 0 12px}
+.pastille{flex:none;border-radius:99px;padding:3px 9px;font-size:.72rem;font-weight:700;background:var(--accent);color:var(--on-accent)}
+nav.tabs button .badge-nav{position:absolute;top:0;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--rouge);color:#fff;font-size:.66rem;font-weight:700;font-style:normal;line-height:17px;text-align:center}
+.depot.survol{box-shadow:inset 0 0 0 2px var(--accent)}
+.choix-case{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-size:.92rem}
+.choix-case em{font-style:normal;color:var(--muted)}
+.champ-recherche{position:relative;margin:0 0 12px}
+.champ-recherche input{padding-left:40px}
+.champ-recherche svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linecap:round;pointer-events:none}
+/* Changement de mois en glissant : un léger mouvement montre d'où vient le nouveau mois */
+@keyframes depuisDroite{from{opacity:.35;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes depuisGauche{from{opacity:.35;transform:translateX(-28px)}to{opacity:1;transform:none}}
+#view.vers-g,.week.vers-g{animation:depuisDroite .2s ease-out}
+#view.vers-d,.week.vers-d{animation:depuisGauche .2s ease-out}
+@media (prefers-reduced-motion:reduce){#view.vers-g,#view.vers-d,.week.vers-g,.week.vers-d{animation:none}}
 /* Vue liste */
 .lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:0 0 8px;text-align:left;font-weight:600;color:var(--brand)}
 .colpill{flex:none;border-radius:99px;padding:3px 10px;font-size:.75rem;font-weight:600;background:var(--bg);color:var(--muted)}
@@ -217,7 +230,7 @@ nav.tabs button svg{width:23px;height:23px;stroke-width:1.4}
 nav.tabs button.on{color:var(--text);font-weight:700}
 nav.tabs button.on::before{content:"";position:absolute;top:-8px;left:28%;right:28%;height:2px;border-radius:2px;background:var(--text)}
 
-/* Menu Réglages */
+/* Menu Paramètres */
 .sethead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 13px}
 .toggle{width:58px;height:32px;border-radius:99px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;padding:3px;color:var(--text)}
 [data-theme=dark] .toggle{justify-content:flex-end}
@@ -356,7 +369,7 @@ b.off{color:var(--rouge-txt)}
   <iframe id="polCadre" title="Politique de confidentialité"></iframe>
 </dialog>
 <input type="file" id="restoreFile" accept=".json,application/json" hidden>
-<input type="file" id="importFile" accept=".json,application/json" hidden>
+<input type="file" id="importFile" accept=".json,application/json" multiple hidden>
 
 <script>
 'use strict';
@@ -427,9 +440,9 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 23;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 14;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const RGPD_VERSION = 1;  // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
+const APP_VERSION = 24;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 19;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const RGPD_VERSION = 2; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
   therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données et à recevoir les envois de vos clients : il leur est transmis avec votre lien d’invitation. Un code vous sera envoyé pour le confirmer.',
@@ -508,6 +521,7 @@ function defaults(d = {}) {
   d.profile = Object.assign({nom:'', prenom:'', start:today()}, d.profile);
   d.labels = Object.assign({}, DEF_LABELS, d.labels);
   d.settings = Object.assign({autolock:1, geoloc:true}, d.settings);
+  d.settings.partage = Object.assign({synthese:false, lieu:false, notes:false}, d.settings.partage);   // données transmises au thérapeute, en plus du minimum
   d.days = d.days || {};
   d.role ||= 'client';            // 'client' ou 'therapeute'
   d.uid ||= rid(8);               // identifiant anonyme, transmis au thérapeute avec les envois
@@ -515,7 +529,7 @@ function defaults(d = {}) {
   for (const [f, v] of Object.entries(d.sent)) if (typeof v === 'string') d.sent[f] = {to:addDays(f, 6), at:v};
   d.therapist ??= null;           // client : thérapeute lié (clé publique + coordonnées)
   d.clients ||= {};               // thérapeute : fiches clients (coordonnées + données reçues)
-  for (const c of Object.values(d.clients)) { if (!('uid' in c)) c.uid = c.id; c.contact ||= {}; c.note ??= ''; }
+  for (const c of Object.values(d.clients)) { if (!('uid' in c)) c.uid = c.id; c.contact ||= {}; c.note ??= ''; c.statut ||= 'actuel'; }
   d.thera = Object.assign({type:'', tel:'', email:'', adresse:''}, d.thera);
   d.pending ||= {notes:0, envois:0};   // compteurs pas encore transmis au serveur (hors connexion)
   return d;
@@ -573,6 +587,15 @@ function supabaseApi() {
     async resume(t) { session = await call('/auth/v1/token?grant_type=refresh_token', {refresh_token:t}, 'POST', false); },
     token: () => session?.refresh_token,
     rpc: (fn, args) => call('/rest/v1/rpc/' + fn, args),
+    /* Sans le compte de l'utilisateur : le serveur ne peut pas rattacher la demande à quelqu'un */
+    async rpcAnon(fn, args) {
+      let r;
+      try { r = await fetch(SERVER.url + '/rest/v1/rpc/' + fn, {method:'POST', headers:{apikey:SERVER.anon, 'Content-Type':'application/json'}, body:JSON.stringify(args ?? {})}); }
+      catch { throw apiErr('reseau'); }
+      const j = r.status === 204 ? null : await r.json().catch(() => null);
+      if (!r.ok) throw apiErr('serveur', j?.message);
+      return j;
+    },
     recup: body => call('/functions/v1/recuperation', body),
     setPassword: pw => call('/auth/v1/user', {password:pw}, 'PUT'),
     setConsent: rgpd => call('/auth/v1/user', {data:{rgpd}}, 'PUT'),
@@ -602,6 +625,25 @@ function demoApi() {
       const p = moi(x); if (p?.role !== 'therapeute' || !p.actif) return null;
       p.cle_publique = p_pk; p.code_invitation ||= rid(15); return p.code_invitation;
     },
+    deposer_arrivee(x, {p_pk, p_contenu}) {
+      const p = Object.values(x.comptes).map(c => c.profil).find(q => q.cle_publique === p_pk && q.role === 'therapeute' && q.actif);
+      if (!p) return false;
+      (x.arrivees ||= []).push({id:Date.now() + Math.random(), therapeute:p.id, contenu:p_contenu}); return true;
+    },
+    lire_arrivees(x) { return (x.arrivees || []).filter(a => a.therapeute === session.id).map(({id, contenu}) => ({id, contenu})); },
+    supprimer_arrivees(x, {p_ids}) { x.arrivees = (x.arrivees || []).filter(a => !(a.therapeute === session.id && p_ids.includes(a.id))); },
+    canal_ecrire(x, {p_id, p_jeton, p_cote, p_fiche}) {
+      const c = (x.canaux ||= {})[p_id] ||= {jeton:p_jeton, statut:'actif'};
+      if (c.jeton !== p_jeton || c.statut !== 'actif') return false;
+      c[p_cote] = p_fiche; return true;
+    },
+    canal_lire(x, {p_id}) { const c = x.canaux?.[p_id]; return c ? {client:c.client ?? null, therapeute:c.therapeute ?? null, statut:c.statut, rompu_par:c.rompu_par ?? null} : null; },
+    canal_rompre(x, {p_id, p_jeton, p_par}) {
+      const c = (x.canaux ||= {})[p_id] ||= {jeton:p_jeton};
+      if (c.jeton !== p_jeton) return false;
+      Object.assign(c, {statut:'rompu', rompu_par:p_par, client:null, therapeute:null}); return true;
+    },
+    canal_supprimer(x, {p_id, p_jeton}) { if (x.canaux?.[p_id]?.jeton === p_jeton && x.canaux[p_id].statut === 'rompu') delete x.canaux[p_id]; },
     lire_invitation(x, {p_code}) {
       const p = Object.values(x.comptes).map(c => c.profil).find(q => q.code_invitation === p_code.toLowerCase() && q.role === 'therapeute' && q.actif);
       return p ? {v:1, pk:p.cle_publique, nom:p.nom, prenom:p.prenom, type:p.therapie, tel:p.telephone, email:p.email_contact, adresse:p.adresse} : null;
@@ -651,6 +693,7 @@ function demoApi() {
     async resume(t) { if (!db().comptes[t]) throw apiErr('session'); session = {id:t}; },
     token: () => session?.id,
     async rpc(fn, args = {}) { const x = db(), r = RPC[fn](x, args); put(x); return r === undefined ? null : JSON.parse(JSON.stringify(r)); },
+    rpcAnon(fn, args) { return API.rpc(fn, args); },
     /* En démonstration, rien n'est envoyé : les codes sont toujours 123456 */
     async recup(b) {
       if (b.action === 'quota_envoi') return {credits:287, type:'free'};
@@ -776,7 +819,7 @@ function showInstall() {
     <p class="muted">Cela protège vos notes et garde tout au même endroit.</p>
     ${pendingInv ? `<section class="card">
       <h2>Vous avez reçu une invitation</h2>
-      <p class="small muted" style="margin:6px 0 0">Motus est déjà installé ? Copiez l’invitation, ouvrez Motus depuis votre écran d’accueil, puis touchez « Coller l’invitation » dans Réglages › Mon thérapeute. Sinon, installez d’abord Motus.</p>
+      <p class="small muted" style="margin:6px 0 0">Motus est déjà installé ? Copiez l’invitation, ouvrez Motus depuis votre écran d’accueil, puis touchez « Coller l’invitation » dans Paramètres › Mon thérapeute. Sinon, installez d’abord Motus.</p>
       <button class="btn primary block" data-act="copierLien">Copier l’invitation</button>
     </section>` : '<p class="small muted">Motus est déjà installé ? Fermez cette page et ouvrez-le depuis son icône.</p>'}
     ${blocInstall()}
@@ -802,7 +845,7 @@ function showTransfert() {
     ${blocInstall().replace('Installer Motus</h2>', '2. Installez Motus</h2>')}
     <section class="card">
       <h2>3. Retrouvez vos notes dans l’app</h2>
-      <p class="small muted" style="margin:6px 0 0">Connectez-vous depuis l’icône. Si vos notes n’y sont pas, ouvrez Réglages › Sauvegarde › Restaurer et choisissez le fichier.</p>
+      <p class="small muted" style="margin:6px 0 0">Connectez-vous depuis l’icône. Si vos notes n’y sont pas, ouvrez Paramètres › Sauvegarde › Restaurer et choisissez le fichier.</p>
     </section>
     <button class="btn block" data-act="lockNow">Se déconnecter</button>
     <p class="small"><button class="link small" data-act="navQuandMeme">Impossible d’installer Motus sur ce téléphone ?</button></p>
@@ -996,7 +1039,7 @@ function choixInitiaux() {
     D.innerHTML = `<form method="dialog" id="chForm">
       <div class="dlg-h"><h2>Vos préférences</h2></div>
       <div class="dlg-b">
-        <p class="small muted">Vous pourrez les changer à tout moment dans les Réglages.</p>
+        <p class="small muted">Vous pourrez les changer à tout moment dans les Paramètres.</p>
         <label class="label" for="chLock">Temps de verrouillage</label>
         <select id="chLock">${optionsVerrou()}</select>
         <p class="small muted" style="margin:6px 0 0">Après ce délai hors de l’app, votre mot de passe est redemandé.</p>
@@ -1052,7 +1095,7 @@ async function openJournal(id, pw, init) {
   navigator.storage?.persist?.();
   showApp();
   if (!await exigerRgpd()) return;
-  pushProfile(); flushStats(); assurerLienCourt(); ensureSecours(pw).then(ok => ok && exigerMail());
+  pushProfile(); flushStats(); assurerLienCourt(); synchroCanaux(true); ensureSecours(pw).then(ok => ok && exigerMail());
 }
 
 function applyProfil() {
@@ -1395,6 +1438,9 @@ async function supprimerCompte() {
 /* Retire de cet appareil tout ce qui concerne le compte. Le choix d'apparence, qui ne concerne que l'appareil, reste. */
 async function oublierCompte() {
   const id = data.account.identifiant;
+  // le compte n'existe plus : chaque thérapeute ou client lié en est prévenu
+  if (data.therapist?.canal) await rompreCanal(data.therapist.canal, 'client');
+  for (const c of Object.values(data.clients)) if (c.canal && c.statut !== 'ancien') await rompreCanal(c.canal, 'therapeute');
   clearTimeout(saveTimer); clearTimeout(profTimer);
   key = null;   // plus aucun enregistrement ne peut recréer le fichier
   await savePending.catch(() => {});
@@ -1504,7 +1550,7 @@ async function syncSession() {
       const rappel = !src && (view === 'day' || view === 'clients') && !$('.admin-rappel') ? adminReminder() : '';
       if (rappel) $('#view').insertAdjacentHTML('afterbegin', rappel);
     }
-    pushProfile(); flushStats(); envoyerConsentement(); assurerLienCourt(); ensureSecours().then(ok => ok && exigerMail());
+    pushProfile(); flushStats(); envoyerConsentement(); assurerLienCourt(); synchroCanaux(true); ensureSecours().then(ok => ok && exigerMail());
     if (pendingInv && !doitInstaller()) { const c = pendingInv; pendingInv = null; offerInvite(c); }   // lien court ouvert avant la reprise de la connexion
   } catch (x) {
     if (!data) return;
@@ -1562,6 +1608,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); if (key) saveNow(); return; }
   swReg?.update().catch(() => {});   // l'app revient au premier plan : y a-t-il une nouvelle version ?
   if (key && !busy && data.settings.autolock >= 0 && Date.now() - hiddenAt >= data.settings.autolock * 60000) lock();
+  else if (key && !doitInstaller()) synchroCanaux();   // coordonnées et ruptures, au plus une fois par minute
 });
 window.addEventListener('pagehide', () => { if (key) saveNow(); });
 
@@ -1600,15 +1647,15 @@ const ICO = {
   usersup:'<circle cx="10" cy="8" r="4"/><path d="M3 21c1.3-4 3.8-6 7-6s4.2.7 5.5 2"/><path d="m17 15 4.5 4.5M21.5 15 17 19.5"/>', sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
   moon:'<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>', shield:'<path d="M12 3l7.5 3v5.5c0 4.7-3.2 8-7.5 9.5-4.3-1.5-7.5-4.8-7.5-9.5V6L12 3Z"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>', phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
-  share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/>',
+  share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/>', loupe:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4.5-4.5"/>',
   link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>', ch:'<path d="m9 5 7 7-7 7"/>',
 };
 const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
-const TABN = {day:'Journée', cal:'Calendrier', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Réglages'};
+const TABN = {day:'Quotidien', cal:'Journal', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Paramètres'};
 function renderNav() {
   const tabs = data.role === 'therapeute' ? ['clients', 'rep', 'set'] : ['day', 'cal', 'rep', 'set'];
   if (data.account?.est_admin && session) tabs.splice(tabs.length - 1, 0, 'admin');
-  $('#tabs').innerHTML = tabs.map(v => `<button data-act="tab" data-v="${v}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${ICONS[v]}</svg>${TABN[v]}</button>`).join('');
+  $('#tabs').innerHTML = tabs.map(v => `<button data-act="tab" data-v="${v}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${ICONS[v]}</svg>${TABN[v]}${v === 'clients' && nbNouveaux() ? `<i class="badge-nav">${nbNouveaux()}</i>` : ''}</button>`).join('');
 }
 
 function markTabs() {
@@ -1641,7 +1688,7 @@ function vDay() {
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
   const fs = famSummary(ents), ro = !!src;
   return `
-  ${clientBar()}${ro ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
+  ${clientBar()}${ro ? '' : ruptureAvis() + safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
     <div class="dayhead-t">
       <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : dj.getFullYear()}</div>
@@ -1666,6 +1713,14 @@ function vDay() {
     ${ro ? '' : '<button class="btn primary block" data-act="newEntry">+ Noter une émotion</button>'}
   </section>
 
+  ${ro && ns.length ? `<section class="card">
+    <div class="card-h"><h2>Notes personnelles</h2><span class="count">${ns.length}</span></div>
+    <ul class="entries">${ns.map(n => `
+      <li><div class="entry" style="--fc:var(--lav)"><span class="edot"></span><span class="etxt">
+        <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
+        <span class="txt note-txt">${esc(n.text)}</span></span></div></li>`).join('')}</ul>
+  </section>` : ''}
+
   ${ro ? '' : `<section class="card">
     <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
     ${ns.length ? `<ul class="entries">${ns.map(n => `
@@ -1674,7 +1729,7 @@ function vDay() {
         <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
         <span class="txt note-txt">${esc(n.text)}</span></span>
       </button></li>`).join('')}</ul>` : ''}
-    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.</p>
+    <p class="small muted" style="margin:${ns.length ? '10px' : '0'} 0 0">${data.settings.partage?.notes ? 'Ces notes sont incluses dans vos envois à votre thérapeute (Paramètres › Données transmises), mais pas dans le fichier Excel.' : 'Pour vous seul(e) : ces notes ne sont ni envoyées à votre thérapeute, ni incluses dans le fichier Excel.'}</p>
     <button class="btn block" data-act="newNote">+ Ajouter une note</button>
   </section>`}
 
@@ -1812,7 +1867,7 @@ function vCal() {
     <button class="${calMode === 'grid' ? 'on' : ''}" data-act="calMode" data-m="grid" aria-pressed="${calMode === 'grid'}">Calendrier</button>
     <button class="${calMode === 'list' ? 'on' : ''}" data-act="calMode" data-m="list" aria-pressed="${calMode === 'list'}">Liste</button>
   </div>
-  ${calMode === 'list' ? `<input type="search" id="calQ" class="recherche" value="${esc(calQ)}" placeholder="Rechercher un mot dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search">` : ''}
+  ${calMode === 'list' ? `<div class="champ-recherche">${ico('loupe', '')}<input type="search" id="calQ" value="${esc(calQ)}" placeholder="Rechercher dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search"></div>` : ''}
   <div id="listeMois" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>${filterCard}
   ${calMode === 'list' ? listCards() : `<section class="card">
     <div class="cal ${filtre ? 'filtre' : ''}">${cells}</div>
@@ -1880,7 +1935,7 @@ function vRep() {
   <p class="small muted" style="text-align:center">Source : Liberté pour Aimer — libertepouraimer.com</p>`;
 }
 
-/* — Vue Réglages : un menu, puis une page par sujet — */
+/* — Vue Paramètres : un menu, puis une page par sujet — */
 const LOCK_N = {0:'Immédiate', 1:'1 min', 5:'5 min', 15:'15 min', '-1':'Jamais'};
 const THEME_N = {auto:'Automatique', clair:'Clair', sombre:'Sombre'};
 const ligneMenu = (icone, nom, {val, page, act, cl = ''} = {}) => `<button class="ro ${cl}" data-act="${act || 'setPage'}"${page ? ` data-p="${page}"` : ''}>${ico(icone)}<span class="rn">${nom}</span>${val ? `<em>${esc(val)}</em>` : ''}${ico('ch', 'rc')}</button>`;
@@ -1889,7 +1944,7 @@ const groupeMenu = (titre, lignes) => `<div class="gl">${titre}</div><div class=
 function vSet() {
   const page = setPage && PAGES_REGLAGES[setPage];
   if (!page) return vSetMenu();
-  return `<div class="subhead"><button class="icon-btn" data-act="setBack" aria-label="Retour aux réglages">‹</button><h1>${page[0]}</h1></div>${page[1]()}`;
+  return `<div class="subhead"><button class="icon-btn" data-act="setBack" aria-label="Retour aux paramètres">‹</button><h1>${page[0]}</h1></div>${page[1]()}`;
 }
 
 function vSetMenu() {
@@ -1898,7 +1953,7 @@ function vSetMenu() {
   const mail = a.recup === 'attente' ? 'À confirmer' : a.recup ? data.recupIndice || 'Confirmé' : 'À ajouter';
   return `
   <div class="sethead">
-    <div>${th ? '<div class="eyebrow">Espace thérapeute</div>' : ''}<h1>Réglages</h1></div>
+    <div>${th ? '<div class="eyebrow">Espace thérapeute</div>' : ''}<h1>Paramètres</h1></div>
     <button class="toggle" data-act="toggleTheme" aria-label="Passer en mode ${document.documentElement.dataset.theme === 'dark' ? 'clair' : 'sombre'}"><b>${ico(document.documentElement.dataset.theme === 'dark' ? 'moon' : 'sun', '')}</b></button>
   </div>
   <div class="whois"><div class="avatar" aria-hidden="true">${esc([...(p.prenom || a.identifiant || '?').trim()][0].toUpperCase())}</div><div><b>${esc(nom)}</b><span>${ROLE_N[data.role]}${a.numero ? ' · ' + esc(a.numero) : ''}</span></div></div>
@@ -1914,6 +1969,8 @@ function vSetMenu() {
   ]) : groupeMenu('Mon suivi', [
     ligneMenu('heart', 'Mon thérapeute', {val:t ? `${initiale(t.prenom)} ${t.nom}`.trim() : 'À ajouter', page:'thera'}),
     ligneMenu('send', 'Partager ma semaine', {page:'partage'}),
+    ligneMenu('shield', 'Données transmises', {val:resumePartage(), page:'donnees'}),
+    ligneMenu('mail', 'Mes envois', {val:String(Object.keys(data.sent).length), page:'envois'}),
     ligneMenu('col', 'Code couleur', {page:'couleurs'}),
     ligneMenu('pin', 'Localisation', {val:data.settings.geoloc ? 'Activée' : 'Désactivée', page:'geo'}),
   ])}
@@ -1978,7 +2035,7 @@ function pageSecu() {
 function pagePartage() {
   const t = today(), th = data.therapist;
   return `<section class="card">
-    <p class="small muted" style="margin:0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (Réglages › Mon thérapeute) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
+    <p class="small muted" style="margin:0">${th ? `Envoyez votre semaine à ${esc(th.prenom || 'votre thérapeute')} : le fichier est chiffré, seul(e) votre thérapeute peut l’ouvrir.` : 'Ajoutez votre thérapeute (Paramètres › Mon thérapeute) pour lui envoyer vos semaines de façon chiffrée.'} Vous pouvez aussi créer un fichier Excel.</p>
     <div class="weeknav">
       <button class="icon-btn" data-act="xPrevWeek" aria-label="7 jours plus tôt">‹</button>
       <div class="wk" id="wkLabel" aria-live="polite">${weekLabel()}</div>
@@ -2015,7 +2072,7 @@ function pageCouleurs() {
 function pageInvite() {
   const t = data.thera;
   return `<section class="card">
-    <p class="small muted" style="margin:0">Donnez ce lien à vos clients. Ils le collent dans leur app (Réglages › Mon thérapeute) et peuvent ensuite vous envoyer chaque semaine un fichier chiffré que vous seul(e) pouvez ouvrir.</p>
+    <p class="small muted" style="margin:0">Donnez ce lien à vos clients. Ils le collent dans leur app (Paramètres › Mon thérapeute) et peuvent ensuite vous envoyer chaque semaine un fichier chiffré que vous seul(e) pouvez ouvrir.</p>
     <div class="small" style="margin-top:10px">Code de sécurité à leur confirmer : <span class="fp">${esc(data.keys?.fp || '…')}</span></div>
     <textarea id="invField" rows="3" readonly aria-label="Lien d’invitation">${data.keys ? esc(inviteLink()) : ''}</textarea>
     <div class="row" style="margin-top:10px">
@@ -2127,7 +2184,7 @@ function pageAPropos() {
 
 const PAGES_REGLAGES = {
   infos:['Informations personnelles', pageInfos], mail:['Mon mail', pageMail], secu:['Mot de passe et verrouillage', pageSecu],
-  thera:['Mon thérapeute', therapistCard], partage:['Partager ma semaine', pagePartage], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
+  thera:['Mon thérapeute', therapistCard], partage:['Partager ma semaine', pagePartage], donnees:['Données transmises', pageDonnees], envois:['Mes envois', pageEnvois], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
   invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
   sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
   apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos],
@@ -2195,10 +2252,8 @@ async function assurerLienCourt() {
 async function readInvite(text) {
   const s = String(text).trim(), court = s.match(CODE_COURT);
   let o;
-  if (court) {
-    if (!session) throw apiErr('reseau');
-    o = await API.rpc('lire_invitation', {p_code:court[1]});
-  } else {
+  if (court) o = await API.rpcAnon('lire_invitation', {p_code:court[1]});
+  else {
     const m = s.match(/(?:#inv=)?([A-Za-z0-9_-]{40,})\s*$/);
     if (!m) throw new Error('format');
     o = JSON.parse(dec.decode(fromB64(unb64url(m[1]))));
@@ -2212,17 +2267,18 @@ async function offerInvite(text) {
   let o;
   try { o = await readInvite(text); } catch (x) { return toast(x.code === 'reseau' ? 'Connexion internet nécessaire pour lire cette invitation.' : 'Lien d’invitation non reconnu.'); }
   if (data.role === 'therapeute') return toast('Ce lien est destiné à vos clients.');
-  const who = `${o.prenom || ''} ${o.nom || ''}`.trim() || 'ce thérapeute', old = data.therapist;
-  if (old?.fp === o.fp) { Object.assign(old, o); await saveNow(); render(); return toast('Coordonnées du thérapeute mises à jour'); }
-  if (!confirm(`Ajouter ${who}${o.type ? ' (' + o.type + ')' : ''} comme thérapeute ?\n\nCode de sécurité : ${o.fp}\nVérifiez qu’il correspond à celui que vous a donné votre thérapeute.`
-    + (old ? `\n\n${old.prenom} ${old.nom} ne sera plus votre thérapeute dans l’app.` : ''))) return;
-  data.therapist = {...o, addedAt: new Date().toISOString()};
-  await saveNow(); render(); toast(`${who} est maintenant votre thérapeute`);
+  const who = nomDe(o) || 'ce thérapeute', old = data.therapist;
+  if (old?.fp === o.fp && old.canal) { Object.assign(old, o); await saveNow(); render(); return toast('Coordonnées du thérapeute mises à jour'); }
+  if (!await consentirLien(o, old?.fp === o.fp ? null : old)) return;
+  if (old?.canal && old.fp !== o.fp && !await rompreCanal(old.canal, 'client')) data.ruptureAEnvoyer = old.canal;
+  data.therapist = {...o, addedAt:old?.fp === o.fp ? old.addedAt : new Date().toISOString(), canal:hexDe(crypto.getRandomValues(new Uint8Array(32)))};
+  delete data.ruptureRecue;
+  await saveNow(); await synchroCanaux(true); render(); toast(`${who} est maintenant votre thérapeute`);
 }
 async function shareInvite() {
   if (!data.keys) return;
   const url = inviteLink(), p = data.profile;
-  const text = `${p.prenom} ${p.nom} vous invite à relier votre journal Motus. Copiez ce lien dans l’app (Réglages › Mon thérapeute). Code de sécurité : ${data.keys.fp}`;
+  const text = `${p.prenom} ${p.nom} vous invite à relier votre journal Motus. Copiez ce lien dans l’app (Paramètres › Mon thérapeute). Code de sécurité : ${data.keys.fp}`;
   busy = true;
   try {
     if (navigator.share) await navigator.share({title:'Invitation — Motus', text, url});
@@ -2233,20 +2289,143 @@ async function shareInvite() {
 
 /* — Client : carte « Mon thérapeute », envoi de la semaine, rappel — */
 /* Retirer le thérapeute : un code affiché à recopier évite une erreur de manipulation */
-let retraitFait = null;
-function confirmerRetrait() {
+/* ───────────── Lien client ↔ thérapeute : le canal ─────────────
+   À la liaison, l'app du client crée un secret qu'elle remet au thérapeute, chiffré pour lui seul. Les deux apps échangent ensuite
+   leurs coordonnées et l'état du lien dans un canal du serveur, chiffré avec ce secret et rangé sous un identifiant qui en dérive.
+   Le journal n'y passe jamais (il voyage par mail), et le serveur ne sait pas quel client est lié à quel thérapeute :
+   le client n'y accède pas avec son compte. */
+const hexDe = u8 => [...new Uint8Array(u8)].map(b => b.toString(16).padStart(2, '0')).join('');
+const sha256hex = async s => hexDe(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+const idCanal = S => sha256hex('motus-canal|' + S), jetonCanal = S => sha256hex('motus-ecrire|' + S);
+const cleCanal = async S => crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', enc.encode('motus-cle|' + S)), 'AES-GCM', false, ['encrypt', 'decrypt']);
+async function chiffrerCanal(S, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, await cleCanal(S), enc.encode(JSON.stringify(obj))));
+  return JSON.stringify({iv:toB64(iv), ct:toB64(ct)});
+}
+async function dechiffrerCanal(S, txt) {
+  const o = JSON.parse(txt);
+  return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(o.iv)}, await cleCanal(S), fromB64(o.ct))));
+}
+/* Ce que chacun montre à l'autre : jamais l'identifiant de connexion */
+const ficheClient = () => ({prenom:data.profile.prenom, nom:data.profile.nom, numero:data.account?.numero || '', uid:data.uid});
+const ficheTherapeute = () => ({prenom:data.profile.prenom, nom:data.profile.nom, numero:data.account?.numero || '', type:data.thera.type, tel:data.thera.tel, email:data.thera.email, adresse:data.thera.adresse});
+const nomDe = o => `${o?.prenom || ''} ${o?.nom || ''}`.trim();
+
+let synchroEnCours = false, derniereSynchro = 0;
+async function synchroCanaux(force) {
+  if (!data || synchroEnCours || (!force && Date.now() - derniereSynchro < 60000)) return;
+  synchroEnCours = true; derniereSynchro = Date.now();
+  let change = false;
+  try { change = data.role === 'therapeute' ? await synchroTherapeute() : await synchroClient(); }
+  catch (x) { console.warn('Lien thérapeute', x.code || x); }
+  finally { synchroEnCours = false; }
+  if (!change || !data) return;
+  save(); renderNav(); markTabs();
+  if (!$('dialog[open]') && !document.activeElement?.matches('input, textarea, select')) render(true);   // jamais pendant une saisie
+}
+async function synchroClient() {
+  let change = false;
+  const r = data.ruptureAEnvoyer;
+  if (r && await API.rpcAnon('canal_rompre', {p_id:await idCanal(r), p_jeton:await jetonCanal(r), p_par:'client'})) { delete data.ruptureAEnvoyer; change = true; }
+  const th = data.therapist, S = th?.canal;
+  if (!S) return change;
+  if (!th.arrivee) {
+    const p = await sealFor(th, {type:'liaison', secret:S, client:ficheClient(), at:new Date().toISOString()});
+    if (await API.rpcAnon('deposer_arrivee', {p_pk:th.pk, p_contenu:JSON.stringify(p)})) { th.arrivee = true; change = true; }
+  }
+  const id = await idCanal(S), jeton = await jetonCanal(S), f = JSON.stringify(ficheClient());
+  if (th.ficheEnvoyee !== f && await API.rpcAnon('canal_ecrire', {p_id:id, p_jeton:jeton, p_cote:'client', p_fiche:await chiffrerCanal(S, ficheClient())})) { th.ficheEnvoyee = f; change = true; }
+  const c = await API.rpcAnon('canal_lire', {p_id:id});
+  if (c?.statut === 'rompu' && c.rompu_par === 'therapeute') {
+    data.ruptureRecue = {nom:nomDe(th) || 'Votre thérapeute', at:new Date().toISOString()};
+    data.therapist = null;
+    await API.rpcAnon('canal_supprimer', {p_id:id, p_jeton:jeton}).catch(() => {});
+    return true;
+  }
+  if (c?.therapeute) {
+    const t = await dechiffrerCanal(S, c.therapeute);
+    for (const k of ['prenom', 'nom', 'type', 'tel', 'email', 'adresse']) if (k in t && t[k] !== th[k]) { th[k] = t[k]; change = true; }
+  }
+  return change;
+}
+async function synchroTherapeute() {
+  let change = false;
+  if (session) {
+    const arr = await API.rpc('lire_arrivees') || [], lus = [];
+    for (const a of arr) {
+      try { const o = await openEnvoi(JSON.parse(a.contenu)); if (o.type === 'liaison' && o.secret) { lierClient(o); change = true; } } catch (x) { console.warn('Arrivée illisible', x); }
+      lus.push(a.id);
+    }
+    if (lus.length) await API.rpc('supprimer_arrivees', {p_ids:lus});
+  }
+  const fiche = ficheTherapeute(), f = JSON.stringify(fiche);
+  for (const c of Object.values(data.clients)) {
+    if (c.ruptureAEnvoyer && await API.rpcAnon('canal_rompre', {p_id:await idCanal(c.ruptureAEnvoyer), p_jeton:await jetonCanal(c.ruptureAEnvoyer), p_par:'therapeute'})) { delete c.ruptureAEnvoyer; change = true; }
+    const S = c.canal;
+    if (!S || c.statut === 'ancien') continue;
+    const id = await idCanal(S), jeton = await jetonCanal(S);
+    if (c.ficheEnvoyee !== f && await API.rpcAnon('canal_ecrire', {p_id:id, p_jeton:jeton, p_cote:'therapeute', p_fiche:await chiffrerCanal(S, fiche)})) { c.ficheEnvoyee = f; change = true; }
+    const r = await API.rpcAnon('canal_lire', {p_id:id});
+    if (r?.statut === 'rompu' && r.rompu_par === 'client') {
+      c.statut = 'ancien'; c.rupture = {par:'client', at:new Date().toISOString()}; delete c.canal;
+      (data.rupturesRecues ||= []).push({nom:fullName(c), at:c.rupture.at});
+      await API.rpcAnon('canal_supprimer', {p_id:id, p_jeton:jeton}).catch(() => {});
+      change = true;
+    } else if (r?.client) {
+      const k = await dechiffrerCanal(S, r.client);
+      if (k.prenom !== c.profile.prenom || k.nom !== c.profile.nom || k.numero !== c.numero) { Object.assign(c.profile, {prenom:k.prenom, nom:k.nom}); c.numero = k.numero; change = true; }
+    }
+  }
+  return change;
+}
+/* Reconnaître la fiche d'un client : par son app, puis par son numéro de compte. Le nom ne sert que pour une fiche créée à la main,
+   sans numéro, et seulement s'il n'y a aucun homonyme : deux clients du même nom ne sont jamais confondus. */
+const ficheLibre = x => (!x.uid || x.uid === x.id) && !x.canal && !x.numero;
+function ficheConnue(k) {
+  const tous = Object.values(data.clients), nom = nomDe(k).toLowerCase();
+  const memeNom = tous.filter(x => fullName(x).toLowerCase() === nom);
+  return tous.find(x => k.uid && x.uid === k.uid) || tous.find(x => k.numero && x.numero?.toUpperCase() === k.numero.toUpperCase())
+    || (memeNom.length === 1 && ficheLibre(memeNom[0]) ? memeNom[0] : null);
+}
+/* Un client vient de rejoindre le thérapeute : sa fiche existante est reprise si on la reconnaît, sinon elle est créée */
+function lierClient(o) {
+  const k = o.client || {};
+  let c = ficheConnue(k);
+  if (!c) { const id = 'c' + rid(6); c = data.clients[id] = {id, uid:null, profile:{nom:'', prenom:'', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[]}; }
+  Object.assign(c.profile, {prenom:k.prenom || c.profile.prenom, nom:k.nom || c.profile.nom});
+  Object.assign(c, {uid:k.uid || c.uid, numero:k.numero || c.numero, canal:o.secret, statut:'actuel', nouveauClient:true});
+  delete c.rupture; delete c.ficheEnvoyee;
+  return c;
+}
+/* Rompre le lien : l'autre le verra à sa prochaine ouverture de Motus. Sans connexion, la rupture part plus tard. */
+async function rompreCanal(S, par) {
+  try { if (await API.rpcAnon('canal_rompre', {p_id:await idCanal(S), p_jeton:await jetonCanal(S), p_par:par})) return true; } catch {}
+  return false;
+}
+/* Messages de rupture reçus, affichés jusqu'à ce qu'on les ait lus */
+function ruptureAvis() {
+  if (data.role === 'therapeute') {
+    const r = data.rupturesRecues || [];
+    return r.length ? `<div class="banner"><span>${r.map(x => `${esc(x.nom)} a mis fin au suivi le ${fmtFR(ymd(new Date(x.at)))}.`).join('<br>')} ${r.length > 1 ? 'Ces clients sont' : 'Ce client est'} maintenant dans « Anciens clients ».</span><button class="btn" data-act="ruptureLue">OK</button></div>` : '';
+  }
+  const r = data.ruptureRecue;
+  return r ? `<div class="banner"><span>${esc(r.nom)} a mis fin au suivi le ${fmtFR(ymd(new Date(r.at)))}. Vous ne pouvez plus lui envoyer vos données. Vos notes restent sur votre téléphone.</span><button class="btn" data-act="ruptureLue">OK</button></div>` : '';
+}
+
+/* Code à recopier avant une action qu'on ne doit pas faire par erreur */
+function confirmerCode({titre, texte, bouton}) {
   return new Promise(resolve => {
-    const D = $('#codeDlg'), th = data.therapist, nom = `${th.prenom || ''} ${th.nom || ''}`.trim() || 'ce thérapeute';
-    const code = String(1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000);
+    const D = $('#codeDlg'), code = String(1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000);
     D.innerHTML = `<form method="dialog" id="rtForm">
-      <div class="dlg-h"><h2>Retirer ${esc(nom)} ?</h2></div>
+      <div class="dlg-h"><h2>${esc(titre)}</h2></div>
       <div class="dlg-b">
-        <p class="small muted">Vous ne pourrez plus lui envoyer vos semaines. Vos notes restent sur votre téléphone, et les fichiers déjà envoyés restent chez lui. Pour le rajouter, il faudra de nouveau son invitation.</p>
+        <p class="small muted">${texte}</p>
         <label class="label" for="rtCode">Pour confirmer, saisissez le code <b class="fp">${code}</b></label>
         <input type="text" id="rtCode" inputmode="numeric" maxlength="4" autocomplete="off">
         <div class="err" id="rtErr"></div>
       </div>
-      <div class="dlg-f"><button type="button" class="btn" id="rtNon">Annuler</button><button class="btn danger">Retirer</button></div>
+      <div class="dlg-f"><button type="button" class="btn" id="rtNon">Annuler</button><button class="btn danger">${bouton}</button></div>
     </form>`;
     const fin = ok => { D.oncancel = null; if (D.open) D.close(); resolve(ok); };
     $('#rtNon').onclick = () => fin(false);
@@ -2260,10 +2439,134 @@ function confirmerRetrait() {
     $('#rtCode').focus();
   });
 }
+
+/* Rejoindre un thérapeute : le client vérifie le code de sécurité et donne son accord */
+function consentirLien(o, ancien) {
+  return new Promise(resolve => {
+    const D = $('#codeDlg'), nom = nomDe(o) || 'ce thérapeute';
+    D.innerHTML = `<form method="dialog" id="lnForm">
+      <div class="dlg-h"><h2>Rejoindre ${esc(nom)}</h2></div>
+      <div class="dlg-b">
+        ${o.type ? `<p class="small muted" style="margin-top:0">${esc(o.type)}</p>` : ''}
+        <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(o.fp)}</b></div>
+        <p class="small muted">Vérifiez qu’il correspond à celui que vous a donné votre thérapeute.</p>
+        <p class="small">En le rejoignant, vous partagez avec lui votre prénom, votre nom et votre numéro de compte${data.account?.numero ? ` (${esc(data.account.numero)})` : ''}. Vos coordonnées et les siennes se mettent à jour automatiquement.</p>
+        <p class="small">Par sécurité, les données de votre journal ne lui sont pas transmises automatiquement : vous les lui envoyez quand vous le souhaitez, depuis Paramètres › Partager ma semaine.${ancien ? ` <b>${esc(nomDe(ancien))} ne sera plus votre thérapeute</b>, et il en sera prévenu.` : ''}</p>
+        <label class="rgpd"><input type="checkbox" id="lnOui"><span>J’accepte que ${esc(nom)} reçoive et lise les données que je lui enverrai.</span></label>
+        <div class="err" id="lnErr"></div>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="lnNon">Annuler</button><button class="btn primary">Rejoindre</button></div>
+    </form>`;
+    const fin = ok => { D.oncancel = null; if (D.open) D.close(); resolve(ok); };
+    $('#lnNon').onclick = () => fin(false);
+    D.oncancel = () => resolve(false);
+    $('#lnForm').onsubmit = e => {
+      e.preventDefault();
+      if (!$('#lnOui').checked) return $('#lnErr').textContent = 'Cochez la case pour donner votre accord.';
+      fin(true);
+    };
+    D.showModal();
+  });
+}
+
+/* Données transmises au thérapeute : les émotions, leur heure et la couleur du jour au minimum ; le reste au choix du client */
+const PARTAGE = [['synthese', 'La synthèse de la journée'], ['lieu', 'Les lieux (ville et précision)'], ['notes', 'Les notes personnelles']];
+const resumePartage = () => { const n = PARTAGE.filter(([k]) => data.settings.partage?.[k]).length; return n ? `Minimum + ${n} option${n > 1 ? 's' : ''}` : 'Minimum'; };
+function formPartage() {
+  const p = data.settings.partage || {};
+  return `<label class="choix-case"><input type="checkbox" checked disabled><span>Les émotions, leur heure et leur raison, et la couleur de la journée <em>(toujours transmis)</em></span></label>
+    ${PARTAGE.map(([k, n]) => `<label class="choix-case"><input type="checkbox" data-partage="${k}" ${p[k] ? 'checked' : ''}><span>${n}</span></label>`).join('')}`;
+}
+function choisirPartage() {
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="ptForm">
+      <div class="dlg-h"><h2>Que transmettre à votre thérapeute ?</h2></div>
+      <div class="dlg-b">
+        <p class="small muted">Ce choix vaut pour tous vos envois. Vous pourrez le changer dans Paramètres › Données transmises.</p>
+        ${formPartage()}
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="ptNon">Annuler</button><button class="btn primary">Continuer</button></div>
+    </form>`;
+    const fin = ok => { D.oncancel = null; if (D.open) D.close(); resolve(ok); };
+    $('#ptNon').onclick = () => fin(false);
+    D.oncancel = () => resolve(false);
+    $('#ptForm').onsubmit = e => {
+      e.preventDefault();
+      D.querySelectorAll('[data-partage]').forEach(c => data.settings.partage[c.dataset.partage] = c.checked);
+      data.settings.partageChoisi = true; save(); fin(true);
+    };
+    D.showModal();
+  });
+}
+function aTransmettre(d) {
+  const p = data.settings.partage || {}, lieu = x => p.lieu ? x : {...x, ville:'', lieu:''};
+  const o = {color:d.color || null, entries:(d.entries || []).map(lieu), synth:p.synthese ? d.synth || '' : ''};
+  if (p.notes && dayNotes(d).length) o.notes = dayNotes(d).map(lieu);
+  return o;
+}
+const aEnvoyer = d => !!d && (!!d.color || !!d.entries?.length || (data.settings.partage?.synthese && !!d.synth?.trim()) || (data.settings.partage?.notes && dayNotes(d).length > 0));
+
+/* Thérapeute : fichiers déposés en vrac, chacun rangé dans la fiche de son client */
+async function importerFichiers(fichiers, cibleId) {
+  const ranges = {}, refus = [];
+  for (const f of fichiers) {
+    let pkg, o;
+    try { pkg = JSON.parse(await f.text()); if (pkg.app !== 'journal-emotions' || pkg.type !== 'envoi') throw 0; }
+    catch { refus.push(`${f.name} : ce n’est pas un envoi Motus`); continue; }
+    if (pkg.to !== data.keys?.fp) { refus.push(`${f.name} : chiffré pour un autre thérapeute`); continue; }
+    try { o = await openEnvoi(pkg); } catch { refus.push(`${f.name} : fichier abîmé`); continue; }
+    if (o.type === 'liaison') { lierClient(o); continue; }
+    const c = ficheDe(o.client || {}, cibleId);
+    integrer(c, o);
+    ranges[c.id] = (ranges[c.id] || 0) + 1;
+  }
+  await saveNow();
+  const noms = Object.entries(ranges).map(([id, n]) => `${fullName(data.clients[id])} (${n})`);
+  if (cibleId && Object.keys(ranges).length === 1 && ranges[cibleId]) openClient(cibleId);
+  else { src = null; view = 'clients'; render(); }
+  renderNav(); markTabs();
+  if (refus.length) alert(`${noms.length ? `Rangé : ${noms.join(', ')}.\n\n` : ''}Non importé :\n${refus.join('\n')}`);
+  else toast(noms.length ? `Rangé : ${noms.join(', ')}` : 'Aucun fichier à ranger');
+}
+function ficheDe(k, cibleId) {
+  let c = ficheConnue({...k, uid:k.id});
+  if (!c && cibleId && ficheLibre(data.clients[cibleId])) c = data.clients[cibleId];
+  if (!c) { const id = 'c' + rid(6); c = data.clients[id] = {id, uid:null, profile:{nom:k.nom || '', prenom:k.prenom || '', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[], statut:'actuel'}; }
+  if (k.id) c.uid = k.id;
+  if (k.numero && !c.numero) c.numero = k.numero;
+  return c;
+}
+function integrer(c, o) {
+  if (!c.profile.start || o.from < c.profile.start) c.profile.start = o.from;
+  c.labels = {...DEF_LABELS, ...o.labels};
+  for (let k = o.from; k <= o.to; k = addDays(k, 1)) { if (o.days[k]) c.days[k] = o.days[k]; else delete c.days[k]; }
+  c.envois = c.envois.filter(x => !(x.from === o.from && x.to === o.to));
+  c.envois.push({from:o.from, to:o.to, sentAt:o.sentAt, importedAt:new Date().toISOString()});
+  c.envois.sort((a, b) => a.from.localeCompare(b.from));
+  c.nouveau = (c.nouveau || 0) + 1;
+}
+const nbNouveaux = () => Object.values(data.clients || {}).filter(c => c.nouveau || c.nouveauClient).length;
+
+function pageDonnees() {
+  return `<section class="card">
+    <p class="small muted" style="margin:0 0 6px">Ce que contiennent vos envois à votre thérapeute. Le fichier Excel, lui, ne change pas.</p>
+    ${formPartage()}
+  </section>`;
+}
+function pageEnvois() {
+  const l = Object.entries(data.sent).sort((a, b) => b[1].at.localeCompare(a[1].at));
+  return `<section class="card">
+    ${l.length ? l.map(([from, s]) => `<div class="stat"><span>Du ${fmtFR(from)} au ${fmtFR(s.to)}${s.dest ? `<br><span class="small muted">à ${esc(s.dest)}</span>` : ''}</span><b class="small" style="text-align:right">Envoyé ${sentAt(s.at)}</b></div>`).join('')
+      : '<p class="empty">Aucun envoi pour l’instant.</p>'}
+  </section>`;
+}
+
+let retraitFait = null;
 function therapistCard() {
   const th = data.therapist, fait = retraitFait;
   retraitFait = null;
-  return `${fait ? `<div class="banner"><span>✓ ${esc(fait)} n’est plus votre thérapeute. Vous pouvez en ajouter un autre ci-dessous.</span></div>` : ''}<section class="card">
+  return `${ruptureAvis()}${fait ? `<div class="banner"><span>✓ ${esc(fait)} n’est plus votre thérapeute. Il en sera prévenu à sa prochaine ouverture de Motus. Vous pouvez en ajouter un autre ci-dessous.</span></div>` : ''}<section class="card">
     ${th ? `
       <div class="stat"><span class="muted">Prénom</span><b>${esc(th.prenom || '—')}</b></div>
       <div class="stat"><span class="muted">Nom</span><b>${esc(th.nom || '—')}</b></div>
@@ -2273,6 +2576,9 @@ function therapistCard() {
       <div class="stat"><span class="muted">Adresse du cabinet</span><b style="text-align:right">${esc(th.adresse || '—')}</b></div>
       <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(th.fp)}</b></div>
       ${th.addedAt ? `<div class="stat"><span class="muted">Ajouté le</span><b>${fmtFR(ymd(new Date(th.addedAt)))}</b></div>` : ''}
+      <div class="stat"><span class="muted">Lien</span><b>${th.canal ? (th.arrivee ? 'Actif' : 'En attente de connexion') : 'À activer'}</b></div>
+      ${th.canal ? '' : `<p class="small muted" style="margin:8px 0 0">Activez le lien pour partager vos coordonnées avec votre thérapeute, les tenir à jour et être prévenu(e) si l’un de vous met fin au suivi.</p>
+      <button class="btn primary block" data-act="activerLien">Activer le lien</button>`}
       <button class="btn danger block" data-act="removeTherapist">Retirer ce thérapeute</button>` : `
       <p class="small muted" style="margin:0">Votre thérapeute vous a donné un lien d’invitation ? Copiez-le et collez-le ici.</p>
       <button class="btn primary block" data-act="collerInvit">Coller l’invitation</button>
@@ -2293,13 +2599,14 @@ async function sendWeek() {
   const x = exportRange(); if (!x) return;
   const th = data.therapist, p = data.profile;
   if (!p.prenom.trim() && !p.nom.trim()) return toast('Indiquez d’abord votre nom dans « Informations personnelles ».');
+  if (!data.settings.partageChoisi && !await choisirPartage()) return;   // au premier envoi
   const days = {};
-  for (let k = x.from; k <= x.to; k = addDays(k, 1)) if (dayUsed(data.days[k])) { const {notes, ...partage} = data.days[k]; days[k] = partage; }
+  for (let k = x.from; k <= x.to; k = addDays(k, 1)) if (aEnvoyer(data.days[k])) days[k] = aTransmettre(data.days[k]);
   if (!Object.keys(days).length && !confirm('Aucune note sur cette période. Envoyer quand même ?')) return;
-  const pkg = await sealFor(th, {client:{id:data.uid, nom:p.nom, prenom:p.prenom}, from:x.from, to:x.to, sentAt:new Date().toISOString(), labels:data.labels, days});
+  const pkg = await sealFor(th, {client:{id:data.uid, nom:p.nom, prenom:p.prenom, numero:data.account?.numero || ''}, from:x.from, to:x.to, sentAt:new Date().toISOString(), labels:data.labels, days});
   const name = `motus-envoi_${x.from}.json`;
   envoyerParMail({file:new File([JSON.stringify(pkg)], name, {type:'application/json'}), from:x.from, to:x.to, chiffre:true, fait:() => {
-    data.sent[x.from] = {to:x.to, at:new Date().toISOString()}; countStat('envois');
+    data.sent[x.from] = {to:x.to, at:new Date().toISOString(), dest:nomDe(th)}; countStat('envois');
     const st = $('#sentSt'); if (st) st.textContent = sentStatus();
   }});
 }
@@ -2353,23 +2660,36 @@ function sendReminder() {
 const fullName = c => `${c.profile.prenom} ${c.profile.nom}`.trim() || 'Client sans nom';
 let importTarget = null;
 
-function vClients() {
-  const key = c => `${c.profile.nom} ${c.profile.prenom}`;
-  const list = Object.values(data.clients).sort((a, b) => key(a).localeCompare(key(b), 'fr', {sensitivity:'base'}));
+function ligneClient(c) {
+  const l = lastOf(c.envois), pastille = c.nouveauClient ? 'Nouveau client' : c.nouveau ? `${c.nouveau} nouveau${c.nouveau > 1 ? 'x' : ''}` : '';
   return `
-  ${sauvegardeReminder()}${recupReminder()}${adminReminder()}
-  <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Mes clients</h1></div>
-  <section class="card">
-    <div class="card-h"><h2>Clients</h2><span class="count">${list.length}</span></div>
-    ${list.length > 5 ? '<input type="search" id="cliSearch" placeholder="Rechercher un client" aria-label="Rechercher un client" style="margin-bottom:10px">' : ''}
-    ${list.length ? list.map(c => { const l = lastOf(c.envois); return `
       <button class="clientrow" data-act="openClient" data-id="${esc(c.id)}" data-name="${esc(fullName(c).toLowerCase())}">
-        <b>${esc(fullName(c))}</b>
-        <span class="strip" aria-hidden="true">${l ? [0, 1, 2, 3, 4, 5, 6].map(i => `<i class="${c.days[addDays(l.from, i)]?.color || ''}"></i>`).join('') : ''}</span>
+        <b>${esc(fullName(c))}${c.numero ? ` <span class="small muted" style="white-space:nowrap">${esc(c.numero)}</span>` : ''}</b>
+        ${pastille ? `<span class="pastille">${pastille}</span>` : `<span class="strip" aria-hidden="true">${l ? [0, 1, 2, 3, 4, 5, 6].map(i => `<i class="${c.days[addDays(l.from, i)]?.color || ''}"></i>`).join('') : ''}</span>`}
         <span class="small muted">${l ? `Dernier envoi : du ${fmtFR(l.from).slice(0, 5)} au ${fmtFR(l.to).slice(0, 5)} · importé le ${fmtFR(ymd(new Date(l.importedAt))).slice(0, 5)}` : 'Aucune donnée reçue pour l’instant'}</span>
-      </button>`; }).join('') : '<p class="empty">Aucun client pour l’instant. Ajoutez vos clients ici, puis envoyez-leur votre lien d’invitation.</p>'}
-    <button class="btn primary block" data-act="newClient">+ Ajouter un client</button>
+      </button>`;
+}
+function vClients() {
+  const key = c => `${c.profile.nom} ${c.profile.prenom}`, tri = (a, b) => key(a).localeCompare(key(b), 'fr', {sensitivity:'base'});
+  const tous = Object.values(data.clients), actuels = tous.filter(c => c.statut !== 'ancien').sort(tri), anciens = tous.filter(c => c.statut === 'ancien').sort(tri);
+  return `
+  ${ruptureAvis()}${sauvegardeReminder()}${recupReminder()}${adminReminder()}
+  <div style="margin:4px 0 16px"><div class="eyebrow">Espace thérapeute</div><h1>Mes clients</h1></div>
+  <section class="card depot" id="depot">
+    <h2>Fichiers reçus</h2>
+    <p class="small muted" style="margin:6px 0 0">Déposez ici, en vrac, les fichiers reçus de vos clients : chacun se range seul dans la bonne fiche, par date.</p>
+    <button class="btn primary block" data-act="importerLot">Choisir des fichiers</button>
   </section>
+  <section class="card">
+    <div class="card-h"><h2>Clients actuels</h2><span class="count">${actuels.length}</span></div>
+    ${tous.length > 5 ? '<input type="search" id="cliSearch" placeholder="Rechercher un client" aria-label="Rechercher un client" style="margin-bottom:10px">' : ''}
+    ${actuels.length ? actuels.map(ligneClient).join('') : '<p class="empty">Aucun client pour l’instant. Envoyez votre lien d’invitation : la fiche se crée quand votre client vous rejoint.</p>'}
+    <button class="btn block" data-act="newClient">+ Ajouter un client à la main</button>
+  </section>
+  ${anciens.length ? `<section class="card">
+    <div class="card-h"><h2>Anciens clients</h2><span class="count">${anciens.length}</span></div>
+    ${anciens.map(ligneClient).join('')}
+  </section>` : ''}
   <section class="card">
     <h2>Inviter un client</h2>
     <p class="small muted" style="margin:6px 0 0">Envoyez votre lien d’invitation à votre client : il pourra ensuite vous transmettre ses semaines dans un fichier chiffré. Code de sécurité à lui confirmer : <span class="fp">${esc(data.keys?.fp || '…')}</span></p>
@@ -2378,7 +2698,7 @@ function vClients() {
 }
 function clientBar() {
   if (!src) return '';
-  const [act, label] = view === 'day' ? ['clientCal', 'Calendrier'] : ['backClients', 'Mes clients'];
+  const [act, label] = view === 'day' ? ['clientCal', 'Journal'] : ['backClients', 'Mes clients'];
   return `<div class="clientbar"><button class="link" data-act="${act}">‹ ${label}</button><span class="who">${esc(fullName(src))}</span></div>`;
 }
 /* Haut de la fiche : import (répétable) et historique des envois reçus */
@@ -2390,15 +2710,20 @@ function srcImportCard() {
     ${n ? `<ul class="envois">${shown.map(e => `<li>Du ${fmtFR(e.from)} au ${fmtFR(e.to)}<span class="muted"> · importé le ${fmtFR(ymd(new Date(e.importedAt)))}</span></li>`).join('')}
       ${n > 4 ? `<li class="muted">… et ${n - 4} plus ancien${n > 5 ? 's' : ''}</li>` : ''}</ul>`
     : `<p class="empty">Rien reçu pour l’instant. Quand ${esc(src.profile.prenom || 'votre client')} vous envoie un fichier, enregistrez-le sur cet appareil puis importez-le ici.</p>`}
-    <button class="btn primary block" data-act="importEnvoi">Importer un fichier reçu</button>
+    <button class="btn primary block" data-act="importEnvoi">Importer des fichiers reçus</button>
   </section>`;
 }
 /* Bas de la fiche : coordonnées, export, modification, suppression */
 function srcCard() {
   if (!src) return '';
   const k = src.contact || {};
+  const suivi = src.statut === 'ancien'
+    ? `<p class="small muted" style="margin:6px 0 0">Ancien client : le suivi a pris fin${src.rupture ? ` le ${fmtFR(ymd(new Date(src.rupture.at)))}, ${src.rupture.par === 'client' ? 'à sa demande' : 'à votre demande'}` : ''}.</p>`
+    : src.canal ? '<p class="small muted" style="margin:6px 0 0">Lié à votre compte : ses coordonnées se mettent à jour seules.</p>' : '';
   return `<section class="card">
     <h2>Fiche client</h2>
+    ${src.numero ? `<div class="stat" style="margin-top:6px"><span class="muted">Numéro</span><b>${esc(src.numero)}</b></div>` : ''}
+    ${suivi}
     ${k.email ? `<div class="small" style="margin-top:8px"><a href="mailto:${esc(k.email)}">${esc(k.email)}</a></div>` : ''}
     ${k.tel ? `<div class="small"><a href="tel:${esc(k.tel.replace(/\s/g, ''))}">${esc(k.tel)}</a></div>` : ''}
     ${src.note ? `<p class="synth-ro small" style="margin-top:8px">${esc(src.note)}</p>` : ''}
@@ -2407,11 +2732,13 @@ function srcCard() {
       <button class="btn" data-act="editClient">Modifier</button>
       <button class="btn" data-act="exportClient" ${Object.keys(src.days).length ? '' : 'disabled'}>Exporter en Excel</button>
     </div>
+    ${src.statut === 'ancien' ? '' : '<button class="btn danger block" data-act="finSuivi">Mettre fin au suivi</button>'}
     <button class="btn danger block" data-act="removeClient">Supprimer ce client</button>
   </section>`;
 }
 function openClient(id) {
   src = data.clients[id]; if (!src) return;
+  if (src.nouveau || src.nouveauClient) { delete src.nouveau; delete src.nouveauClient; save(); renderNav(); }
   const l = lastOf(src.envois), d = parse(l && l.to < today() ? l.to : today());
   calY = d.getFullYear(); calM = d.getMonth(); calF = calW = null; view = 'cal'; render();
 }
@@ -2424,6 +2751,9 @@ function openClientForm(id) {
         <div><label class="label" for="cfPrenom">Prénom</label><input type="text" id="cfPrenom" value="${esc(c?.profile.prenom || '')}" autocomplete="off"></div>
         <div><label class="label" for="cfNom">Nom</label><input type="text" id="cfNom" value="${esc(c?.profile.nom || '')}" autocomplete="off"></div>
       </div>
+      <label class="label" for="cfNumero">Numéro de compte Motus</label>
+      <input type="text" id="cfNumero" value="${esc(c?.numero || '')}" placeholder="ex. C-0012" autocomplete="off" autocapitalize="characters" ${c?.canal ? 'readonly' : ''}>
+      <div class="small muted" style="margin-top:4px">Il permet de reconnaître votre client sans le confondre avec un homonyme.</div>
       <label class="label" for="cfTel">Téléphone</label>
       <input type="text" id="cfTel" inputmode="tel" value="${esc(k.tel || '')}" autocomplete="off">
       <label class="label" for="cfEmail">E-mail</label>
@@ -2435,37 +2765,6 @@ function openClientForm(id) {
     <div class="dlg-f"><button type="button" class="btn primary" data-act="saveClient" data-id="${c ? esc(c.id) : ''}">Enregistrer</button></div>
   </form>`;
   D.showModal();
-}
-async function importEnvoi(f, targetId) {
-  const c = data.clients[targetId]; if (!c) return;
-  let pkg;
-  try { pkg = JSON.parse(await f.text()); if (pkg.app !== 'journal-emotions' || pkg.type !== 'envoi') throw 0; }
-  catch { return toast('Ce fichier n’est pas un envoi du journal.'); }
-  if (pkg.to !== data.keys?.fp) return toast('Ce fichier a été chiffré pour un autre thérapeute.');
-  let o;
-  try { o = await openEnvoi(pkg); } catch { return toast('Impossible d’ouvrir ce fichier (abîmé ou clé différente).'); }
-  const sender = `${o.client.prenom} ${o.client.nom}`.trim() || 'un client sans nom';
-  if (c.uid && c.uid !== o.client.id) {
-    if (!confirm(`Ce fichier vient de l’app de ${sender}, qui n’est pas celle liée à la fiche de ${fullName(c)}.\n\nL’importer quand même dans cette fiche ?`)) return;
-  } else if (!c.uid) {
-    const other = Object.values(data.clients).find(x => x.uid === o.client.id);
-    if (other) {
-      if (!confirm(`Les envois de ${sender} sont déjà importés dans la fiche de ${fullName(other)}.\n\nImporter aussi ce fichier dans la fiche de ${fullName(c)} ?`)) return;
-    } else {
-      if (sender.toLowerCase() !== fullName(c).toLowerCase()
-        && !confirm(`Ce fichier a été envoyé par ${sender}.\n\nLe rattacher à la fiche de ${fullName(c)} ? Les prochains envois de cette personne seront reconnus automatiquement.`)) return;
-      c.uid = o.client.id;
-    }
-  }
-  if (!c.profile.start || o.from < c.profile.start) c.profile.start = o.from;
-  c.labels = {...DEF_LABELS, ...o.labels};
-  for (let k = o.from; k <= o.to; k = addDays(k, 1)) { if (o.days[k]) c.days[k] = o.days[k]; else delete c.days[k]; }
-  c.envois = c.envois.filter(x => !(x.from === o.from && x.to === o.to));
-  c.envois.push({from:o.from, to:o.to, sentAt:o.sentAt, importedAt:new Date().toISOString()});
-  c.envois.sort((a, b) => a.from.localeCompare(b.from));
-  await saveNow();
-  toast(`Période du ${fmtFR(o.from).slice(0, 5)} au ${fmtFR(o.to).slice(0, 5)} importée`);
-  openClient(c.id);
 }
 
 /* ───────────── Administration (compte administrateur uniquement) ─────────────
@@ -2518,7 +2817,7 @@ function vAdmin() {
   <section class="card">
     <h2>Temps de travail sur Motus</h2>
     <div class="heures"><b>≈ ${HEURES_TRAVAIL} h</b><span class="small muted">jusqu’à la version ${APP_VERSION}</span></div>
-    <p class="small muted" style="margin:6px 0 0">Estimation à partir des échanges avec Claude, sans les pauses de plus de 15 minutes. Mise à jour à chaque version.</p>
+    <p class="small muted" style="margin:6px 0 0">Estimation à partir des échanges avec Claude, sans les pauses de plus de 30 minutes. Mise à jour à chaque version.</p>
   </section>` + limitsCard() + `
   <section class="card">
     <div class="card-h"><h2>Utilisateurs</h2><span class="count">${list.length}</span></div>
@@ -2674,7 +2973,7 @@ const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform 
 const safariAvis = () => IOS && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches
   ? '<div class="banner safari-avis"><span>Installez Motus avec le bouton Partager › « Sur l’écran d’accueil », puis notez uniquement depuis l’icône : les notes de Safari et celles de l’app ne sont pas partagées.</span></div>' : '';
 async function geoRefus() {
-  if (IOS) return 'L’iPhone ne donne pas la position à Motus. Dans les Réglages de l’iPhone, vérifiez : Confidentialité et sécurité › Service de localisation (activé, et autorisé pour les sites Safari), puis Safari › Localisation.';
+  if (IOS) return 'L’iPhone ne donne pas la position à Motus. Dans les Paramètres de l’iPhone, vérifiez : Confidentialité et sécurité › Service de localisation (activé, et autorisé pour les sites Safari), puis Safari › Localisation.';
   let etat = '';
   try { etat = (await navigator.permissions.query({name:'geolocation'})).state; } catch {}
   if (etat === 'denied') return `Le navigateur bloque la position pour Motus. Dans Chrome : Paramètres › Paramètres des sites › Position, puis autorisez ${location.hostname}.`;
@@ -3068,10 +3367,29 @@ const ACT = {
   /* lien client ↔ thérapeute */
   addTherapist: () => offerInvite($('#invCode').value),
   removeTherapist: async () => {
-    if (!await confirmerRetrait()) return;
-    retraitFait = `${data.therapist.prenom || ''} ${data.therapist.nom || ''}`.trim() || 'Votre thérapeute';
+    const th = data.therapist, nom = nomDe(th) || 'ce thérapeute';
+    if (!await confirmerCode({titre:`Retirer ${nom} ?`, bouton:'Retirer',
+      texte:`Vous ne pourrez plus lui envoyer vos données, et il sera prévenu à sa prochaine ouverture de Motus. Vos notes restent sur votre téléphone, et les fichiers déjà envoyés restent chez lui. Pour le rajouter, il faudra de nouveau son invitation.`})) return;
+    if (th.canal && !await rompreCanal(th.canal, 'client')) data.ruptureAEnvoyer = th.canal;
+    retraitFait = nomDe(th) || 'Votre thérapeute';
     data.therapist = null; await saveNow(); render();
   },
+  activerLien: async () => {
+    const th = data.therapist;
+    if (!await consentirLien(th, null)) return;
+    th.canal = hexDe(crypto.getRandomValues(new Uint8Array(32))); delete th.arrivee;
+    await saveNow(); await synchroCanaux(true); render();
+  },
+  ruptureLue: () => { delete data.ruptureRecue; delete data.rupturesRecues; save(); render(true); },
+  finSuivi: async () => {
+    const c = src;
+    if (!await confirmerCode({titre:`Mettre fin au suivi de ${fullName(c)} ?`, bouton:'Mettre fin au suivi',
+      texte:`${esc(c.profile.prenom || 'Votre client')} ne pourra plus vous envoyer de données, et en sera prévenu(e) à sa prochaine ouverture de Motus. Sa fiche et ses données reçues restent consultables dans « Anciens clients ».`})) return;
+    if (c.canal && !await rompreCanal(c.canal, 'therapeute')) c.ruptureAEnvoyer = c.canal;
+    delete c.canal; c.statut = 'ancien'; c.rupture = {par:'therapeute', at:new Date().toISOString()};
+    await saveNow(); render(); toast(`${fullName(c)} est maintenant dans « Anciens clients »`);
+  },
+  importerLot: () => { importTarget = null; busy = true; $('#importFile').value = ''; $('#importFile').click(); setTimeout(() => busy = false, 60000); },
   sendWeek: () => sendWeek(),
   partagerApp: async () => {
     const url = location.origin + location.pathname;
@@ -3104,11 +3422,14 @@ const ACT = {
   newClient: () => openClientForm(null),
   editClient: () => openClientForm(src.id),
   saveClient: t => {
-    const prenom = $('#cfPrenom').value.trim(), nom = $('#cfNom').value.trim();
+    const prenom = $('#cfPrenom').value.trim(), nom = $('#cfNom').value.trim(), numero = $('#cfNumero').value.trim().toUpperCase();
     if (!prenom && !nom) return $('#cfErr').textContent = 'Indiquez au moins un prénom ou un nom.';
+    if (numero && !/^C-\d{4,}$/.test(numero)) return $('#cfErr').textContent = 'Numéro de compte au format C-0012.';
+    if (numero && Object.values(data.clients).some(x => x.id !== t.dataset.id && x.numero === numero)) return $('#cfErr').textContent = 'Ce numéro est déjà celui d’un autre client.';
     let c = data.clients[t.dataset.id];
     if (!c) { const id = 'c' + rid(6); c = data.clients[id] = {id, uid:null, profile:{nom:'', prenom:'', start:''}, contact:{}, note:'', labels:{...DEF_LABELS}, days:{}, envois:[]}; }
     Object.assign(c.profile, {prenom, nom});
+    if (!c.canal) { if (numero) c.numero = numero; else delete c.numero; }
     c.contact = {tel:$('#cfTel').value.trim(), email:$('#cfEmail').value.trim()};
     c.note = $('#cfNote').value.trim();
     save(); $('#clientDlg').close(); openClient(c.id);
@@ -3272,6 +3593,34 @@ const ACT = {
 };
 
 document.addEventListener('gesturestart', e => e.preventDefault());   // iPhone : ignore le zoom à deux doigts
+/* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le journal, change de mois ; dans une page des Paramètres,
+   vers la droite, revient au menu. Le geste doit être franc (70 px, nettement horizontal, en moins d'une seconde), pour ne jamais gêner
+   le défilement ni un simple appui. */
+let glisse = null;
+document.addEventListener('touchstart', e => {
+  const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || (view === 'set' && setPage) || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
+    && e.touches.length === 1 && !$('dialog[open]') && !e.target.closest('input, textarea, select');
+  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now()} : null;
+}, {passive:true});
+document.addEventListener('touchend', e => {
+  if (!glisse) return;
+  const p = e.changedTouches[0], dx = p.clientX - glisse.x, dy = p.clientY - glisse.y, lent = Date.now() - glisse.t > 1000;
+  glisse = null;
+  if (lent || Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy)) return;
+  const now = new Date();
+  if (view === 'day') {
+    if (dx < 0 && mondayOf(cur) >= mondayOf(today())) return;   // pas de semaine à venir
+    cur = addDays(cur, dx < 0 ? 7 : -7); if (cur > today()) cur = today();
+    render();
+  }
+  else if (view === 'set') { if (dx < 0) return; ACT.setBack(); }
+  else if (dx < 0 && calY === now.getFullYear() && calM === now.getMonth()) return;   // pas de mois à venir
+  else if (dx < 0) ACT.nextMonth(); else ACT.prevMonth();
+  const v = view === 'day' ? $('#view .week') : $('#view'), c = dx < 0 ? 'vers-g' : 'vers-d';
+  v.classList.remove('vers-g', 'vers-d'); void v.offsetWidth; v.classList.add(c);
+  v.addEventListener('animationend', () => v.classList.remove(c), {once:true});
+}, {passive:true});
+document.addEventListener('touchcancel', () => { glisse = null; }, {passive:true});
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
@@ -3303,7 +3652,11 @@ document.addEventListener('input', e => {
   else if (t.dataset.label) { data.labels[t.dataset.label] = t.value.trim() || DEF_LABELS[t.dataset.label]; save(); }
   else if (t.id === 'autolock') setAutolock(t);
 });
-document.addEventListener('change', e => { if (e.target.id === 'geoloc' && data) { data.settings.geoloc = e.target.checked; save(); } });
+document.addEventListener('change', e => {
+  if (!data) return;
+  if (e.target.id === 'geoloc') { data.settings.geoloc = e.target.checked; save(); }
+  else if (e.target.dataset.partage && !e.target.closest('#ptForm')) { data.settings.partage[e.target.dataset.partage] = e.target.checked; data.settings.partageChoisi = true; save(); }
+});
 $('#entryDlg').addEventListener('click', e => { if (e.target === e.currentTarget && !$('#nText')) e.currentTarget.close(); });   // une note en cours ne se perd pas d'un appui à côté
 
 $('#restoreFile').addEventListener('change', async e => {
@@ -3324,7 +3677,15 @@ $('#restoreFile').addEventListener('change', async e => {
     await saveNow(); showApp(); toast('Sauvegarde restaurée');
   } catch { toast('Mot de passe incorrect pour cette sauvegarde.'); }
 });
-$('#importFile').addEventListener('change', e => { busy = false; const f = e.target.files[0]; if (f) importEnvoi(f, importTarget); });
+$('#importFile').addEventListener('change', e => { busy = false; const f = [...e.target.files]; if (f.length) importerFichiers(f, importTarget); });
+/* Thérapeute sur ordinateur : fichiers glissés dans la zone « Fichiers reçus » */
+document.addEventListener('dragover', e => { const z = e.target.closest?.('#depot'); if (z) { e.preventDefault(); z.classList.add('survol'); } });
+document.addEventListener('dragleave', e => { e.target.closest?.('#depot')?.classList.remove('survol'); });
+document.addEventListener('drop', e => {
+  const z = e.target.closest?.('#depot'); if (!z) return;
+  e.preventDefault(); z.classList.remove('survol');
+  const f = [...e.dataTransfer.files]; if (f.length) importerFichiers(f, null);
+});
 
 /* Lien d'invitation ouvert directement : on le garde pour après le déverrouillage et on l'efface de l'adresse */
 {
