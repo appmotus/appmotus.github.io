@@ -455,9 +455,9 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 27;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 28;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 21;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:471, cache:461, envoyes:8, ecrits:1.8};   // en millions, même script, même moment
+const JETONS_CONSOMMES = {total:480, cache:470, envoyes:8, ecrits:1.8};   // en millions, même script, même moment
 const RGPD_VERSION = 2; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte, à effacer vos données ou à confirmer une modification de vos informations. Un code vous sera envoyé pour le confirmer.',
@@ -3906,8 +3906,10 @@ document.addEventListener('gesturestart', e => e.preventDefault());   // iPhone 
    (moins de 45°) : il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite. */
 let glisse = null;
 document.addEventListener('touchstart', e => {
-  const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || (view === 'set' && setPage) || (view === 'admin' && admPage) || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
-    && e.touches.length === 1 && !$('dialog[open]') && !e.target.closest('input, textarea, select');
+  // pour revenir en arrière, le geste peut partir de n'importe où, même d'un champ de saisie (la page des notes en est presque entièrement couverte)
+  const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
+  const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || retour || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
+    && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]')));
   glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null} : null;
 }, {passive:true});
 /* Dès que le geste est franchement horizontal, l'écran ne défile plus verticalement ; un geste vertical, lui, n'est jamais gêné */
