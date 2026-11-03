@@ -78,6 +78,7 @@ input[type=time],input[type=date]{display:block;min-width:0;max-width:100%}
 }
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
 textarea{resize:vertical;min-height:84px}
+textarea[data-notes-admin]{overflow:hidden;resize:none}   /* le cadre suit la longueur du texte (ajusterHauteur) */
 .mdp-champ{position:relative;display:block}
 .mdp-champ input{padding-right:48px}
 .oeil{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:42px;height:42px;border:0;background:none;color:var(--muted);display:grid;place-items:center;padding:0}
@@ -461,9 +462,9 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 29;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 30;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 22;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:537, cache:526, envoyes:8.7, ecrits:1.9};   // en millions, même script, même moment
+const JETONS_CONSOMMES = {total:554, cache:543, envoyes:8.8, ecrits:2};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
@@ -1787,6 +1788,7 @@ function render(keepScroll) {
   if (!keepScroll) window.scrollTo(0, 0);
   if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();
   listeAPlacer = false;
+  document.querySelectorAll('#view textarea[data-notes-admin]').forEach(ajusterHauteur);
   marquerEntete();
   montrerAvis();   // une fin de suivi ou une acceptation reçue s'affiche quelle que soit la page
 }
@@ -1965,8 +1967,8 @@ function vCal() {
     let premier = [ks[0], cree, ymd(new Date(calY, calM, 1))].filter(Boolean).sort()[0];
     const fin = parse(premier), mois = [];
     for (let y = now.getFullYear(), m = now.getMonth(); y > fin.getFullYear() || (y === fin.getFullYear() && m >= fin.getMonth()); m === 0 ? (m = 11, y--) : m--) mois.push([y, m]);
-    return mois.map(([y, m]) => `<div class="mois-sep" data-mois="${y}-${m}"><span>${MOIS[m]} ${y}</span></div>
-      ${listCards(y, m) || `<p class="small muted mois-vide">${filtre ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[m]}.</p>`}`).join('')
+    return `<div id="listeNotes">${mois.map(([y, m]) => `<div class="mois-bloc" data-mois="${y}-${m}"><div class="mois-sep" data-mois="${y}-${m}"><span>${MOIS[m]} ${y}</span></div>
+      ${listCards(y, m) || `<p class="small muted mois-vide">${filtre ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[m]}.</p>`}</div>`).join('')}</div>`
       + '<div class="fin-liste"></div>';   // de la place en bas : le mois le plus ancien peut lui aussi remonter sous l'en-tête
   }
   function listCards(y, m) {
@@ -2009,7 +2011,7 @@ function vCal() {
   </div>
   ${calMode === 'list' ? `<div class="champ-recherche">${ico('loupe', '')}<input type="search" id="calQ" value="${esc(calQ)}" placeholder="Rechercher dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search"></div>` : ''}
   <div id="listeMois" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>${filterCard}
-  ${calMode === 'list' ? listeContinue() : `<section class="card">
+  ${calMode === 'list' ? listeContinue() : `<section class="card" id="carteCal">
     <div class="cal ${filtre ? 'filtre' : ''}">${cells}</div>
     <div class="legend">${legend}</div>
   </section>
@@ -2376,23 +2378,38 @@ function pageContact() {
    « Mardi 27 octobre à 21h » (année déduite), « 1er novembre, 10h ». Une ligne qui ne contient qu'une heure (« 22h10 »,
    « 12h30 Lieu : restaurant ») ouvre une nouvelle note le même jour. Les lignes suivantes forment le texte de la note.
    Le lieu est une ville s'il figure dans la liste des communes, sinon un lieu (« bureau », « chez mes parents »). */
-const RE_JOUR = '(?:(?:lun|mar|mer|jeu|ven|sam|dim)[a-z]*\\.?,?\\s+)?';
+// début de ligne toléré : puces, titres, « Le », jour de la semaine en entier ou abrégé (« jeu. »)
+const RE_DEBUT = '[\\s#*•>_-]*(?:le\\s+)?(?:(?:lun|mar|mer|jeu|ven|sam|dim)[a-zé]*\\.?,?\\s+)?(?:le\\s+)?';
 const RE_MOIS = '(janv(?:ier)?|f[ée]vr?(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept?(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)\\.?';
 const MOIS_TXT = [['janv',0],['jan',0],['fev',1],['mars',2],['avr',3],['mai',4],['juin',5],['juil',6],['aou',7],['sep',8],['oct',9],['nov',10],['dec',11]];
+const RE_HEURE = '(?:à|a|vers|@)?\\s*(\\d{1,2})\\s*[hH:]\\s*(\\d{2})?(?!\\d)';
 const RE_DATES = [
-  [new RegExp(`^\\s*${RE_JOUR}(\\d{4})-(\\d{1,2})-(\\d{1,2})(?!\\d)`, 'i'), m => [+m[1], +m[2] - 1, +m[3]]],
-  [new RegExp(`^\\s*${RE_JOUR}(\\d{1,2})[/.-](\\d{1,2})[/.-](\\d{4}|\\d{2})(?!\\d)`, 'i'), m => [m[3].length === 2 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1]]],
-  [new RegExp(`^\\s*${RE_JOUR}(\\d{1,2})(?:er)?\\s+${RE_MOIS}(?:\\s+(\\d{4}))?(?![\\p{L}\\d])`, 'iu'), m => [m[3] ? +m[3] : null, MOIS_TXT.find(([p]) => sansAccent(m[2]).startsWith(p))[1], +m[1]]],
+  [new RegExp(`^${RE_DEBUT}(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})(?!\\d)`, 'i'), m => [+m[1], +m[2] - 1, +m[3]]],
+  [new RegExp(`^${RE_DEBUT}(\\d{1,2})[/.-](\\d{1,2})[/.-](\\d{4}|\\d{2})(?!\\d)`, 'i'), m => [m[3].length === 2 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1]]],
+  [new RegExp(`^${RE_DEBUT}(\\d{1,2})(?:er)?\\s+${RE_MOIS}(?:\\s+(\\d{4}))?(?![\\p{L}\\d])`, 'iu'), m => [m[3] ? +m[3] : null, MOIS_TXT.find(([p]) => sansAccent(m[2]).startsWith(p))[1], +m[1]]],
+  // « 30/10 » sans année : seulement suivi d'une heure, d'un séparateur ou de rien (« 1/2 litre » reste du texte)
+  [new RegExp(`^${RE_DEBUT}(\\d{1,2})[/.](\\d{1,2})(?=\\s*$|\\s*[,;:@–—-]|\\s+${RE_HEURE})`, 'i'), m => [null, +m[2] - 1, +m[1]]],
 ];
 const heureTxt = (h, mn = '0') => +h < 24 && +mn < 60 ? `${pad(+h)}:${pad(+mn)}` : '';
+/* Ce qui suit la date et l'heure : la ville, un lieu, ou déjà le texte de la note.
+   « à Paris », « (Annecy) », « Lieu : bureau », « Paris, au café », « à Lyon : journée difficile », « à Paris Journée difficile » */
 function lieuTxt(reste, estVille) {
-  const brut = reste.replace(/^[\s,;:–—-]+/, '').trim();
-  let s = brut.replace(/^\((.+)\)$/, '$1').replace(/^lieu\s*:\s*/i, '').trim();
+  const brut = reste.replace(/^[\s,;:–—@-]+/, '').trim();
+  let s = brut.replace(/^\((.+)\)$/, '$1').replace(/^lieu\s*:\s*/i, '').trim(), texte = '';
   if (!s) return {};
+  const deux = s.match(/^([^:.!?]{1,60}?)\s*:\s+(.+)$/);   // le lieu, puis le texte après deux-points
+  if (deux) { s = deux[1].trim(); texte = deux[2].trim(); }
   if (s.length > 60 || /[.!?…]$|[.!?]\s/.test(s)) return {texte:brut};   // une phrase : c'est déjà le texte de la note
-  const v = s.replace(/^(?:à|a)\s+/i, '');
-  if (estVille(v)) return {ville:v};
-  return {lieu:s.replace(/^(?:au|à la|à l['’]|à)\s+/i, '').replace(/^(?:à l['’])/i, '')};
+  const parties = s.split(/\s*[,;–—]\s*|\s+-\s+/).map(p => p.replace(/^(?:à|a|@)\s+/i, '').trim()).filter(Boolean);
+  let iv = parties.findIndex(estVille), ville = iv >= 0 ? parties[iv] : '';
+  if (!ville && parties.length === 1 && /^(?:à|a|@)\s/i.test(s)) {   // « à Paris Journée difficile » : la ville, puis le texte
+    const mots = parties[0].split(/\s+/);
+    for (let n = Math.min(4, mots.length - 1); n >= 1 && !ville; n--) if (estVille(mots.slice(0, n).join(' '))) {
+      ville = mots.slice(0, n).join(' '); texte = [mots.slice(n).join(' '), texte].filter(Boolean).join(' '); parties.length = 0;
+    }
+  }
+  const lieu = parties.filter((_, i) => i !== iv).join(', ').replace(/^(?:au|aux|à la|à)\s+/i, '').replace(/^à l['’]\s*/i, '');
+  return {ville, lieu, texte};
 }
 function lireNotesTexte(texte, estVille) {
   const notes = [], t = today();
@@ -2413,7 +2430,7 @@ function lireNotesTexte(texte, estVille) {
       if (dt.getMonth() === mo && dt.getDate() === j) {
         finir(); annee = y;
         let reste = ligne.slice(m[0].length), time = '';
-        const h = reste.match(/^[\s,;:–—-]*(?:à|a|vers)?\s*(\d{1,2})\s*[hH:]\s*(\d{2})?(?!\d)/);
+        const h = reste.match(new RegExp(`^[\\s,;:–—@-]*${RE_HEURE}`, 'i'));
         if (h && (time = heureTxt(h[1], h[2]))) reste = reste.slice(h[0].length);
         const l = lieuTxt(reste, estVille);
         n = {k:ymd(dt), time, ville:l.ville || '', lieu:l.lieu || '', lignes:l.texte ? [l.texte] : []};
@@ -2421,8 +2438,8 @@ function lireNotesTexte(texte, estVille) {
       }
     }
     // une heure seule (éventuellement suivie du lieu) : nouvelle note le même jour
-    const h = n && ligne.match(/^\s*(?:à|a|vers)?\s*(\d{1,2})\s*[hH:]\s*(\d{2})?(?!\d)(.*)$/);
-    if (h && heureTxt(h[1], h[2]) && /^\s*$|^\s*(?:[,;:–—(-]|lieu\b|à\s|a\s|au\s|chez\s)/i.test(h[3])) {
+    const h = n && ligne.match(new RegExp(`^[\\s•*-]*${RE_HEURE}(.*)$`, 'i'));
+    if (h && heureTxt(h[1], h[2]) && /^\s*$|^\s*(?:[,;:–—(@-]|lieu\b|à\s|a\s|au\s|chez\s)/i.test(h[3])) {
       const l = lieuTxt(h[3], estVille);
       if (n.time || n.lignes.join('').trim()) { const k = n.k; finir(); n = {k, time:'', ville:'', lieu:'', lignes:[]}; }
       Object.assign(n, {time:heureTxt(h[1], h[2]), ville:l.ville || n.ville, lieu:l.lieu || n.lieu});
@@ -2477,7 +2494,7 @@ async function analyserTexte(texte) {
 function pageImporter() {
   return `<section class="card">
     <p class="small muted" style="margin:0">Vous tenez déjà un journal ailleurs (Notes, un fichier texte) ? Importez-le : chaque note devient une note personnelle, à sa date et à son heure.</p>
-    <p class="small muted" style="margin:8px 0 0">Chaque note doit commencer par une ligne qui donne sa date, et si possible l’heure et le lieu, par exemple :<br>« Lundi 26 octobre 2026, 8h40 — Lyon »<br>« 26/10/2026 18:15, au bureau »<br>Une ligne avec seulement une heure (« 22h10 ») ouvre une nouvelle note le même jour.</p>
+    <p class="small muted" style="margin:8px 0 0">Chaque note doit commencer par une ligne qui donne sa date, et si possible l’heure et le lieu. La plupart des façons de l’écrire sont reconnues, par exemple :<br>« jeu. 29/10/2026 18:01 à Paris »<br>« Lundi 26 octobre 2026, 8h40 — Lyon »<br>« 30/10 à 9h15, au bureau »<br>Une ligne avec seulement une heure (« 22h10 ») ouvre une nouvelle note le même jour.</p>
     <button class="btn primary block" data-act="choisirTxt">Choisir un fichier .txt</button>
     <input type="file" id="txtFile" accept=".txt,text/plain" hidden>
     <label class="label" for="txtColle">Ou collez votre texte</label>
@@ -3201,6 +3218,8 @@ async function loadAdmin() {
   catch (x) { adm.err = x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Erreur du serveur.'; adm.users ||= []; }
   if (view === 'admin') render(true);
 }
+/* Un cadre de saisie aussi haut que son texte : jamais de barre de défilement à l'intérieur */
+function ajusterHauteur(t) { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 2}px`; }
 /* Mes notes : le bloc-notes de l'administrateur, en trois catégories, chiffré avec son journal sur cet appareil */
 let admPage = null, admScroll = 0;
 const NOTES_ADMIN = [['maj', 'À travailler pour la prochaine mise à jour', 'Corrections et demandes à traiter…'], ['plusTard', 'Travaux ultérieurs', 'Idées et chantiers pour plus tard…'], ['libres', 'Notes libres', 'Tout le reste…']];
@@ -3210,7 +3229,7 @@ function pageNotesAdmin() {
   <p class="small muted" style="margin:0 2px 12px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes. Elles s’enregistrent au fil de la frappe.</p>
   ${NOTES_ADMIN.map(([k, titre, aide]) => `<section class="card">
     <h2>${titre}</h2>
-    <textarea data-notes-admin="${k}" rows="7" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
+    <textarea data-notes-admin="${k}" rows="3" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
     <div class="small muted" data-etat="${k}" style="margin-top:6px;text-align:right">${n[k] ? 'Enregistré ✓' : ''}</div>
   </section>`).join('')}`;
 }
@@ -4128,65 +4147,99 @@ function ajouterOeil() {
   });
 }
 new MutationObserver(ajouterOeil).observe(document.body, {childList:true, subtree:true});
-/* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le journal, change de mois ; dans une page des Paramètres
-   ou dans « Mes notes » de l'admin, vers la droite, revient en arrière. Le geste doit faire 60 px, en moins d'une seconde et quart, et partir plutôt à l'horizontale
-   (moins de 45°) : il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite. */
+/* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le Journal, sur le calendrier ou sur la liste des notes,
+   change de mois ; dans une page des Paramètres ou dans « Mes notes » de l'admin, vers la droite, revient en arrière.
+   Le geste part plutôt à l'horizontale (moins de 45°) et fait 60 px en moins d'une seconde et quart, ou 30 px d'un geste vif :
+   il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite.
+   Seule la partie balayée bouge, et la page voisine arrive à côté d'elle en suivant le doigt. Le reste de la page se met à jour ensuite. */
 let glisse = null;
+const ECART = 16;   // espace entre la page et sa voisine pendant le geste
 document.addEventListener('touchstart', e => {
   // pour revenir en arrière, le geste peut partir de n'importe où, même d'un champ de saisie (la page des notes en est presque entièrement couverte)
   const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
-  const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || retour || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
-    && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]')));
-  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null} : null;
+  const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('.week') : retour;
+  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]')));
+  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0} : null;
 }, {passive:true});
-/* La page suit le doigt. Au lâcher, elle part du côté du geste et la suivante arrive de l'autre côté ;
-   sinon elle revient en place. Là où il n'y a rien (semaine ou mois à venir), elle résiste. */
-const cibleGlisse = () => view === 'day' ? $('#view .week') : $('#view');
+// ce qui bouge : la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
+const cibleGlisse = () => view === 'day' ? $('#view .week') : view === 'cal' ? $(calMode === 'list' ? '#listeNotes' : '#carteCal') : $('#view');
 function glissePossible(dx) {
   if (view === 'day') return dx > 0 || mondayOf(cur) < mondayOf(today());   // pas de semaine à venir
   if (view === 'set' || view === 'admin') return dx > 0;                    // retour en arrière : vers la droite
   const now = new Date();
   return dx > 0 || calY !== now.getFullYear() || calM !== now.getMonth();   // pas de mois à venir
 }
-function remettreEnPlace(el) { if (el) { el.style.transition = 'transform .2s ease-out'; el.style.transform = ''; } }
+/* La page voisine (cote 1 : celle d'avant, à gauche ; -1 : celle d'après, à droite), construite par les fonctions d'affichage habituelles */
+function voisineHtml(cote) {
+  if (view === 'day') { const c = cur; cur = addDays(cur, cote < 0 ? 7 : -7); if (cur > today()) cur = today(); try { return weekStrip(); } finally { cur = c; } }
+  if (view === 'set') { const p = setPage; setPage = null; try { return `<div>${vSet()}</div>`; } finally { setPage = p; } }
+  if (view === 'admin') { const p = admPage; admPage = null; try { return `<div>${vAdmin()}</div>`; } finally { admPage = p; } }
+  const [y, m] = cote < 0 ? (calM === 11 ? [calY + 1, 0] : [calY, calM + 1]) : (calM === 0 ? [calY - 1, 11] : [calY, calM - 1]);
+  if (calMode === 'list') return $(`#listeNotes .mois-bloc[data-mois="${y}-${m}"]`)?.outerHTML || '';   // la liste contient déjà tous les mois
+  const avant = [calY, calM]; [calY, calM] = [y, m];
+  try { const t = document.createElement('template'); t.innerHTML = vCal(); return t.content.querySelector('#carteCal')?.outerHTML || ''; }
+  finally { [calY, calM] = avant; }
+}
+function poserVoisine(g, cote) {
+  const el = g.el, p = el.parentNode, t = document.createElement('template');
+  t.innerHTML = voisineHtml(cote).trim();
+  const v = t.content.firstElementChild; if (!v) return null;
+  v.removeAttribute('id'); v.querySelectorAll('[id]').forEach(x => x.removeAttribute('id'));
+  v.setAttribute('aria-hidden', 'true');
+  if (g.posP === undefined) { g.posP = p.style.position; if (getComputedStyle(p).position === 'static') p.style.position = 'relative'; }
+  let top = el.offsetTop;
+  if (view === 'set' || view === 'admin') top += scrollY - (view === 'set' ? menuScroll : admScroll);   // le menu revient là où on l'avait laissé
+  else if (view === 'cal' && calMode === 'list') {   // le mois voisin se présente juste sous l'en-tête, comme après le changement
+    const h = $('#view .calhead'), sep = $('#listeNotes .mois-sep');
+    top = Math.max(top, h.getBoundingClientRect().bottom + 4 - parseFloat(getComputedStyle(sep).marginTop) - p.getBoundingClientRect().top);
+  }
+  Object.assign(v.style, {position:'absolute', top:`${top}px`, left:`${el.offsetLeft - cote * (el.offsetWidth + ECART)}px`, width:`${el.offsetWidth}px`, margin:'0', pointerEvents:'none'});
+  p.appendChild(v);
+  return v;
+}
+function bouger(g, x, transition = 'none') {
+  for (const e of [g.el, g.voisine]) if (e) { e.style.transition = transition; e.style.transform = x ? `translateX(${x}px)` : ''; }
+}
+function nettoyer(g) {
+  g.voisine?.remove(); g.voisine = null;
+  if (g.el) { g.el.style.transition = ''; g.el.style.transform = ''; }
+  if (g.posP !== undefined && g.el?.parentNode) g.el.parentNode.style.position = g.posP;
+}
 /* Dès que le geste est franchement horizontal, l'écran ne défile plus verticalement ; un geste vertical, lui, n'est jamais gêné */
 document.addEventListener('touchmove', e => {
-  if (!glisse || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - glisse.x, dy = e.touches[0].clientY - glisse.y;
-  if (!glisse.sens && Math.hypot(dx, dy) > 12) glisse.sens = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
-  if (glisse.sens !== 'h') return;
+  const g = glisse;
+  if (!g || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+  if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+  if (g.sens !== 'h') return;
   if (e.cancelable) e.preventDefault();
-  const el = glisse.el ||= cibleGlisse();
-  if (el) { el.style.transition = 'none'; el.style.transform = `translateX(${glissePossible(dx) ? dx : dx / 4}px)`; }
+  if (!(g.el ||= cibleGlisse())) return;
+  const possible = glissePossible(dx), cote = possible ? Math.sign(dx) : 0;
+  if (cote !== g.cote) { g.voisine?.remove(); g.voisine = cote ? poserVoisine(g, cote) : null; g.cote = cote; }   // le doigt peut repartir de l'autre côté
+  bouger(g, possible ? dx : dx / 4);   // là où il n'y a rien, la page résiste
 }, {passive:false});
 document.addEventListener('touchend', e => {
-  if (!glisse) return;
-  const g = glisse, p = e.changedTouches[0], dx = p.clientX - g.x, dy = p.clientY - g.y, dt = Date.now() - g.t;
+  const g = glisse;
+  if (!g) return;
   glisse = null;
-  // une fois le geste parti à l'horizontale, l'écran ne défile plus : le doigt peut alors dévier sans annuler le balayage.
-  // Un geste court mais vif suffit aussi.
+  const p = e.changedTouches[0], dx = p.clientX - g.x, dy = p.clientY - g.y, dt = Date.now() - g.t;
+  // une fois le geste parti à l'horizontale, l'écran ne défile plus : le doigt peut alors dévier sans annuler le balayage
   const va = g.sens === 'h' && glissePossible(dx) && dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
-  if (!va) return remettreEnPlace(g.el);
-  const sens = dx < 0 ? -1 : 1, el = g.el;
+  if (!va) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); return; }
+  const cote = dx < 0 ? -1 : 1;
   const changer = () => {
-    if (view === 'day') { cur = addDays(cur, sens < 0 ? 7 : -7); if (cur > today()) cur = today(); render(true); }   // on reste au même endroit de la page
+    if (view === 'day') { cur = addDays(cur, cote < 0 ? 7 : -7); if (cur > today()) cur = today(); render(true); }   // on reste au même endroit de la page
     else if (view === 'set') ACT.setBack();
     else if (view === 'admin') ACT.admRetour();
-    else if (sens < 0) ACT.nextMonth(); else ACT.prevMonth();
+    else if (cote < 0) ACT.nextMonth(); else ACT.prevMonth();
   };
-  if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) { if (el) el.style.transform = ''; return changer(); }
-  const w = el.offsetWidth;
-  el.style.transition = 'transform .15s ease-in'; el.style.transform = `translateX(${sens * w}px)`;
-  setTimeout(() => {
-    el.style.transition = 'none'; el.style.transform = '';
-    changer();
-    const n = cibleGlisse(); if (!n) return;
-    n.style.transition = 'none'; n.style.transform = `translateX(${-sens * w * .35}px)`;
-    void n.offsetWidth;
-    n.style.transition = 'transform .22s cubic-bezier(.2,.8,.3,1)'; n.style.transform = '';
-  }, 150);
+  if (!g.el || matchMedia('(prefers-reduced-motion: reduce)').matches) { nettoyer(g); return changer(); }
+  if (g.cote !== cote) { g.voisine?.remove(); g.voisine = poserVoisine(g, cote); }
+  bouger(g, cote * (g.el.offsetWidth + ECART), 'transform .18s ease-out');   // la voisine prend la place de la page
+  // puis la vraie page s'affiche à cet endroit, identique à la voisine qui disparaît
+  setTimeout(() => { changer(); nettoyer(g); }, 180);
 }, {passive:true});
-document.addEventListener('touchcancel', () => { remettreEnPlace(glisse?.el); glisse = null; }, {passive:true});
+document.addEventListener('touchcancel', () => { const g = glisse; glisse = null; if (g) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); } }, {passive:true});
 /* Un trait sous la date ou le mois quand ils restent collés en haut pendant le défilement */
 function marquerEntete() {
   const h = $('#view .dayhead, #view .calhead');
@@ -4229,6 +4282,7 @@ document.addEventListener('input', e => {
   } else if (t.id === 'repQ') {
     repQ = t.value; $('#repListe').innerHTML = listeRepertoire();
   } else if (t.dataset.notesAdmin) {
+    ajusterHauteur(t);
     const k = t.dataset.notesAdmin, etat = () => $(`[data-etat="${k}"]`);
     data.notesAdmin[k] = t.value; etat().textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = etat(); if (s) s.textContent = 'Enregistré ✓'; }), 500);
