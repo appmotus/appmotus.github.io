@@ -115,7 +115,7 @@ textarea[data-notes-admin]{overflow:hidden;resize:none}   /* le cadre suit la lo
 .calhead.colle.sans-trait{box-shadow:none}
 .icon-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .dayhead-t{flex:1;min-width:0}
-.dayhead h1{font-size:min(1.5rem,calc((100vw - 140px) / 12));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* « Dimanche 27 septembre » tient sur une ligne : l'en-tête garde la même hauteur d'un jour à l'autre */
+.dayhead h1{font-size:min(1.5rem,calc((100vw - 160px) / 12));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* « Dimanche 27 septembre » tient sur une ligne : l'en-tête garde la même hauteur d'un jour à l'autre */
 .dayhead .eyebrow{white-space:nowrap}
 .eyebrow .link{padding:0;font:inherit;font-weight:600}
 
@@ -204,6 +204,10 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .mois-grille button:disabled{opacity:.35}
 .mois-grille button small{display:block;min-height:1.1em;margin-top:2px;font-size:.72rem;font-weight:600;color:var(--accent)}
 .mois-grille button.on small{color:inherit}
+.jours-grille .cday.on,.jours-grille .cday.on.today{box-shadow:inset 0 0 0 2px var(--text);font-weight:700}
+.dayhead h1 .titre-mois{max-width:100%}
+.dayhead .titre-mois .tm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dayhead .titre-mois .tm-fl{width:14px;height:14px}
 .mois-cadre{position:relative;overflow:hidden;touch-action:pan-y}
 /* la fenêtre s'ouvre juste sous le mois (--haut), par-dessus le reste de l'en-tête */
 dialog.en-haut{margin:0 auto;top:var(--haut,0px);bottom:auto;border-radius:0 0 22px 22px;max-height:calc(100dvh - var(--haut,0px) - 12px)}
@@ -224,7 +228,6 @@ dialog.en-haut .dlg-f{padding-bottom:12px}
 .cday .has{position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.55}
 /* Coin plié : note personnelle ce jour-là, assez grand pour se voir d'un coup d'œil */
 .cday .nt{position:absolute;top:0;right:0;border-style:solid;border-width:0 13px 13px 0;border-color:transparent var(--accent) transparent transparent}
-.cday.today .nt{border-right-color:currentColor}
 /* Filtre : la couleur du jour reste au centre, encadrée par la couleur du filtre (fin liseré pour séparer deux teintes proches) */
 .cal .cday.hit{box-shadow:inset 0 0 0 2.5px var(--fc)}
 .cal.filtre .cday.today{font-weight:800;text-decoration:underline;text-underline-offset:3px}   /* à ne pas confondre avec un cadre */
@@ -238,8 +241,31 @@ nav.tabs button .badge-nav{position:absolute;top:0;left:calc(50% + 6px);min-widt
 .choix-case em{font-style:normal;color:var(--muted)}
 .champ-recherche{position:relative;margin:0 0 12px}
 mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
-.champ-recherche input{padding-left:40px}
-.champ-recherche svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linecap:round;pointer-events:none}
+.champ-recherche input{padding-left:40px;padding-right:42px}
+.champ-recherche>svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linecap:round;pointer-events:none}
+/* La croix efface le texte et annule la recherche ; elle n'apparaît que s'il y a du texte (celle du navigateur est masquée) */
+.champ-recherche .croix{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:none;color:var(--muted);display:grid;place-items:center;padding:0}
+.champ-recherche .croix svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.champ-recherche input:placeholder-shown~.croix{display:none}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
+/* Version d'essai : un bandeau discret en haut de chaque page ; le toucher rappelle les engagements */
+.bandeau-essai{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:0;border:0;border-top:env(safe-area-inset-top) solid var(--bg);padding:7px 16px;background:var(--accent);color:var(--on-accent);font:inherit;font-size:.8rem;font-weight:700;letter-spacing:.01em}
+.bandeau-essai svg,.essai .dlg-h svg{flex:none;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bandeau-essai+.wrap{padding-top:10px}
+/* La fenêtre des engagements : en-tête de la couleur de l'app, chaque engagement dans son cadre, encadré une fois coché */
+.essai .dlg-h{background:var(--accent);border-bottom:0}
+.essai .dlg-h h2{display:flex;align-items:center;gap:8px;color:var(--on-accent);font-size:1.05rem}
+.essai .dlg-h svg{width:20px;height:20px}
+.essai-intro{margin:14px 0 12px;font-weight:600;color:var(--brand)}
+.essai .choix-case{background:var(--surface);border:1.5px solid transparent;border-radius:13px;padding:10px 12px;margin-bottom:8px}
+.essai .choix-case:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.engagements{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.engagements li{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;background:var(--surface);border-radius:13px;padding:10px 12px}
+.engagements svg{flex:none;width:20px;height:20px;margin-top:1px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Quotidien : une émotion ou une note balayée vers la gauche découvre « Supprimer », comme sur l'iPhone */
+.entries li.balaye{position:relative;overflow:hidden;border-radius:12px}
+.entries li.balaye .entry{position:relative;z-index:1;background:var(--surface)}
+.suppr-ligne{position:absolute;inset:0;border:0;border-radius:12px;background:var(--rouge-txt);color:var(--bg);font:inherit;font-weight:600;font-size:.88rem;display:flex;align-items:center;justify-content:flex-end;padding:0 20px}
 /* Balayage : la page suit le doigt (transform posé par le script) ; ce qui sort de l'écran ne fait pas défiler la page en largeur (.wrap) */
 /* Vue liste */
 /* Liste continue du Journal : le nom de chaque mois entre deux traits */
@@ -413,6 +439,7 @@ b.off{color:var(--rouge-txt)}
 <section id="lock" hidden></section>
 
 <div id="app" hidden>
+  <button type="button" class="bandeau-essai" data-act="voirEngagements"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg>Version d’essai · Voir mes engagements</button>
   <main class="wrap" id="view"></main>
   <nav class="tabs" aria-label="Navigation"><div class="in" id="tabs"></div></nav>
 </div>
@@ -496,10 +523,18 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 32;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 23;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:605, cache:594, envoyes:8.9, ecrits:2.1};   // en millions, même script, même moment
+const APP_VERSION = 33;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 24;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:618, cache:606, envoyes:9.3, ecrits:2.1};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
+const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
+const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
+const ENGAGEMENTS = [
+  'Ne pas en parler autour de moi.',
+  'Ne pas la diffuser sans l’accord de l’administrateur (contact dans Paramètres › Nous contacter).',
+  'Sauvegarder régulièrement mes données : même si c’est peu probable, des pertes de données sont possibles (Paramètres › Sauvegarde).',
+  'Faire remonter à l’administrateur les anomalies rencontrées et mes idées d’amélioration (Paramètres › Nous contacter).',
+];
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
   therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données et à recevoir les envois de vos clients : il leur est transmis une fois leur demande acceptée. Un code vous sera envoyé pour le confirmer.',
@@ -1176,7 +1211,7 @@ async function openJournal(id, pw, init) {
   if (data.role === 'therapeute') await ensureKeys(); else await saveNow();
   navigator.storage?.persist?.();
   showApp();
-  if (!await exigerRgpd()) return;
+  if (!await exigerRgpd() || !await exigerEssai()) return;
   pushProfile(); flushStats(); assurerLienCourt(); synchroCanaux(true); ensureSecours(pw).then(ok => ok && exigerMail());
 }
 
@@ -1278,6 +1313,36 @@ function exigerRgpd() {
       busy = false; D.oncancel = null; D.close(); envoyerConsentement(); resolve(true);
     };
     busy = true;   // le temps de lire la politique, sans que l'app se verrouille
+    D.showModal();
+  });
+}
+/* Version d'essai : chaque compte s'engage une fois, case par case, à la connexion ou à la création du compte.
+   L'accord est gardé dans le journal chiffré de l'appareil (rien n'est envoyé au serveur). Refuser déconnecte, sans toucher aux notes. */
+function exigerEssai() {
+  if (data.essai?.version === ESSAI_VERSION) return Promise.resolve(true);
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="esForm" class="essai">
+      <div class="dlg-h"><h2>${ico('info', '')}Version d’essai</h2></div>
+      <div class="dlg-b">
+        <p class="essai-intro">${ESSAI_INTRO}</p>
+        ${ENGAGEMENTS.map(t => `<label class="choix-case"><input type="checkbox"><span>${t}</span></label>`).join('')}
+        <p class="small muted" id="esAide" style="margin:4px 0 0">Cochez chaque engagement pour continuer.</p>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="esNon">Se déconnecter</button><button class="btn primary" id="esOui" disabled>J’accepte</button></div>
+    </form>`;
+    D.onclose = null;
+    D.oncancel = e => e.preventDefault();
+    $('#esForm').onchange = () => { const ok = [...D.querySelectorAll('#esForm input')].every(c => c.checked); $('#esOui').disabled = !ok; $('#esAide').hidden = ok; };
+    $('#esNon').onclick = async () => { busy = false; D.oncancel = null; D.close(); await lock(); resolve(false); };
+    $('#esForm').onsubmit = async e => {
+      e.preventDefault();
+      if ($('#esOui').disabled) return;
+      data.essai = {version:ESSAI_VERSION, date:new Date().toISOString()};
+      await saveNow();
+      busy = false; D.oncancel = null; D.close(); resolve(true);
+    };
+    busy = true;   // le temps de lire, sans que l'app se verrouille
     D.showModal();
   });
 }
@@ -1678,7 +1743,7 @@ async function boot() {
     VKEY = vaultKey(s.id); key = s.key; salt = fromB64(v.salt); data = defaults(JSON.parse(dec.decode(pt)));
   } catch { await forgetKey(); return showLock(); }
   showApp();
-  if (await exigerRgpd()) syncSession();
+  if (await exigerRgpd() && await exigerEssai()) syncSession();
 }
 /* En arrière-plan : reprend la connexion au serveur. Sans internet, le journal reste simplement ouvert. */
 async function syncSession() {
@@ -1804,8 +1869,11 @@ const ICO = {
   filtre:'<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/><path d="M8 9h5M8 12h3"/>',
   oeilBarre:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
+  croix:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>', coche:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
 };
 const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
+/* Champ de recherche : la loupe, et une croix qui efface le texte et annule la recherche */
+const champRecherche = (id, val, ph, style = '') => `<div class="champ-recherche"${style ? ` style="${style}"` : ''}>${ico('loupe', '')}<input type="search" id="${id}" value="${esc(val)}" placeholder="${ph}" aria-label="${ph}" autocapitalize="none" enterkeyhint="search"><button type="button" class="croix" data-act="effacerRecherche" aria-label="Effacer la recherche">${ico('croix', '')}</button></div>`;
 const TABN = {day:'Quotidien', cal:'Journal', clients:'Clients', rep:'Répertoire', admin:'Admin', set:'Paramètres'};
 function renderNav() {
   const tabs = data.role === 'therapeute' ? ['clients', 'rep', 'set'] : ['day', 'cal', 'rep', 'set'];
@@ -1821,6 +1889,7 @@ function render(keepScroll) {
   markTabs();
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
   if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = Infinity; entJ.deploye = false; }
+  ligneOuverte = null;   // une ligne ouverte pour être supprimée disparaît avec l'ancienne page
   entJ.y = Math.max(0, scrollY); entetesJournal();
   if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();
   listeAPlacer = false;
@@ -1853,7 +1922,7 @@ function vDay() {
   <div class="dayhead">
     <div class="dayhead-t">
       <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : dj.getFullYear()}${isT ? '' : ' · <button class="link" data-act="goToday">Revenir à aujourd’hui</button>'}</div>
-      <h1>${JOURS[dj.getDay()]} ${dj.getDate()} ${MOIS[dj.getMonth()]}</h1>
+      <h1><button class="titre-mois" data-act="choisirJour" aria-label="Choisir un autre jour"><span class="tm">${JOURS[dj.getDay()]} ${dj.getDate()} ${MOIS[dj.getMonth()]}</span>${ico('ch', 'tm-fl')}</button></h1>
     </div>
     <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
     <button class="icon-btn" data-act="nextDay" aria-label="Jour suivant" ${isT ? 'disabled' : ''}>›</button>
@@ -2054,7 +2123,7 @@ function vCal() {
   </div></div>
   <div id="enteteJ">
   ${segJ}
-  ${calMode === 'list' ? `<div class="champ-recherche">${ico('loupe', '')}<input type="search" id="calQ" value="${esc(calQ)}" placeholder="Rechercher dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search"></div>` : ''}
+  ${calMode === 'list' ? champRecherche('calQ', calQ, 'Rechercher dans toutes les notes') : ''}
   <div id="filtreJ" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>${filterCard}</div>
   </div>
   <div id="listeMois" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>
@@ -2116,7 +2185,7 @@ function vRep() {
     <h2>Clef de communication émotionnelle</h2>
     <p style="margin:8px 0 0">« Je me sens <i>[adjectif précis]</i> parce que <i>[explication rationnelle]</i>. »</p>
   </section>
-  <div class="champ-recherche">${ico('loupe', '')}<input type="search" id="repQ" value="${esc(repQ)}" placeholder="Rechercher une émotion" aria-label="Rechercher une émotion" autocapitalize="none" enterkeyhint="search"></div>
+  ${champRecherche('repQ', repQ, 'Rechercher une émotion')}
   <div id="repListe">${listeRepertoire()}</div>
   <p class="small muted" style="text-align:center">Source : Liberté pour Aimer — libertepouraimer.com</p>`;
 }
@@ -2405,7 +2474,7 @@ function pageInstaller() {
 }
 
 /* Nous contacter : le message part depuis la messagerie de l'utilisateur, vers l'adresse de Motus */
-const CONTACT_MAIL = '';   // adresse de contact de Motus, à renseigner (aussi dans la politique de confidentialité)
+const CONTACT_MAIL = 'motus.app@outlook.fr';   // adresse de contact de Motus (aussi dans la politique de confidentialité)
 const SUJETS_CONTACT = ['Une question', 'Signaler un problème', 'Une suggestion', 'Mes données personnelles', 'Autre chose'];
 function pageContact() {
   return `<section class="card">
@@ -3163,7 +3232,7 @@ function vClients() {
   </section>` : ''}
   <section class="card">
     <div class="card-h"><h2>Clients actuels</h2><span class="count">${actuels.length}</span></div>
-    ${tous.length > 5 ? '<input type="search" id="cliSearch" placeholder="Rechercher un client" aria-label="Rechercher un client" style="margin-bottom:10px">' : ''}
+    ${tous.length > 5 ? champRecherche('cliSearch', '', 'Rechercher un client', 'margin-bottom:10px') : ''}
     ${actuels.length ? actuels.map(ligneClient).join('') : '<p class="empty">Aucun client pour l’instant. Envoyez votre lien d’invitation : la fiche se crée quand votre client vous rejoint.</p>'}
     <button class="btn block" data-act="newClient">+ Ajouter un client à la main</button>
   </section>
@@ -3327,7 +3396,7 @@ function vAdmin() {
     <div class="card-h"><h2>Liste des comptes</h2><span class="count">${list.length}</span></div>
     <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Utilisateurs'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
       `<button class="chip neutre ${adm.filtre === k ? 'on' : ''}" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
-    <input type="search" id="admSearch" placeholder="Rechercher : nom, code, identifiant" aria-label="Rechercher un compte" style="margin-bottom:10px">
+    ${champRecherche('admSearch', '', 'Rechercher : nom, code, identifiant', 'margin-bottom:10px')}
     ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
   </section>`;
 }
@@ -4056,7 +4125,26 @@ const ACT = {
     const d = ensureDay(cur), c = t.dataset.c;
     d.color = d.color === c ? null : c;
     document.querySelectorAll('.colbtn').forEach(b => { const on = b.dataset.c === d.color; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    const w = $(`#view .week .w[data-k="${cur}"]`);   // la frise de la semaine prend aussitôt la nouvelle couleur
+    if (w) { w.classList.remove(...COL); if (d.color) w.classList.add(d.color); }
     save();
+  },
+  choisirJour: () => choisirMois(true),
+  supprimerLigne: t => proposerSuppression(t.closest('li')),
+  effacerRecherche: t => { const i = t.parentNode.querySelector('input'); i.value = ''; i.dispatchEvent(new Event('input', {bubbles:true})); i.blur(); },
+  voirEngagements: () => {
+    const D = $('#codeDlg'), e = data?.essai;
+    D.innerHTML = `<form method="dialog" class="essai">
+      <div class="dlg-h"><h2>${ico('info', '')}Version d’essai</h2></div>
+      <div class="dlg-b">
+        <p class="essai-intro">${ESSAI_INTRO}</p>
+        <ul class="engagements">${ENGAGEMENTS.map(t => `<li>${ico('coche', '')}<span>${t}</span></li>`).join('')}</ul>
+        ${e?.date ? `<p class="small muted" style="margin:12px 0 0">Engagements acceptés le ${fmtFR(ymd(new Date(e.date)))}.</p>` : ''}
+      </div>
+      <div class="dlg-f"><button class="btn primary">Fermer</button></div>
+    </form>`;
+    D.onclose = null;
+    D.showModal();
   },
   newEntry: () => openEntry(null),
   editEntry: t => openEntry(t.dataset.id),
@@ -4309,6 +4397,95 @@ document.addEventListener('touchend', e => {
   setTimeout(() => { changer(); nettoyer(g); }, 180);
 }, {passive:true});
 document.addEventListener('touchcancel', () => { const g = glisse; glisse = null; if (g) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); } }, {passive:true});
+/* Quotidien : une émotion ou une note balayée vers la gauche découvre « Supprimer », comme sur l'iPhone ; un geste long
+   va directement à la confirmation. Mêmes règles de geste que ci-dessus. Un appui ailleurs, ou un balayage vers la droite, referme. */
+let ligne = null, ligneOuverte = null, avalerClic = 0;
+const LARG_SUPPR = 96;   // largeur découverte du bouton « Supprimer »
+const entreeDe = li => li.querySelector('.entry');
+function placerLigne(li, x, transition = 'none') { const e = entreeDe(li); e.style.transition = transition; e.style.transform = x ? `translateX(${x}px)` : ''; }
+function ouvrirLigne(li) {
+  if (!li.querySelector('.suppr-ligne')) {
+    li.classList.add('balaye');
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'suppr-ligne'; b.dataset.act = 'supprimerLigne'; b.textContent = 'Supprimer';
+    li.prepend(b);
+  }
+}
+function fermerLigne(li = ligneOuverte) {
+  if (!li) return;
+  if (li === ligneOuverte) ligneOuverte = null;
+  placerLigne(li, 0, 'transform .2s ease-out');
+  setTimeout(() => { if (ligneOuverte !== li) { li.classList.remove('balaye'); li.querySelector('.suppr-ligne')?.remove(); entreeDe(li).style.transition = ''; } }, 220);
+}
+document.addEventListener('touchstart', e => {
+  ligne = null;
+  if ($('dialog[open]')) return;   // la fenêtre de confirmation est ouverte : la ligne attend la réponse
+  const li = view === 'day' && !src && e.touches.length === 1 && e.target.closest('#view .entries li');
+  if (ligneOuverte && li !== ligneOuverte) { fermerLigne(); avalerClic = Date.now(); }   // l'appui qui referme ne fait rien d'autre
+  if (!li || !li.querySelector('button.entry') || texteSelectionne() || e.target.closest('.suppr-ligne')) return;
+  ligne = {li, x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, base:li === ligneOuverte ? -LARG_SUPPR : 0};
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  const l = ligne;
+  if (!l || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - l.x, dy = e.touches[0].clientY - l.y;
+  if (!l.sens && Math.hypot(dx, dy) > 12) l.sens = Date.now() - l.t > 450 ? 'selection' : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+  if (l.sens !== 'h') return;
+  if (texteSelectionne()) { ligne = null; return l.base ? placerLigne(l.li, -LARG_SUPPR, 'transform .2s ease-out') : fermerLigne(l.li); }
+  if (e.cancelable) e.preventDefault();
+  ouvrirLigne(l.li);
+  const x = l.base + dx;
+  placerLigne(l.li, x > 0 ? x / 4 : x);   // vers la droite, la ligne résiste
+}, {passive:false});
+document.addEventListener('touchend', e => {
+  const l = ligne;
+  if (!l) return;
+  ligne = null;
+  if (l.sens !== 'h') return;
+  avalerClic = Date.now();
+  const p = e.changedTouches[0], dx = p.clientX - l.x, dy = p.clientY - l.y, dt = Date.now() - l.t, x = l.base + dx;
+  const vif = dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
+  if (x < -entreeDe(l.li).offsetWidth * .55) {   // geste long : la confirmation tout de suite
+    ligneOuverte = l.li; placerLigne(l.li, -LARG_SUPPR, 'transform .18s ease-out'); return proposerSuppression(l.li);
+  }
+  const ouvrir = dx < 0 ? vif || x <= -LARG_SUPPR / 2 : !vif && x <= -LARG_SUPPR / 2;
+  if (ouvrir) { ligneOuverte = l.li; placerLigne(l.li, -LARG_SUPPR, 'transform .18s ease-out'); }
+  else fermerLigne(l.li);
+}, {passive:true});
+document.addEventListener('touchcancel', () => { const l = ligne; ligne = null; if (l && l.li !== ligneOuverte) fermerLigne(l.li); }, {passive:true});
+// tant qu'une ligne est ouverte, un appui sert seulement à la refermer (sauf sur « Supprimer »)
+document.addEventListener('click', e => {
+  if (e.target.closest('.suppr-ligne, dialog')) return;
+  if (ligneOuverte || Date.now() - avalerClic < 400) { e.stopPropagation(); e.preventDefault(); fermerLigne(); }
+}, true);
+async function proposerSuppression(li) {
+  const b = li && entreeDe(li);
+  if (!b) return;
+  const note = b.dataset.act === 'editNote', id = b.dataset.id, txt = b.querySelector('.txt')?.textContent.trim() || '';
+  const ok = await confirmerAction({titre:note ? 'Supprimer cette note personnelle ?' : 'Supprimer cette émotion ?',
+    texte:`${esc(b.querySelector('.meta')?.textContent || '')}<br>« ${esc(txt.length > 140 ? txt.slice(0, 140) + '…' : txt)} »`, bouton:'Supprimer'});
+  if (!ok) return fermerLigne(li);
+  const d = ensureDay(cur);
+  if (note) d.notes = dayNotes(d).filter(x => x.id !== id); else d.entries = d.entries.filter(x => x.id !== id);
+  ligneOuverte = null; save(); render(true); toast(note ? 'Note supprimée' : 'Émotion supprimée');
+}
+/* Fenêtre Annuler / Confirmer de l'app, à la place de la boîte du navigateur */
+function confirmerAction({titre, texte = '', bouton = 'Confirmer'}) {
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="caForm">
+      <div class="dlg-h"><h2>${esc(titre)}</h2></div>
+      ${texte ? `<div class="dlg-b"><p class="small muted" style="margin:0">${texte}</p></div>` : ''}
+      <div class="dlg-f"><button type="button" class="btn" id="caNon">Annuler</button><button class="btn danger">${bouton}</button></div>
+    </form>`;
+    let fait = false;
+    const fin = ok => { if (fait) return; fait = true; D.onclose = null; if (D.open) D.close(); resolve(ok); };
+    $('#caNon').onclick = () => fin(false);
+    $('#caForm').onsubmit = e => { e.preventDefault(); fin(true); };
+    D.onclose = () => fin(false);
+    D.showModal();
+  });
+}
 /* Un trait sous la date ou le mois quand ils restent collés en haut pendant le défilement */
 function marquerEntete() {
   const h = $('#view .dayhead, #view .calhead');
@@ -4343,50 +4520,78 @@ function basEntete() {
 }
 /* Journal : choisir n'importe quel mois passé, en quelques gestes. La fenêtre s'ouvre juste sous le mois, par-dessus le reste
    de l'en-tête. L'année se change avec ‹ › ou en balayant les mois (l'année voisine suit le doigt), puis on touche le mois.
-   Sous chaque mois, le nombre de notes : émotions, notes personnelles et synthèses ; les mois à venir sont grisés. */
+   Sous chaque mois, le nombre de notes : émotions, notes personnelles et synthèses ; les mois à venir sont grisés.
+   Quotidien (jour) : la même fenêtre s'ouvre sous la date, sur les jours du mois affiché avec leur couleur ; ‹ › ou un balayage
+   changent de mois, et toucher le nom du mois montre les douze mois de l'année, comme dans le Journal. */
 const MOIS_COURTS = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-function choisirMois() {
-  const now = new Date(), ny = now.getFullYear(), nm = now.getMonth(), compte = {};
+function choisirMois(jour = false) {
+  const now = new Date(), ny = now.getFullYear(), nm = now.getMonth(), t = today(), compte = {};
   for (const [k, d] of Object.entries(D().days)) {
     const n = (d.entries?.length || 0) + dayNotes(d).length + (d.synth?.trim() ? 1 : 0);
     if (n) { const c = `${+k.slice(0, 4)}-${+k.slice(5, 7) - 1}`; compte[c] = (compte[c] || 0) + n; }
   }
+  const ref = jour ? parse(cur) : new Date(calY, calM, 1), selY = ref.getFullYear(), selM = ref.getMonth();   // le mois affiché
   const cree = !src && data.account?.cree_le ? new Date(data.account.cree_le).getFullYear() : ny;
-  const premiere = Math.min(cree, calY, ...Object.keys(compte).map(x => +x.split('-')[0]));   // on ne remonte pas avant le tout premier mois utile
-  let an = calY;
+  const premiere = Math.min(cree, selY, ...Object.keys(compte).map(x => +x.split('-')[0]));   // on ne remonte pas avant le tout premier mois utile
+  let an = selY, mo = selM, niveau = jour ? 'jours' : 'mois';
   const boutons = y => MOIS_COURTS.map((n, m) => {
     const c = compte[`${y}-${m}`];
-    return `<button type="button" data-m="${m}" class="${y === calY && m === calM ? 'on' : ''}" ${y === ny && m > nm ? 'disabled' : ''} aria-label="${MOIS[m]} ${y}${c ? `, ${c} note${c > 1 ? 's' : ''}` : ''}">${n}<small>${c || ''}</small></button>`;
+    return `<button type="button" data-m="${m}" class="${y === selY && m === selM ? 'on' : ''}" ${y === ny && m > nm ? 'disabled' : ''} aria-label="${MOIS[m]} ${y}${c ? `, ${c} note${c > 1 ? 's' : ''}` : ''}">${n}<small>${c || ''}</small></button>`;
   }).join('');
-  const grille = () => {
-    $('#anChoix').textContent = an;
-    $('#anMoins').disabled = an <= premiere; $('#anPlus').disabled = an >= ny;
-    $('#moisGrille').innerHTML = boutons(an);
+  // les jours du mois, sur six semaines comme le calendrier : la fenêtre garde sa hauteur d'un mois à l'autre
+  const jours = (y, m) => {
+    const off = (new Date(y, m, 1).getDay() + 6) % 7, nj = new Date(y, m + 1, 0).getDate();
+    let h = ['L','M','M','J','V','S','D'].map(w => `<div class="wd">${w}</div>`).join('') + '<div class="cvide"></div>'.repeat(off);
+    for (let i = 1; i <= nj; i++) {
+      const k = ymd(new Date(y, m, i)), d = D().days[k];
+      h += `<button type="button" class="cday ${d?.color || ''} ${k === t ? 'today' : ''} ${k === cur ? 'on' : ''} ${k > t ? 'future' : ''}" data-k="${k}" ${k > t ? 'disabled' : ''} aria-label="${fmtLong(k)}">${i}${d?.entries?.length ? '<span class="has"></span>' : ''}${dayNotes(d).length ? '<span class="nt"></span>' : ''}</button>`;
+    }
+    return h + '<div class="cvide"></div>'.repeat(42 - off - nj);
   };
-  const dlg = $('#codeDlg'), h = $('#view .calhead');
+  const contenu = (y, m) => niveau === 'jours' ? jours(y, m) : boutons(y);
+  const decaler = pas => { if (niveau === 'mois') return [an + pas, mo]; const m = mo + pas; return m < 0 ? [an - 1, 11] : m > 11 ? [an + 1, 0] : [an, m]; };
+  const grille = () => {
+    const j = niveau === 'jours';
+    $('#anChoix').innerHTML = j ? `<button type="button" class="titre-mois" id="versMois" aria-label="Voir les mois de ${an}"><span class="tm">${MOIS[mo]} ${an}</span>${ico('ch', 'tm-fl')}</button>` : an;
+    $('#anMoins').disabled = j ? an <= premiere && mo === 0 : an <= premiere;
+    $('#anPlus').disabled = j ? an === ny && mo >= nm : an >= ny;
+    $('#anMoins').setAttribute('aria-label', j ? 'Mois précédent' : 'Année précédente');
+    $('#anPlus').setAttribute('aria-label', j ? 'Mois suivant' : 'Année suivante');
+    $('#moisGrille').className = j ? 'cal jours-grille' : 'mois-grille';
+    $('#moisGrille').innerHTML = contenu(an, mo);
+    $('#moisAide').textContent = j ? 'Touchez le nom du mois pour voir toute l’année.' : 'Sous chaque mois, le nombre de notes enregistrées : émotions, notes personnelles et synthèses.';
+  };
+  const dlg = $('#codeDlg'), h = $('#view .calhead, #view .dayhead');
   dlg.innerHTML = `<form method="dialog" id="moisForm">
     <div class="dlg-b">
-      <div class="annee-nav"><button type="button" class="icon-btn" id="anMoins" aria-label="Année précédente">‹</button><b id="anChoix"></b><button type="button" class="icon-btn" id="anPlus" aria-label="Année suivante">›</button></div>
-      <div class="mois-cadre" id="moisCadre"><div class="mois-grille" id="moisGrille"></div></div>
-      <p class="small muted" style="margin:10px 0 0">Sous chaque mois, le nombre de notes enregistrées : émotions, notes personnelles et synthèses.</p>
+      <div class="annee-nav"><button type="button" class="icon-btn" id="anMoins">‹</button><b id="anChoix"></b><button type="button" class="icon-btn" id="anPlus">›</button></div>
+      <div class="mois-cadre" id="moisCadre"><div id="moisGrille"></div></div>
+      <p class="small muted" id="moisAide" style="margin:10px 0 0"></p>
     </div>
-    <div class="dlg-f"><button type="button" class="btn" id="moisNon">Annuler</button><button type="button" class="btn primary" id="moisActuel">Ce mois-ci</button></div>
+    <div class="dlg-f"><button type="button" class="btn" id="moisNon">Annuler</button><button type="button" class="btn primary" id="moisActuel">${jour ? 'Aujourd’hui' : 'Ce mois-ci'}</button></div>
   </form>`;
   dlg.classList.add('en-haut');
   dlg.style.setProperty('--haut', `${Math.round(h ? h.getBoundingClientRect().bottom : 0)}px`);
   dlg.addEventListener('close', () => { dlg.classList.remove('en-haut'); dlg.onclick = null; }, {once:true});
   const aller = (y, m) => { dlg.close(); calY = y; calM = m; listeAPlacer = true; render(true); };
-  $('#anMoins').onclick = () => { an--; grille(); };
-  $('#anPlus').onclick = () => { an++; grille(); };
-  $('#moisGrille').onclick = e => { const b = e.target.closest('button[data-m]'); if (b && !b.disabled) aller(an, +b.dataset.m); };
+  const allerJour = k => { dlg.close(); cur = k; render(); };
+  $('#anMoins').onclick = () => { [an, mo] = decaler(-1); grille(); };
+  $('#anPlus').onclick = () => { [an, mo] = decaler(1); grille(); };
+  $('#anChoix').onclick = e => { if (e.target.closest('#versMois')) { niveau = 'mois'; grille(); } };
+  $('#moisGrille').onclick = e => {
+    const b = e.target.closest('button'); if (!b || b.disabled) return;
+    if (b.dataset.k) allerJour(b.dataset.k);                          // un jour : on y va
+    else if (jour) { mo = +b.dataset.m; niveau = 'jours'; grille(); }  // Quotidien : un mois montre ses jours
+    else aller(an, +b.dataset.m);
+  };
   $('#moisNon').onclick = () => dlg.close();
-  $('#moisActuel').onclick = () => aller(ny, nm);
+  $('#moisActuel').onclick = () => jour ? allerJour(t) : aller(ny, nm);
   dlg.onclick = e => { if (e.target === dlg) dlg.close(); };   // un appui à côté de la fenêtre la ferme
 
-  /* Balayer les mois change d'année, comme ailleurs dans l'app : l'année voisine arrive à côté en suivant le doigt */
+  /* Balayer la grille change de mois (jours) ou d'année (mois), comme ailleurs dans l'app : la voisine arrive à côté en suivant le doigt */
   const cadre = $('#moisCadre');
   let g = null;
-  const possible = dx => dx > 0 ? an > premiere : an < ny;
+  const possible = dx => !$(dx > 0 ? '#anMoins' : '#anPlus').disabled;
   const placer = (x, transition = 'none') => { for (const e of [$('#moisGrille'), g?.voisine]) if (e) { e.style.transition = transition; e.style.transform = x ? `translateX(${x}px)` : ''; } };
   const finir = () => { g?.voisine?.remove(); const gr = $('#moisGrille'); gr.style.transition = ''; gr.style.transform = ''; g = null; };
   cadre.addEventListener('touchstart', e => { g = e.touches.length === 1 && !texteSelectionne() ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, cote:0, voisine:null} : null; }, {passive:true});
@@ -4401,7 +4606,7 @@ function choisirMois() {
       g.voisine?.remove(); g.voisine = null; g.cote = cote;
       if (cote) {
         const gr = $('#moisGrille'), v = document.createElement('div');
-        v.className = 'mois-grille'; v.setAttribute('aria-hidden', 'true'); v.innerHTML = boutons(an - cote);
+        v.className = gr.className; v.setAttribute('aria-hidden', 'true'); v.innerHTML = contenu(...decaler(-cote));
         Object.assign(v.style, {position:'absolute', top:'0', left:`${-cote * (gr.offsetWidth + 16)}px`, width:`${gr.offsetWidth}px`, pointerEvents:'none'});
         cadre.appendChild(v); g.voisine = v;
       }
@@ -4415,7 +4620,7 @@ function choisirMois() {
     if (!va) { placer(0, 'transform .2s ease-out'); setTimeout(finir, 220); return; }
     const cote = Math.sign(dx);
     placer(cote * ($('#moisGrille').offsetWidth + 16), 'transform .18s ease-out');
-    setTimeout(() => { an -= cote; grille(); finir(); }, 180);
+    setTimeout(() => { [an, mo] = decaler(-cote); grille(); finir(); }, 180);
   }, {passive:true});
 
   grille();
