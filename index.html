@@ -60,7 +60,7 @@ h1,h2,h3{margin:0;color:var(--brand);line-height:1.2}
 h1{font-size:1.55rem;font-weight:600;letter-spacing:-.02em}
 h2{font-size:.97rem;font-weight:600}
 [hidden]{display:none!important}
-.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 96px)}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 96px);overflow-x:clip}
 .card{background:var(--surface);border-radius:var(--r);padding:15px 16px;margin:0 0 12px}
 .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
 .count{color:var(--muted);font-size:.8rem;font-weight:500}
@@ -78,6 +78,10 @@ input[type=time],input[type=date]{display:block;min-width:0;max-width:100%}
 }
 input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
 textarea{resize:vertical;min-height:84px}
+.mdp-champ{position:relative;display:block}
+.mdp-champ input{padding-right:48px}
+.oeil{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:42px;height:42px;border:0;background:none;color:var(--muted);display:grid;place-items:center;padding:0}
+.oeil svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .btn{border:1px solid var(--border);background:var(--bg);border-radius:15px;padding:11px 16px;font-weight:600}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .btn.danger{background:transparent;border-color:var(--rouge-txt);color:var(--rouge-txt)}
@@ -183,8 +187,8 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .cday.today.jaune{background:var(--jaune);color:var(--sur-jaune);box-shadow:none}
 .cday.future{opacity:.35}
 .cday .has{position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.55}
-/* Coin plié : note personnelle ce jour-là */
-.cday .nt{position:absolute;top:0;right:0;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--accent) transparent transparent}
+/* Coin plié : note personnelle ce jour-là, assez grand pour se voir d'un coup d'œil */
+.cday .nt{position:absolute;top:0;right:0;border-style:solid;border-width:0 13px 13px 0;border-color:transparent var(--accent) transparent transparent}
 .cday.today .nt{border-right-color:currentColor}
 /* Filtre : la couleur du jour reste au centre, encadrée par la couleur du filtre (fin liseré pour séparer deux teintes proches) */
 .cal .cday.hit{box-shadow:inset 0 0 0 2.5px var(--fc)}
@@ -198,15 +202,16 @@ nav.tabs button .badge-nav{position:absolute;top:0;left:calc(50% + 6px);min-widt
 .choix-case{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-size:.92rem}
 .choix-case em{font-style:normal;color:var(--muted)}
 .champ-recherche{position:relative;margin:0 0 12px}
+mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .champ-recherche input{padding-left:40px}
 .champ-recherche svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linecap:round;pointer-events:none}
-/* Changement de mois en glissant : un léger mouvement montre d'où vient le nouveau mois */
-@keyframes depuisDroite{from{opacity:.35;transform:translateX(28px)}to{opacity:1;transform:none}}
-@keyframes depuisGauche{from{opacity:.35;transform:translateX(-28px)}to{opacity:1;transform:none}}
-#view.vers-g,.week.vers-g{animation:depuisDroite .2s ease-out}
-#view.vers-d,.week.vers-d{animation:depuisGauche .2s ease-out}
-@media (prefers-reduced-motion:reduce){#view.vers-g,#view.vers-d,.week.vers-g,.week.vers-d{animation:none}}
+/* Balayage : la page suit le doigt (transform posé par le script) ; ce qui sort de l'écran ne fait pas défiler la page en largeur (.wrap) */
 /* Vue liste */
+/* Liste continue du Journal : le nom de chaque mois entre deux traits */
+.mois-sep{display:flex;align-items:center;gap:12px;margin:22px 2px 12px;font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.mois-sep::before,.mois-sep::after{content:'';flex:1;height:1px;background:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.mois-vide{margin:0 4px 6px;text-align:center}
+.fin-liste{height:55vh}
 .lhead{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;padding:0 0 8px;text-align:left;font-weight:600;color:var(--brand)}
 .colpill{flex:none;border-radius:99px;padding:3px 10px;font-size:.75rem;font-weight:600;background:var(--bg);color:var(--muted)}
 .colpill.vert{background:var(--vert-bg);color:var(--vert-fg)}.colpill.jaune{background:var(--jaune-bg);color:var(--jaune-fg)}.colpill.rouge{background:var(--rouge-bg);color:var(--rouge-fg)}
@@ -225,6 +230,7 @@ nav.tabs button .badge-nav{position:absolute;top:0;left:calc(50% + 6px);min-widt
 .stat:last-child{border-bottom:0}
 button.stat{width:100%;background:none;border-width:0 0 1px;color:inherit;font:inherit;font-size:.92rem;text-align:left;padding:9px 0;align-items:baseline}
 button.stat b{text-align:right}
+.stat .masque{font-weight:500;font-style:italic}
 
 /* Répertoire */
 .rep h3{color:color-mix(in srgb,var(--fc) 85%,var(--text));font-size:1.02rem;font-weight:600}
@@ -342,7 +348,7 @@ a{color:var(--accent)}
 table.stats{width:100%;border-collapse:collapse;margin-top:10px;font-size:.9rem}
 table.stats th,table.stats td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right}
 table.stats th[scope=row],table.stats thead th:first-child{text-align:left;font-weight:500}
-table.stats thead th{font-size:.75rem;color:var(--muted);font-weight:500}
+table.stats thead th{font-size:.75rem;color:var(--muted);font-weight:500;white-space:nowrap}
 table.stats td{font-variant-numeric:tabular-nums;font-weight:600}
 table.stats tr:last-child>*{border-bottom:0}
 .lim-g{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}
@@ -455,13 +461,13 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 28;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 21;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:480, cache:470, envoyes:8, ecrits:1.8};   // en millions, même script, même moment
-const RGPD_VERSION = 2; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
+const APP_VERSION = 29;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 22;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:537, cache:526, envoyes:8.7, ecrits:1.9};   // en millions, même script, même moment
+const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
-  client:'Votre mail sert uniquement à récupérer votre compte, à effacer vos données ou à confirmer une modification de vos informations. Un code vous sera envoyé pour le confirmer.',
-  therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données, à confirmer une modification de vos informations et à recevoir les envois de vos clients : il leur est transmis une fois leur demande acceptée. Un code vous sera envoyé pour le confirmer.',
+  client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
+  therapeute:'Votre mail professionnel sert à récupérer votre compte, à effacer vos données et à recevoir les envois de vos clients : il leur est transmis une fois leur demande acceptée. Un code vous sera envoyé pour le confirmer.',
 };
 const MAIL_NOM = {client:'Mail de récupération', therapeute:'Mail professionnel'};
 let toastTimer;
@@ -547,6 +553,8 @@ function defaults(d = {}) {
   d.clients ||= {};               // thérapeute : fiches clients (coordonnées + données reçues)
   for (const c of Object.values(d.clients)) { if (!('uid' in c)) c.uid = c.id; c.contact ||= {}; c.note ??= ''; c.statut ||= 'actuel'; if (c.numero) c.numero = codeU(c.numero); }
   if (d.account?.numero) d.account.numero = codeU(d.account.numero);
+  // admin : notes en trois catégories ; celles de la version 27, d'un seul bloc, deviennent des notes libres
+  d.notesAdmin = typeof d.notesAdmin === 'string' ? {maj:'', plusTard:'', libres:d.notesAdmin} : Object.assign({maj:'', plusTard:'', libres:''}, d.notesAdmin);
   d.thera = Object.assign({type:'', tel:'', email:'', adresse:''}, d.thera);
   d.pending ||= {notes:0, envois:0};   // compteurs pas encore transmis au serveur (hors connexion)
   return d;
@@ -554,7 +562,7 @@ function defaults(d = {}) {
 const getDay = k => D().days[k] || {color:null, synth:'', entries:[]};
 const ensureDay = k => (data.days[k] ||= {color:null, synth:'', entries:[]});
 const dayUsed = d => !!(d && (d.color || d.synth?.trim() || d.entries?.length));   // partie partageable d'une journée
-const dayNotes = d => d?.notes || [];   // notes personnelles : ni envoyées au thérapeute, ni exportées
+const dayNotes = d => d?.notes || [];   // notes personnelles : envoyées au thérapeute seulement si l'utilisateur le choisit ; jamais dans son propre Excel
 const dayFilled = d => dayUsed(d) || dayNotes(d).length > 0;
 const initiale = s => { const c = [...String(s || '').trim()][0]; return c ? c.toUpperCase() + '.' : ''; };
 /* Aide-mémoire du mail de récupération, gardé uniquement dans le journal chiffré de l'appareil */
@@ -675,14 +683,15 @@ function demoApi() {
       const P = Object.values(x.comptes).map(c => c.profil), U = Object.values(x.usage);
       const recent = (iso, n) => !!iso && Date.now() - new Date(iso) < n * 864e5;
       const sum = (f, n) => U.filter(u => !n || u.jour >= addDays(today(), 1 - n)).reduce((a, u) => a + u[f], 0);
-      const act = f => ({j7:sum(f, 7), j30:sum(f, 30), total:sum(f)});
+      const act = f => ({j1:sum(f, 1), j7:sum(f, 7), j30:sum(f, 30), total:sum(f)});
+      const duJour = iso => !!iso && ymd(new Date(iso)) === today();
       const sem = {};
       U.filter(u => u.jour >= addDays(today(), -55)).forEach(u => {
         const s = sem[mondayOf(u.jour)] ||= {semaine:mondayOf(u.jour), connexions:0, notes:0, envois:0};
         s.connexions += u.connexions; s.notes += u.notes; s.envois += u.envois;
       });
       return {comptes:P.length, clients:P.filter(p => p.role === 'client').length, therapeutes:P.filter(p => p.role === 'therapeute').length,
-        desactives:P.filter(p => !p.actif).length, inscrits_7j:P.filter(p => recent(p.cree_le, 7)).length, inscrits_30j:P.filter(p => recent(p.cree_le, 30)).length,
+        desactives:P.filter(p => !p.actif).length, inscrits_1j:P.filter(p => duJour(p.cree_le)).length, actifs_1j:P.filter(p => duJour(p.derniere_connexion)).length, inscrits_7j:P.filter(p => recent(p.cree_le, 7)).length, inscrits_30j:P.filter(p => recent(p.cree_le, 30)).length,
         actifs_7j:P.filter(p => recent(p.derniere_connexion, 7)).length, actifs_30j:P.filter(p => recent(p.derniere_connexion, 30)).length,
         activite:{connexions:act('connexions'), notes:act('notes'), envois:act('envois')},
         semaines:Object.values(sem).sort((a, b) => a.semaine.localeCompare(b.semaine))};
@@ -733,23 +742,17 @@ function demoApi() {
         const c = x.recup[session.id];
         if (!c?.effacer || c.effacer !== b.code) throw apiErr('code');
         delete c.effacer;
-      } else if (b.action === 'identite_demande' || b.action === 'identite_confirme') {
-        const c = x.recup[session.id];
-        if (id && x.comptes[id] && id !== session.id) throw apiErr('pris');
-        if (b.action === 'identite_demande') {
-          if (!c?.email || c.email !== e) throw apiErr('adresse');
-          c.identite = '123456';
-        } else {
-          if (!c?.identite || c.identite !== b.code) throw apiErr('code');
-          delete c.identite;
-          if (id && id !== session.id) {   // les comptes de démonstration sont rangés sous leur identifiant
-            const ancien = session.id;
-            x.comptes[id] = x.comptes[ancien]; delete x.comptes[ancien];
-            Object.assign(x.comptes[id].profil, {id, identifiant:id});
-            x.recup[id] = c; delete x.recup[ancien];
-            for (const u of Object.values(x.usage || {})) if (u.id === ancien) u.id = id;
-            session.id = id;
-          }
+      } else if (b.action === 'identite_mdp') {
+        if (!ID_RE.test(id)) throw apiErr('identifiant');
+        if (x.comptes[id] && id !== session.id) throw apiErr('pris');
+        if (x.comptes[session.id].mdp !== await hash(b.mot_de_passe)) throw apiErr('mot_de_passe');
+        if (id !== session.id) {   // les comptes de démonstration sont rangés sous leur identifiant
+          const ancien = session.id;
+          x.comptes[id] = x.comptes[ancien]; delete x.comptes[ancien];
+          Object.assign(x.comptes[id].profil, {id, identifiant:id});
+          if (x.recup[ancien]) { x.recup[id] = x.recup[ancien]; delete x.recup[ancien]; }
+          for (const u of Object.values(x.usage || {})) if (u.id === ancien) u.id = id;
+          session.id = id;
         }
       } else if (b.action === 'supprimer_demande') {
         const c = x.recup[session.id];
@@ -810,6 +813,8 @@ const NAV_OK = 'journal-emotions.navigateur-accepte', INVIT = 'journal-emotions.
 let recupNotes = false;
 const surIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const surAndroid = () => /Android/.test(navigator.userAgent);
+/* Samsung Internet : Google Play Protect bloque parfois l'app qu'il crée (« Appli non sécurisée bloquée ») ; avec Chrome, l'installation se passe bien */
+const surSamsung = () => surAndroid() && /SamsungBrowser/.test(navigator.userAgent);
 const appInstallee = () => navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches || document.referrer.startsWith('android-app://');
 const doitInstaller = () => (surIOS() || surAndroid()) && !appInstallee() && !localStorage.getItem(NAV_OK);
 const notesIci = () => Object.keys(localStorage).some(k => k.startsWith('journal-emotions.donnees.') || k.startsWith('journal-emotions.vault.'));
@@ -838,6 +843,13 @@ function blocInstall() {
     <h2>Ouvrez d’abord votre navigateur</h2>
     <p class="small muted" style="margin:6px 0 0">Motus ne peut pas s’installer depuis cette app. Ouvrez le menu (⋯ ou ⋮), puis « Ouvrir dans ${surIOS() ? 'Safari' : 'le navigateur'} ». Si cette option n’existe pas, copiez le lien et collez-le dans votre navigateur.</p>
     <button class="btn block" data-act="copierLien">Copier le lien</button>
+  </section>`;
+  if (surSamsung()) return `<section class="card">
+    <h2>Installez Motus avec Chrome</h2>
+    <p class="small muted" style="margin:6px 0 0">Depuis Samsung Internet, Google Play Protect bloque parfois l’installation des apps web comme Motus (« Appli non sécurisée bloquée »). Avec Chrome, l’installation se fait normalement.</p>
+    <a class="btn primary block" href="intent://${esc(location.host + location.pathname)}#Intent;scheme=https;package=com.android.chrome;end">Ouvrir dans Chrome</a>
+    ${pendingInv ? '<p class="small muted" style="margin:8px 0 0">Copiez d’abord votre invitation : vous la collerez ensuite dans Motus.</p>' : ''}
+    <button class="btn block" data-act="copierLien">${pendingInv ? 'Copier l’invitation' : 'Copier le lien'}</button>
   </section>`;
   return `<section class="card">
     <h2>Installer Motus</h2>
@@ -1452,8 +1464,7 @@ async function confirmerEffacement() {
   catch { toast('Mot de passe incorrect : rien n’a été effacé.'); return false; }
 }
 
-/* Nom, prénom ou identifiant : un code envoyé au mail de récupération confirme la modification */
-const CODE_IDENTITE = {titre:'Confirmer la modification', demande:'identite_demande', confirme:'identite_confirme', avertissement:'Saisir ce code enregistre vos nouvelles informations.', bouton:'Confirmer', classe:'primary'};
+/* Nom, prénom ou identifiant : le mot de passe confirme la modification (ACT.modifierIdentite) */
 function formIdentite() {
   return new Promise(resolve => {
     const D = $('#codeDlg'), p = data.profile, a = data.account;
@@ -1716,6 +1727,7 @@ window.addEventListener('pagehide', () => { if (key) saveNow(); });
 
 /* ───────────── Application ───────────── */
 let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null, calQ = '', menuScroll = 0;
+let listeAPlacer = false;      // Journal en liste : amener la page au mois calM au prochain affichage
 let src = null;               // thérapeute : données d'un client consultées en lecture seule
 let pendingInv = null;        // invitation reçue via un lien (#inv=…), proposée après déverrouillage
 const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
@@ -1752,6 +1764,9 @@ const ICO = {
   share:'<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v14"/>', loupe:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4.5-4.5"/>',
   link:'<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/>', ch:'<path d="m9 5 7 7-7 7"/>',
   sablier:'<path d="M6.5 3h11M6.5 21h11"/><path d="M8 3v3.5L12 12l4-5.5V3M8 21v-3.5L12 12l4 5.5V21"/>',
+  oeil:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+  importer:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14l3 3 3-3"/>',
+  oeilBarre:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
 };
 const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
@@ -1770,6 +1785,8 @@ function render(keepScroll) {
   markTabs();
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
   if (!keepScroll) window.scrollTo(0, 0);
+  if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();
+  listeAPlacer = false;
   marquerEntete();
   montrerAvis();   // une fin de suivi ou une acceptation reçue s'affiche quelle que soit la page
 }
@@ -1891,14 +1908,19 @@ function vCal() {
   cells += '<div class="cvide"></div>'.repeat(42 - off - nDays);   // toujours six semaines : la page ne bouge pas d'un mois à l'autre
   occ.sort((a, b) => (a.k + a.e.time).localeCompare(b.k + b.e.time));
   occN.sort((a, b) => (a.k + a.n.time).localeCompare(b.k + b.n.time));
-  const dayName = k => `${JOURS[parse(k).getDay()]} ${parse(k).getDate()} ${MOIS[calM]}`;
+  const dayName = k => `${JOURS[parse(k).getDay()]} ${parse(k).getDate()} ${MOIS[parse(k).getMonth()]}`;
+  // liste continue : les émotions précises proposées par le filtre viennent de tous les mois
+  if (calMode === 'list' && fam) {
+    for (const w in fWords) delete fWords[w];
+    for (const d of Object.values(D().days)) for (const e of d.entries || []) for (const x of e.emos) if (x.f === calF) fWords[x.w] = (fWords[x.w] || 0) + 1;
+  }
 
   const filterCard = `
   <section class="card">
     <h2>Afficher</h2>
     <div class="chips" style="margin-top:10px">
       <button class="chip neutre ${!filtre ? 'on' : ''}" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
-      ${src ? '' : `<button class="chip neutre ${notesOnly ? 'on' : ''}" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>`}
+      <button class="chip neutre ${notesOnly ? 'on' : ''}" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>
       <button class="chip neutre ${synthOnly ? 'on' : ''}" data-act="calFilter" data-f="synth" aria-pressed="${synthOnly}">Synthèses</button>
       ${FAM.map(f => `<button class="chip ${calF === f.k ? 'on' : ''}" style="--fc:${f.c}" data-act="calFilter" data-f="${f.k}" aria-pressed="${calF === f.k}">${f.n}</button>`).join('')}
     </div>
@@ -1910,7 +1932,7 @@ function vCal() {
   const legend = COL.map(c => `<span><i style="background:var(--${c})"></i>${esc(D().labels[c])}</span>`).join('')
     + (filtre ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : notesOnly ? 'Note personnelle' : 'Synthèse')}</span>`
       : '<span><i style="background:currentColor;width:4px;height:4px"></i>émotions notées</span>'
-        + (src ? '' : '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 10px 10px 0;border-color:transparent var(--accent) transparent transparent"></i>note personnelle</span>'));
+        + '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--accent) transparent transparent"></i>note personnelle</span>');
   const occCard = fam ? `
   <section class="card">
     <h2>${esc(calW || fam.n)} · ${MOIS[calM]}</h2>
@@ -1936,11 +1958,21 @@ function vCal() {
       <div class="txt note-txt">${esc(n.text)}</div>
     </button>`).join('')}
   </section>`;
-  /* Vue liste : les journées du mois, de la plus récente à la plus ancienne */
-  function listCards() {
+  /* Vue liste : une seule liste continue, du mois en cours au plus ancien, chaque mois séparé par son nom.
+     L'en-tête suit le mois affiché pendant le défilement (majEnteteListe) ; flèches et balayage mènent au mois voulu (allerAuMois). */
+  function listeContinue() {
+    const now = new Date(), ks = Object.keys(D().days).sort(), cree = !src && data.account?.cree_le ? ymd(new Date(data.account.cree_le)) : '';
+    let premier = [ks[0], cree, ymd(new Date(calY, calM, 1))].filter(Boolean).sort()[0];
+    const fin = parse(premier), mois = [];
+    for (let y = now.getFullYear(), m = now.getMonth(); y > fin.getFullYear() || (y === fin.getFullYear() && m >= fin.getMonth()); m === 0 ? (m = 11, y--) : m--) mois.push([y, m]);
+    return mois.map(([y, m]) => `<div class="mois-sep" data-mois="${y}-${m}"><span>${MOIS[m]} ${y}</span></div>
+      ${listCards(y, m) || `<p class="small muted mois-vide">${filtre ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[m]}.</p>`}`).join('')
+      + '<div class="fin-liste"></div>';   // de la place en bas : le mois le plus ancien peut lui aussi remonter sous l'en-tête
+  }
+  function listCards(y, m) {
     const out = [];
-    for (let i = nDays; i >= 1; i--) {
-      const k = ymd(new Date(calY, calM, i)), d = D().days[k];
+    for (let i = new Date(y, m + 1, 0).getDate(); i >= 1; i--) {
+      const k = ymd(new Date(y, m, i)), d = D().days[k];
       if (!d || k > t) continue;
       const ents = (d.entries || []).filter(e => !fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW)));
       const lignes = [
@@ -1955,7 +1987,7 @@ function vCal() {
         ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${esc(d.synth)}</div></button>` : ''}
       </section>`);
     }
-    return out.join('') || `<section class="card"><p class="empty">${filtre ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[calM]}.</p></section>`;
+    return out.join('');
   }
   const noted = cnt.vert + cnt.jaune + cnt.rouge;
   const topW = Object.entries(words).sort((a,b) => b[1]-a[1]).slice(0, 5);
@@ -1977,7 +2009,7 @@ function vCal() {
   </div>
   ${calMode === 'list' ? `<div class="champ-recherche">${ico('loupe', '')}<input type="search" id="calQ" value="${esc(calQ)}" placeholder="Rechercher dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search"></div>` : ''}
   <div id="listeMois" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>${filterCard}
-  ${calMode === 'list' ? listCards() : `<section class="card">
+  ${calMode === 'list' ? listeContinue() : `<section class="card">
     <div class="cal ${filtre ? 'filtre' : ''}">${cells}</div>
     <div class="legend">${legend}</div>
   </section>
@@ -1987,7 +2019,7 @@ function vCal() {
     ${COL.map(c => `<div class="stat"><span>${esc(D().labels[c])}</span><b>${cnt[c]}</b></div>`).join('')}
     <div class="stat"><span class="muted">Jours sans couleur</span><b class="muted">${pastDays - noted}</b></div>
     <div class="stat"><span class="muted">Émotions notées</span><b class="muted">${nEntries}</b></div>
-    ${src ? '' : `<div class="stat"><span class="muted">Notes personnelles</span><b class="muted">${nNotes}</b></div>`}
+    <div class="stat"><span class="muted">Notes personnelles</span><b class="muted">${nNotes}</b></div>
   </section>
   ${famS.length ? `<section class="card">
     <h2>Émotions du mois</h2>
@@ -2026,7 +2058,8 @@ function resultatsRecherche(q) {
     : `<section class="card"><p class="empty">Aucun résultat pour « ${esc(q.trim())} ».</p></section>`;
 }
 
-/* — Vue Répertoire — */
+/* — Vue Répertoire — avec une recherche, sans tenir compte des accents ni des majuscules */
+let repQ = '';
 function vRep() {
   return `
   <div style="margin:4px 0 16px"><div class="eyebrow">Identifier et nommer mon état intérieur</div><h1>Le répertoire des émotions</h1></div>
@@ -2034,13 +2067,25 @@ function vRep() {
     <h2>Clef de communication émotionnelle</h2>
     <p style="margin:8px 0 0">« Je me sens <i>[adjectif précis]</i> parce que <i>[explication rationnelle]</i>. »</p>
   </section>
-  ${FAM.map((f, n) => `
-  <section class="card rep" style="--fc:${f.c}">
+  <div class="champ-recherche">${ico('loupe', '')}<input type="search" id="repQ" value="${esc(repQ)}" placeholder="Rechercher une émotion" aria-label="Rechercher une émotion" autocapitalize="none" enterkeyhint="search"></div>
+  <div id="repListe">${listeRepertoire()}</div>
+  <p class="small muted" style="text-align:center">Source : Liberté pour Aimer — libertepouraimer.com</p>`;
+}
+function listeRepertoire() {
+  const q = sansAccent(repQ.trim());
+  // les mots trouvés sont surlignés ; une lettre accentuée compte pour une seule lettre, les positions se correspondent
+  const marque = w => { const i = q ? sansAccent(w).indexOf(q) : -1; return i < 0 ? esc(w) : `${esc(w.slice(0, i))}<mark>${esc(w.slice(i, i + q.length))}</mark>${esc(w.slice(i + q.length))}`; };
+  const blocs = FAM.map((f, n) => {
+    const tous = INT.map(([k, name]) => [name, f[k]]);
+    const trouves = q ? tous.map(([name, ws]) => [name, ws.filter(w => sansAccent(w).includes(q))]).filter(([, ws]) => ws.length) : tous;
+    if (q && !trouves.length && !sansAccent(f.n).includes(q)) return '';
+    return `<section class="card rep" style="--fc:${f.c}">
     <h3>${n+1}. ${f.n}</h3>
     <div class="besoin">« Je me sens… » — ${f.b}</div>
-    ${INT.map(([k, name]) => `<p class="lvl"><b>${name}</b>${f[k].join(', ')}</p>`).join('')}
-  </section>`).join('')}
-  <p class="small muted" style="text-align:center">Source : Liberté pour Aimer — libertepouraimer.com</p>`;
+    ${(trouves.length ? trouves : tous).map(([name, ws]) => `<p class="lvl"><b>${name}</b>${ws.map(marque).join(', ')}</p>`).join('')}
+  </section>`;
+  }).join('');
+  return blocs || `<section class="card"><p class="empty">Aucune émotion ne correspond à « ${esc(repQ.trim())} ».</p></section>`;
 }
 
 /* — Vue Paramètres : un menu, puis une page par sujet — */
@@ -2082,12 +2127,14 @@ function vSetMenu() {
   ])}
   ${groupeMenu('Mes données', [
     ligneMenu('save', 'Sauvegarde', {val:data.backupAt ? fmtFR(ymd(new Date(data.backupAt))) : 'Aucune', page:'sauvegarde'}),
+    ...(th ? [] : [ligneMenu('importer', 'Importer des notes', {page:'importer'})]),
     ligneMenu('trash', 'Effacer mes données', {page:'effacer', cl:'dan'}),
     ligneMenu('usersup', 'Supprimer mon compte', {page:'supprimer', cl:'dan'}),
   ])}
   ${groupeMenu('Application', [
     ligneMenu('sun', 'Apparence', {val:THEME_N[themeChoisi()], page:'apparence'}),
     ligneMenu('share', 'Partager Motus', {act:'partagerApp'}),
+    ...(CONTACT_MAIL ? [ligneMenu('mail', 'Nous contacter', {page:'contact'})] : []),   // visible dès que l'adresse de contact est renseignée
     ...(appInstallee() ? [] : [ligneMenu('phone', 'Installer sur l’écran d’accueil', {page:'installer'})]),
     `<a class="ro" href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">${ico('shield')}<span class="rn">Confidentialité</span>${ico('ch', 'rc')}</a>`,
     ligneMenu('info', 'À propos', {val:`Version ${APP_VERSION}`, page:'apropos'}),
@@ -2105,7 +2152,7 @@ function pageInfos() {
     <div class="stat"><span class="muted">Compte créé le</span><b>${a.cree_le ? fmtFR(ymd(new Date(a.cree_le))) : '—'}</b></div>
     ${session ? '' : '<p class="small muted" style="margin:8px 0 0">Hors connexion : le compte sera synchronisé à la prochaine connexion avec internet.</p>'}
     <button class="btn block" data-act="modifierIdentite">Modifier mon nom ou mon identifiant</button>
-    <p class="small muted" style="margin:6px 0 0">Un code envoyé à votre ${th ? 'mail professionnel' : 'mail de récupération'} confirme la modification.${th ? '' : ' Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.'}</p>
+    <p class="small muted" style="margin:6px 0 0">Votre mot de passe vous sera demandé pour confirmer.${th ? '' : ' Votre nom figure dans l’export Excel et dans les envois à votre thérapeute.'}</p>
   </section>
   ${pageMail()}`;
 }
@@ -2175,11 +2222,11 @@ function pagePartage() {
     ${peutEnvoyer ? '' : '<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>'}
     <p class="small muted" style="margin:6px 0 0"><b>Vos notes personnelles n’y figurent pas.</b> <b>Le fichier n’est pas chiffré :</b> vos émotions y sont lisibles.${peutEnvoyer ? '' : ` ${aideEnvoi('')}`}</p>
   </section>
-  ${th || Object.keys(data.sent).length ? `<section class="card">
+  <section class="card">
     <h2>Mes semaines</h2>
     <p class="small muted" style="margin:4px 0 6px">Ce que vous avez envoyé à votre thérapeute, de la semaine en cours à la création de votre compte. Touchez une semaine pour la choisir.</p>
     <div id="listeSem">${listeSemaines()}</div>
-  </section>` : ''}`;
+  </section>`;
 }
 /* Semaines du lundi au dimanche, de la création du compte à aujourd'hui, avec la date de leur envoi.
    Les périodes choisies à la main peuvent ne couvrir qu'une partie d'une semaine : on compte jour par jour. */
@@ -2308,6 +2355,137 @@ function pageInstaller() {
   </section>`;
 }
 
+/* Nous contacter : le message part depuis la messagerie de l'utilisateur, vers l'adresse de Motus */
+const CONTACT_MAIL = '';   // adresse de contact de Motus, à renseigner (aussi dans la politique de confidentialité)
+const SUJETS_CONTACT = ['Une question', 'Signaler un problème', 'Une suggestion', 'Mes données personnelles', 'Autre chose'];
+function pageContact() {
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Une question, un problème, une idée ? Écrivez-nous : le message part depuis votre messagerie.</p>
+    <label class="label" for="ctSujet">Sujet</label>
+    <select id="ctSujet">${SUJETS_CONTACT.map(s => `<option>${s}</option>`).join('')}</select>
+    <label class="label" for="ctMsg">Votre message</label>
+    <textarea id="ctMsg" rows="7" placeholder="Écrivez votre message…"></textarea>
+    <p class="small muted" style="margin:6px 0 0">Pour vous répondre plus facilement, votre code utilisateur et la version de l’app sont ajoutés au message. N’y mettez pas le contenu de vos notes.</p>
+    <button class="btn primary block" data-act="envoyerContact" ${CONTACT_MAIL ? '' : 'disabled'}>Écrire à Motus</button>
+    ${CONTACT_MAIL ? `<p class="small muted" style="margin:8px 0 0;text-align:center">${esc(CONTACT_MAIL)}</p>` : '<p class="small muted" style="margin:8px 0 0">L’adresse de contact sera bientôt disponible.</p>'}
+  </section>`;
+}
+/* ───────────── Importer des notes depuis un texte (.txt ou texte collé) ─────────────
+   Chaque note commence par une ligne qui donne sa date, souvent avec l'heure et le lieu :
+   « Lundi 26 octobre 2026, 8h40 — Lyon », « 26/10/2026 18:15, au bureau », « 2026-10-31 16:00 (Annecy) »,
+   « Mardi 27 octobre à 21h » (année déduite), « 1er novembre, 10h ». Une ligne qui ne contient qu'une heure (« 22h10 »,
+   « 12h30 Lieu : restaurant ») ouvre une nouvelle note le même jour. Les lignes suivantes forment le texte de la note.
+   Le lieu est une ville s'il figure dans la liste des communes, sinon un lieu (« bureau », « chez mes parents »). */
+const RE_JOUR = '(?:(?:lun|mar|mer|jeu|ven|sam|dim)[a-z]*\\.?,?\\s+)?';
+const RE_MOIS = '(janv(?:ier)?|f[ée]vr?(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept?(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)\\.?';
+const MOIS_TXT = [['janv',0],['jan',0],['fev',1],['mars',2],['avr',3],['mai',4],['juin',5],['juil',6],['aou',7],['sep',8],['oct',9],['nov',10],['dec',11]];
+const RE_DATES = [
+  [new RegExp(`^\\s*${RE_JOUR}(\\d{4})-(\\d{1,2})-(\\d{1,2})(?!\\d)`, 'i'), m => [+m[1], +m[2] - 1, +m[3]]],
+  [new RegExp(`^\\s*${RE_JOUR}(\\d{1,2})[/.-](\\d{1,2})[/.-](\\d{4}|\\d{2})(?!\\d)`, 'i'), m => [m[3].length === 2 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1]]],
+  [new RegExp(`^\\s*${RE_JOUR}(\\d{1,2})(?:er)?\\s+${RE_MOIS}(?:\\s+(\\d{4}))?(?![\\p{L}\\d])`, 'iu'), m => [m[3] ? +m[3] : null, MOIS_TXT.find(([p]) => sansAccent(m[2]).startsWith(p))[1], +m[1]]],
+];
+const heureTxt = (h, mn = '0') => +h < 24 && +mn < 60 ? `${pad(+h)}:${pad(+mn)}` : '';
+function lieuTxt(reste, estVille) {
+  const brut = reste.replace(/^[\s,;:–—-]+/, '').trim();
+  let s = brut.replace(/^\((.+)\)$/, '$1').replace(/^lieu\s*:\s*/i, '').trim();
+  if (!s) return {};
+  if (s.length > 60 || /[.!?…]$|[.!?]\s/.test(s)) return {texte:brut};   // une phrase : c'est déjà le texte de la note
+  const v = s.replace(/^(?:à|a)\s+/i, '');
+  if (estVille(v)) return {ville:v};
+  return {lieu:s.replace(/^(?:au|à la|à l['’]|à)\s+/i, '').replace(/^(?:à l['’])/i, '')};
+}
+function lireNotesTexte(texte, estVille) {
+  const notes = [], t = today();
+  let n = null, annee = null, ignore = 0, sansHeure = 0;
+  const finir = () => {
+    if (!n) return;
+    n.text = n.lignes.join('\n').replace(/\n{3,}/g, '\n\n').trim(); delete n.lignes;
+    if (n.text) { if (!n.time) { n.time = '12:00'; sansHeure++; } notes.push(n); }
+    n = null;
+  };
+  for (const ligne of String(texte).replace(/\r\n?/g, '\n').split('\n')) {
+    let m, ymj = null;
+    for (const [re, f] of RE_DATES) if ((m = ligne.match(re))) { ymj = f(m); break; }
+    if (ymj) {
+      let [y, mo, j] = ymj;
+      if (y == null) { y = annee ?? +t.slice(0, 4); if (ymd(new Date(y, mo, j)) > t) y--; }   // année absente : celle des notes précédentes
+      const dt = new Date(y, mo, j);
+      if (dt.getMonth() === mo && dt.getDate() === j) {
+        finir(); annee = y;
+        let reste = ligne.slice(m[0].length), time = '';
+        const h = reste.match(/^[\s,;:–—-]*(?:à|a|vers)?\s*(\d{1,2})\s*[hH:]\s*(\d{2})?(?!\d)/);
+        if (h && (time = heureTxt(h[1], h[2]))) reste = reste.slice(h[0].length);
+        const l = lieuTxt(reste, estVille);
+        n = {k:ymd(dt), time, ville:l.ville || '', lieu:l.lieu || '', lignes:l.texte ? [l.texte] : []};
+        continue;
+      }
+    }
+    // une heure seule (éventuellement suivie du lieu) : nouvelle note le même jour
+    const h = n && ligne.match(/^\s*(?:à|a|vers)?\s*(\d{1,2})\s*[hH:]\s*(\d{2})?(?!\d)(.*)$/);
+    if (h && heureTxt(h[1], h[2]) && /^\s*$|^\s*(?:[,;:–—(-]|lieu\b|à\s|a\s|au\s|chez\s)/i.test(h[3])) {
+      const l = lieuTxt(h[3], estVille);
+      if (n.time || n.lignes.join('').trim()) { const k = n.k; finir(); n = {k, time:'', ville:'', lieu:'', lignes:[]}; }
+      Object.assign(n, {time:heureTxt(h[1], h[2]), ville:l.ville || n.ville, lieu:l.lieu || n.lieu});
+      if (l.texte) n.lignes.push(l.texte);
+      continue;
+    }
+    if (n) n.lignes.push(ligne); else if (ligne.trim()) ignore++;
+  }
+  finir();
+  return {notes, ignore, sansHeure};
+}
+async function analyserTexte(texte) {
+  if (!String(texte).trim()) return toast('Le texte est vide.');
+  let villes = null;
+  try { const C = await loadCommunes(); villes = new Set(C.n.map(x => sansAccent(x))); } catch {}
+  // sans la liste des communes (hors connexion) : un nom propre court passe pour une ville
+  const estVille = v => villes ? villes.has(sansAccent(v)) : /^\p{Lu}[\p{L}'’ -]{1,40}$/u.test(v) && !/\s\p{Ll}/u.test(v);
+  const r = lireNotesTexte(texte, estVille), D = $('#codeDlg');
+  if (!r.notes.length) {
+    D.innerHTML = `<form method="dialog" id="txForm">
+      <div class="dlg-h"><h2>Aucune note reconnue</h2></div>
+      <div class="dlg-b"><p class="small">Chaque note doit commencer par une ligne qui donne sa date, par exemple :<br>« Lundi 26 octobre 2026, 8h40 — Lyon »<br>« 26/10/2026 18:15 »</p></div>
+      <div class="dlg-f"><button class="btn primary">OK</button></div>
+    </form>`;
+    $('#txForm').onsubmit = e => { e.preventDefault(); D.close(); };
+    return D.showModal();
+  }
+  const deja = x => dayNotes(data.days[x.k]).some(o => o.time === x.time && o.text.trim() === x.text);
+  const nouvelles = r.notes.filter(x => !deja(x)), doublons = r.notes.length - nouvelles.length, ks = r.notes.map(x => x.k).sort();
+  const s = k => k > 1 ? 's' : '';
+  D.innerHTML = `<form method="dialog" id="txForm">
+    <div class="dlg-h"><h2>${r.notes.length} note${s(r.notes.length)} trouvée${s(r.notes.length)}</h2></div>
+    <div class="dlg-b">
+      <p class="small muted" style="margin-top:0">Du ${fmtFR(ks[0])} au ${fmtFR(lastOf(ks))}. Elles seront ajoutées à vos notes personnelles, à leur date et à leur heure.</p>
+      ${r.notes.slice(0, 40).map(x => `<div class="occ"><div class="meta">${fmtLong(x.k)} · ${x.time}${x.ville || x.lieu ? ' · ' + esc([x.ville, x.lieu].filter(Boolean).join(', ')) : ''}${deja(x) ? ' · déjà présente' : ''}</div><div class="txt note-txt">${esc(x.text.length > 140 ? x.text.slice(0, 140) + '…' : x.text)}</div></div>`).join('')}
+      ${r.notes.length > 40 ? `<p class="small muted">… et ${r.notes.length - 40} autre${s(r.notes.length - 40)}.</p>` : ''}
+      ${r.sansHeure ? `<p class="small muted">${r.sansHeure} note${s(r.sansHeure)} sans heure : placée${s(r.sansHeure)} à 12:00.</p>` : ''}
+      ${doublons ? `<p class="small muted">${doublons} note${s(doublons)} déjà dans votre journal : elle${s(doublons)} ne ser${doublons > 1 ? 'ont' : 'a'} pas ajoutée${s(doublons)} une seconde fois.</p>` : ''}
+      ${r.ignore ? `<p class="small muted">Le texte placé avant la première date (${r.ignore} ligne${s(r.ignore)}) n’est pas importé.</p>` : ''}
+    </div>
+    <div class="dlg-f"><button type="button" class="btn" id="txNon">Annuler</button><button class="btn primary" ${nouvelles.length ? '' : 'disabled'}>Importer ${nouvelles.length} note${s(nouvelles.length)}</button></div>
+  </form>`;
+  $('#txNon').onclick = () => D.close();
+  $('#txForm').onsubmit = async e => {
+    e.preventDefault(); D.close();
+    for (const x of nouvelles) (ensureDay(x.k).notes ||= []).push({id:uid(), time:x.time, ville:x.ville, lieu:x.lieu, text:x.text});
+    await saveNow(); render(true);
+    toast(`${nouvelles.length} note${s(nouvelles.length)} importée${s(nouvelles.length)}`);
+  };
+  D.showModal();
+}
+function pageImporter() {
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Vous tenez déjà un journal ailleurs (Notes, un fichier texte) ? Importez-le : chaque note devient une note personnelle, à sa date et à son heure.</p>
+    <p class="small muted" style="margin:8px 0 0">Chaque note doit commencer par une ligne qui donne sa date, et si possible l’heure et le lieu, par exemple :<br>« Lundi 26 octobre 2026, 8h40 — Lyon »<br>« 26/10/2026 18:15, au bureau »<br>Une ligne avec seulement une heure (« 22h10 ») ouvre une nouvelle note le même jour.</p>
+    <button class="btn primary block" data-act="choisirTxt">Choisir un fichier .txt</button>
+    <input type="file" id="txtFile" accept=".txt,text/plain" hidden>
+    <label class="label" for="txtColle">Ou collez votre texte</label>
+    <textarea id="txtColle" rows="6" placeholder="Collez ici le texte de vos notes…"></textarea>
+    <button class="btn block" data-act="analyserCollage">Analyser le texte</button>
+    <p class="small muted" style="margin:8px 0 0">Vous verrez les notes trouvées avant de les importer. Rien ne quitte votre téléphone.</p>
+  </section>`;
+}
 function pageAPropos() {
   return `<section class="card">
     <h2>Motus</h2>
@@ -2329,7 +2507,7 @@ const PAGES_REGLAGES = {
   thera:['Mon thérapeute', therapistCard], partage:['Partage et export', pagePartage], donnees:['Données transmises', pageDonnees], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
   invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
   sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
-  apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos],
+  apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos], contact:['Nous contacter', pageContact], importer:['Importer des notes', pageImporter],
 };
 
 /* ───────────── Lien client ↔ thérapeute (sans serveur) ─────────────
@@ -2792,7 +2970,8 @@ function therapistCard() {
       <div class="stat"><span class="muted">Prénom</span><b>${esc(th.prenom || '—')}</b></div>
       <div class="stat"><span class="muted">Nom</span><b>${esc(th.nom || '—')}</b></div>
       <div class="stat"><span class="muted">Type de thérapie</span><b>${esc(th.type || '—')}</b></div>
-      ${attente ? '' : `<div class="stat"><span class="muted">Mail</span><b style="overflow-wrap:anywhere;text-align:right">${th.email ? `<a href="mailto:${esc(th.email)}">${esc(th.email)}</a>` : '—'}</b></div>
+      ${attente ? ['Mail', 'Téléphone', 'Adresse du cabinet'].map(n => `<div class="stat"><span class="muted">${n}</span><b class="muted masque">Après acceptation</b></div>`).join('')
+      : `<div class="stat"><span class="muted">Mail</span><b style="overflow-wrap:anywhere;text-align:right">${th.email ? `<a href="mailto:${esc(th.email)}">${esc(th.email)}</a>` : '—'}</b></div>
       <div class="stat"><span class="muted">Téléphone</span><b>${th.tel ? `<a href="tel:${esc(th.tel.replace(/\s/g, ''))}">${esc(th.tel)}</a>` : '—'}</b></div>
       <div class="stat"><span class="muted">Adresse du cabinet</span><b style="text-align:right">${esc(th.adresse || '—')}</b></div>`}
       <div class="stat"><span class="muted">Code de sécurité</span><b class="fp">${esc(th.fp)}</b></div>
@@ -3022,15 +3201,18 @@ async function loadAdmin() {
   catch (x) { adm.err = x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Erreur du serveur.'; adm.users ||= []; }
   if (view === 'admin') render(true);
 }
-/* Mes notes : un bloc-notes libre pour l'administrateur, chiffré avec son journal sur cet appareil */
+/* Mes notes : le bloc-notes de l'administrateur, en trois catégories, chiffré avec son journal sur cet appareil */
 let admPage = null, admScroll = 0;
+const NOTES_ADMIN = [['maj', 'À travailler pour la prochaine mise à jour', 'Corrections et demandes à traiter…'], ['plusTard', 'Travaux ultérieurs', 'Idées et chantiers pour plus tard…'], ['libres', 'Notes libres', 'Tout le reste…']];
 function pageNotesAdmin() {
+  const n = data.notesAdmin;
   return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour au tableau de bord">‹</button><h1>Mes notes</h1></div>
-  <section class="card">
-    <p class="small muted" style="margin:0 0 10px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes.</p>
-    <textarea id="admNotesTxt" rows="18" placeholder="Idées, choses à faire, retours des utilisateurs…">${esc(data.notesAdmin || '')}</textarea>
-    <div class="small muted" id="admNotesEtat" style="margin-top:6px;text-align:right">${data.notesAdmin ? 'Enregistré ✓' : ''}</div>
-  </section>`;
+  <p class="small muted" style="margin:0 2px 12px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes. Elles s’enregistrent au fil de la frappe.</p>
+  ${NOTES_ADMIN.map(([k, titre, aide]) => `<section class="card">
+    <h2>${titre}</h2>
+    <textarea data-notes-admin="${k}" rows="7" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
+    <div class="small muted" data-etat="${k}" style="margin-top:6px;text-align:right">${n[k] ? 'Enregistré ✓' : ''}</div>
+  </section>`).join('')}`;
 }
 function vAdmin() {
   if (admPage === 'notes') return pageNotesAdmin();
@@ -3041,7 +3223,8 @@ function vAdmin() {
   data.adminVu = new Date().toISOString(); save();
   const s = adm.stats, a = s?.activite;
   const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
-  const act = (l, o) => `<tr><th scope="row">${l}</th><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
+  const j1 = n => n ?? '—';   // « aujourd'hui » : absent tant que serveur/compteur-du-jour.sql n'est pas exécuté
+  const act = (l, o) => `<tr><th scope="row">${l}</th><td>${j1(o.j1)}</td><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
   const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
     .sort((x, y) => who(x).localeCompare(who(y), 'fr', {sensitivity:'base'}));
   return head
@@ -3051,17 +3234,17 @@ function vAdmin() {
     <h2>Comptes</h2>
     <div class="tiles">${tile(s.comptes, 'au total')}${tile(s.clients, 'utilisateurs')}${tile(s.therapeutes, 'thérapeutes')}${tile(s.desactives, 'désactivés')}</div>
     <table class="stats">
-      <thead><tr><th></th><th>7 jours</th><th>30 jours</th></tr></thead>
+      <thead><tr><th></th><th>Aujourd’hui</th><th>7 jours</th><th>30 jours</th></tr></thead>
       <tbody>
-        <tr><th scope="row">Nouveaux inscrits</th><td>${s.inscrits_7j}</td><td>${s.inscrits_30j}</td></tr>
-        <tr><th scope="row">Comptes actifs</th><td>${s.actifs_7j}</td><td>${s.actifs_30j}</td></tr>
+        <tr><th scope="row">Nouveaux inscrits</th><td>${j1(s.inscrits_1j)}</td><td>${s.inscrits_7j}</td><td>${s.inscrits_30j}</td></tr>
+        <tr><th scope="row">Comptes actifs</th><td>${j1(s.actifs_1j)}</td><td>${s.actifs_7j}</td><td>${s.actifs_30j}</td></tr>
       </tbody>
     </table>
   </section>
   <section class="card">
     <h2>Activité</h2>
     <table class="stats">
-      <thead><tr><th></th><th>7 jours</th><th>30 jours</th><th>Total</th></tr></thead>
+      <thead><tr><th></th><th title="Aujourd’hui">Auj.</th><th>7 jours</th><th>30 jours</th><th>Total</th></tr></thead>
       <tbody>${act('Connexions', a.connexions)}${act('Notes saisies', a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
     </table>
     <p class="small muted" style="margin:8px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
@@ -3185,9 +3368,10 @@ function userRow(u) {
     </div>` : ''}
   </div>`;
 }
+/* Action d'administrateur sur un compte : un code à recopier évite toute erreur de manipulation */
 async function admAction(id, question, run) {
   const u = adm.users.find(x => x.id === id);
-  if (!u || !confirm(question(u))) return;
+  if (!u || !await confirmerCode(question(u))) return;
   try { await run(u); toast('Modification enregistrée'); }
   catch (x) { toast(x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Action impossible'); }
   adm = {...admInit(), filtre:adm.filtre, ouvert:adm.ouvert};
@@ -3463,6 +3647,7 @@ const estLines = (t, w) => t.split('\n').reduce((a, l) => a + Math.max(1, Math.c
 
 function buildXlsx(from, to) {
   const L = D().labels, p = D().profile;
+  const avecNotes = !!src;   // l'Excel du client ne contient pas ses notes personnelles ; celui du thérapeute contient celles qu'il a reçues
   const keys = []; for (let k = from; k <= to; k = addDays(k, 1)) keys.push(k);
   const byTime = d => [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
 
@@ -3490,10 +3675,11 @@ function buildXlsx(from, to) {
     for (let i = 0; i < 7; i++) {
       const k = addDays(mon, i), ref = H[i+1] + r, d = D().days[k];
       if (k < from || k > to) { cells.push(cE(ref, S.off)); continue; }
-      if (!dayUsed(d)) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
+      if (!(avecNotes ? dayFilled(d) : dayUsed(d))) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
       let t = fmtFR(k).slice(0, 5) + (d.color ? ' — ' + L[d.color] : '');
       byTime(d).forEach(e => t += `\n\n${e.time}${where(e) ? ' · ' + where(e) : ''}\n${sentence(e)}`);
       if (d.synth?.trim()) t += `\n\nSYNTHÈSE : ${d.synth.trim()}`;
+      if (avecNotes) dayNotes(d).forEach(n => t += `\n\nNOTE PERSONNELLE ${n.time}${where(n) ? ' · ' + where(n) : ''} :\n${n.text}`);
       lines = Math.max(lines, estLines(t, 34));
       cells.push(cS(ref, cellStyle(d.color), t));
     }
@@ -3532,18 +3718,29 @@ function buildXlsx(from, to) {
     n3++;
   }
   const s3 = sheet({cols:[11,10,18,12,80], rows:r3});
+  const feuilles = [['Tableau d’observation', s1], ['Détail des émotions', s2], ['Synthèses', s3]];
 
-  const names = ['Tableau d’observation', 'Détail des émotions', 'Synthèses'];
-  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  /* Feuille 4, pour le thérapeute : les notes personnelles que le client a choisi de lui transmettre */
+  if (avecNotes) {
+    const h4 = ['Date','Jour','Heure','Ville','Lieu','Note personnelle'];
+    const r4 = [xRow(1, h4.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
+    let n4 = 2;
+    for (const k of keys) for (const n of [...dayNotes(D().days[k])].sort((a, b) => a.time.localeCompare(b.time))) {
+      const vals = [fmtFR(k), JOURS[parse(k).getDay()], n.time, n.ville || '', n.lieu || '', n.text];
+      r4.push(xRow(n4, vals.map((v, i) => cS(colL(i) + n4, S.cell, v)), Math.min(409, Math.max(15, estLines(n.text, 85) * 12 + 4))));
+      n4++;
+    }
+    if (n4 > 2) feuilles.push(['Notes personnelles', sheet({cols:[11,10,7,16,16,80], rows:r4})]);
+  }
+
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', nums = feuilles.map((f, i) => i + 1);
   return zip([
-    {name:'[Content_Types].xml', data: X + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${[1,2,3].map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+    {name:'[Content_Types].xml', data: X + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${nums.map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
     {name:'_rels/.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
-    {name:'xl/workbook.xml', data: X + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${names.map((n, i) => `<sheet name="${xesc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
-    {name:'xl/_rels/workbook.xml.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${[1,2,3].map(i => `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`).join('')}<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/workbook.xml', data: X + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${feuilles.map(([n], i) => `<sheet name="${xesc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${nums.map(i => `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`).join('')}<Relationship Id="rId${feuilles.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
     {name:'xl/styles.xml', data:STYLES},
-    {name:'xl/worksheets/sheet1.xml', data:s1},
-    {name:'xl/worksheets/sheet2.xml', data:s2},
-    {name:'xl/worksheets/sheet3.xml', data:s3},
+    ...feuilles.map(([, data], i) => ({name:`xl/worksheets/sheet${i + 1}.xml`, data})),
   ]);
 }
 
@@ -3669,7 +3866,7 @@ const ACT = {
   sendWeek: () => sendWeek(),
   partagerApp: async () => {
     const url = location.origin + location.pathname;
-    const text = 'Je vous recommande Motus, une app pour noter vos émotions au fil de la journée et les partager avec votre thérapeute. Vos notes restent chiffrées sur votre téléphone.';
+    const text = 'Je vous recommande Motus, une app pour noter vos émotions et vos notes personnelles au fil de la journée, et les partager si vous le souhaitez avec votre thérapeute. Tout reste chiffré sur votre téléphone.';
     busy = true;
     try {
       if (navigator.share) await navigator.share({title:'Motus', text, url});
@@ -3684,15 +3881,30 @@ const ACT = {
   },
   goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
   voirThera: () => { view = 'set'; setPage = 'thera'; render(); synchroCanaux(true); },
+  choisirTxt: () => { busy = true; $('#txtFile').value = ''; $('#txtFile').click(); setTimeout(() => busy = false, 60000); },   // le temps de choisir le fichier, l'app ne se verrouille pas
+  analyserCollage: () => analyserTexte($('#txtColle').value),
+  envoyerContact: () => {
+    const msg = $('#ctMsg').value.trim();
+    if (!msg) return toast('Écrivez votre message.');
+    const a = data.account || {};
+    location.href = lienMail(CONTACT_MAIL, {objet:`Motus — ${$('#ctSujet').value}`, corps:`${msg}\n\n—\n${ROLE_N[data.role]} ${a.numero || ''} · Motus version ${APP_VERSION}`});
+  },
   admNotes: () => { admScroll = scrollY; admPage = 'notes'; render(); },
   admRetour: () => { admPage = null; render(true); window.scrollTo(0, admScroll); },
+  // le mot de passe confirme la modification ; un nouvel identifiant est en plus vérifié et enregistré par le serveur
   modifierIdentite: async () => {
-    const th = data.role === 'therapeute', a = data.account;
-    if (!session) return toast('Une connexion internet est nécessaire pour modifier vos informations.');
-    if (!a.recup || a.recup === 'attente') return toast(`Ajoutez et confirmez d’abord votre ${th ? 'mail professionnel' : 'mail de récupération'}, juste en dessous.`);
+    const a = data.account;
     const v = await formIdentite(); if (!v) return;
     const ancien = a.identifiant, nouveau = v.identifiant !== ancien ? v.identifiant : '';
-    if (!await effacerParCode({...CODE_IDENTITE, extra:{identifiant:nouveau}})) return;
+    if (nouveau && !session) return toast('Une connexion internet est nécessaire pour changer d’identifiant.');
+    const pw = await askCode('Confirmer la modification', {label:'Mot de passe', hint:'Entrez votre mot de passe pour confirmer.'});
+    if (pw == null) return;
+    try { await saveNow(); await openVault(JSON.parse(localStorage.getItem(VKEY)), pw); }
+    catch { return toast('Mot de passe incorrect : rien n’a été modifié.'); }
+    if (nouveau) {
+      try { await API.recup({action:'identite_mdp', mot_de_passe:pw, identifiant:nouveau}); }
+      catch (x) { return toast(EFFACER_ERR[x.code] ? EFFACER_ERR[x.code].replace(' : annulez et', ' :') : x.code === 'mot_de_passe' ? 'Mot de passe incorrect : rien n’a été modifié.' : 'Modification impossible pour le moment.'); }
+    }
     Object.assign(data.profile, {prenom:v.prenom, nom:v.nom});
     if (nouveau) await renommerStockage(ancien, nouveau);
     await saveNow(); pushProfile(); planifierSynchro(); render(true);
@@ -3745,9 +3957,9 @@ const ACT = {
   nextDay: () => { if (cur < today()) { cur = addDays(cur, 1); render(); } },
   goToday: () => { cur = today(); render(); },
   openDay: t => { cur = t.dataset.k; view = 'day'; render(); },
-  calFilter: t => { calF = t.dataset.f || null; calW = null; render(); },
-  calWord: t => { calW = t.dataset.w || null; render(); },
-  calMode: t => { calMode = t.dataset.m; render(); },
+  calFilter: t => { calF = t.dataset.f || null; calW = null; listeAPlacer = true; render(); },
+  calWord: t => { calW = t.dataset.w || null; listeAPlacer = true; render(); },
+  calMode: t => { calMode = t.dataset.m; listeAPlacer = true; render(); },
   // une semaine de la liste devient la période à envoyer ; la semaine en cours va du lundi à aujourd'hui
   choisirSemaine: t => {
     const lun = t.dataset.k, fin = addDays(lun, 6) > today() ? today() : addDays(lun, 6), d = $('#xCustom');
@@ -3759,9 +3971,10 @@ const ACT = {
   xPrevWeek: () => setWeek(-1),
   xNextWeek: () => setWeek(1),
   // changer de mois garde la page au même niveau : la grille fait toujours six semaines
-  prevMonth: () => { if (--calM < 0) { calM = 11; calY--; } render(true); },
-  nextMonth: () => { if (++calM > 11) { calM = 0; calY++; } render(true); },
-  moisEnCours: () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); render(true); },
+  // en liste, la page va au mois voulu (listeAPlacer) ; en calendrier, elle reste au même niveau
+  prevMonth: () => { if (--calM < 0) { calM = 11; calY--; } listeAPlacer = true; render(true); },
+  nextMonth: () => { if (++calM > 11) { calM = 0; calY++; } listeAPlacer = true; render(true); },
+  moisEnCours: () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); listeAPlacer = true; render(true); },
   setColor: t => {
     const d = ensureDay(cur), c = t.dataset.c;
     d.color = d.color === c ? null : c;
@@ -3890,17 +4103,31 @@ const ACT = {
   admFiltre: t => { adm.filtre = t.dataset.f; render(true); },
   admOpen: t => { adm.ouvert = adm.ouvert === t.dataset.id ? null : t.dataset.id; render(true); },
   admActif: t => admAction(t.dataset.id,
-    u => u.actif ? `Désactiver le compte de ${who(u)} ?\n\nIl ne pourra plus se connecter.` : `Réactiver le compte de ${who(u)} ?`,
+    u => u.actif ? {titre:`Désactiver le compte de ${who(u)} ?`, texte:'Cette personne ne pourra plus se connecter, jusqu’à ce que vous réactiviez son compte.', bouton:'Désactiver'}
+      : {titre:`Réactiver le compte de ${who(u)} ?`, texte:'Cette personne pourra de nouveau se connecter.', bouton:'Réactiver'},
     u => API.rpc('admin_activer', {p_id:u.id, p_actif:!u.actif})),
   admType: t => admAction(t.dataset.id,
-    u => `Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'utilisateur'} ?\n\nUn nouveau code utilisateur lui sera attribué.`,
+    u => ({titre:`Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'utilisateur'} ?`, texte:'Un nouveau code utilisateur lui sera attribué ; l’ancien ne sera pas réutilisé.', bouton:'Changer le type'}),
     u => API.rpc('admin_type', {p_id:u.id, p_role:u.role === 'client' ? 'therapeute' : 'client'})),
   admSuppr: t => admAction(t.dataset.id,
-    u => `Supprimer définitivement le compte de ${who(u)} ?\n\nSon journal reste sur son téléphone, mais il ne pourra plus se connecter.`,
+    u => ({titre:`Supprimer le compte de ${who(u)} ?`, texte:'La suppression est définitive. Son journal reste sur son téléphone, mais cette personne ne pourra plus se connecter.', bouton:'Supprimer'}),
     u => API.rpc('admin_supprimer', {p_id:u.id})),
 };
 
 document.addEventListener('gesturestart', e => e.preventDefault());   // iPhone : ignore le zoom à deux doigts
+/* Un œil dans chaque champ de mot de passe, où qu'il apparaisse (connexion, inscription, fenêtres), pour voir ce qu'on tape */
+function ajouterOeil() {
+  document.querySelectorAll('input[type=password]:not([data-oeil])').forEach(i => {
+    i.dataset.oeil = '1';
+    const w = document.createElement('span'), b = document.createElement('button');
+    w.className = 'mdp-champ'; i.replaceWith(w); w.append(i, b);
+    b.type = 'button'; b.className = 'oeil'; b.tabIndex = -1;
+    const maj = () => { const vu = i.type === 'text'; b.innerHTML = ico(vu ? 'oeilBarre' : 'oeil', ''); b.setAttribute('aria-label', vu ? 'Masquer le mot de passe' : 'Afficher le mot de passe'); };
+    b.onclick = () => { i.type = i.type === 'password' ? 'text' : 'password'; maj(); i.focus(); };
+    maj();
+  });
+}
+new MutationObserver(ajouterOeil).observe(document.body, {childList:true, subtree:true});
 /* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le journal, change de mois ; dans une page des Paramètres
    ou dans « Mes notes » de l'admin, vers la droite, revient en arrière. Le geste doit faire 60 px, en moins d'une seconde et quart, et partir plutôt à l'horizontale
    (moins de 45°) : il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite. */
@@ -3910,42 +4137,85 @@ document.addEventListener('touchstart', e => {
   const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
   const ok = ((view === 'cal' && !(calMode === 'list' && calQ.trim())) || retour || (view === 'day' && e.target.closest('.week'))) && !$('#app').hidden
     && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]')));
-  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null} : null;
+  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null} : null;
 }, {passive:true});
+/* La page suit le doigt. Au lâcher, elle part du côté du geste et la suivante arrive de l'autre côté ;
+   sinon elle revient en place. Là où il n'y a rien (semaine ou mois à venir), elle résiste. */
+const cibleGlisse = () => view === 'day' ? $('#view .week') : $('#view');
+function glissePossible(dx) {
+  if (view === 'day') return dx > 0 || mondayOf(cur) < mondayOf(today());   // pas de semaine à venir
+  if (view === 'set' || view === 'admin') return dx > 0;                    // retour en arrière : vers la droite
+  const now = new Date();
+  return dx > 0 || calY !== now.getFullYear() || calM !== now.getMonth();   // pas de mois à venir
+}
+function remettreEnPlace(el) { if (el) { el.style.transition = 'transform .2s ease-out'; el.style.transform = ''; } }
 /* Dès que le geste est franchement horizontal, l'écran ne défile plus verticalement ; un geste vertical, lui, n'est jamais gêné */
 document.addEventListener('touchmove', e => {
   if (!glisse || e.touches.length !== 1) return;
   const dx = e.touches[0].clientX - glisse.x, dy = e.touches[0].clientY - glisse.y;
   if (!glisse.sens && Math.hypot(dx, dy) > 12) glisse.sens = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
-  if (glisse.sens === 'h' && e.cancelable) e.preventDefault();
+  if (glisse.sens !== 'h') return;
+  if (e.cancelable) e.preventDefault();
+  const el = glisse.el ||= cibleGlisse();
+  if (el) { el.style.transition = 'none'; el.style.transform = `translateX(${glissePossible(dx) ? dx : dx / 4}px)`; }
 }, {passive:false});
 document.addEventListener('touchend', e => {
   if (!glisse) return;
-  const p = e.changedTouches[0], dx = p.clientX - glisse.x, dy = p.clientY - glisse.y, lent = Date.now() - glisse.t > 1250, sens = glisse.sens;
+  const g = glisse, p = e.changedTouches[0], dx = p.clientX - g.x, dy = p.clientY - g.y, dt = Date.now() - g.t;
   glisse = null;
-  // une fois le geste parti à l'horizontale, l'écran ne défile plus : le doigt peut alors dévier sans annuler le balayage
-  if (sens !== 'h' || lent || Math.abs(dx) < 60 || Math.abs(dy) > 1.2 * Math.abs(dx)) return;
-  const now = new Date();
-  if (view === 'day') {
-    if (dx < 0 && mondayOf(cur) >= mondayOf(today())) return;   // pas de semaine à venir
-    cur = addDays(cur, dx < 0 ? 7 : -7); if (cur > today()) cur = today();
-    render(true);   // on reste au même endroit de la page
-  }
-  else if (view === 'set') { if (dx < 0) return; ACT.setBack(); }
-  else if (view === 'admin') { if (dx < 0) return; ACT.admRetour(); }
-  else if (dx < 0 && calY === now.getFullYear() && calM === now.getMonth()) return;   // pas de mois à venir
-  else if (dx < 0) ACT.nextMonth(); else ACT.prevMonth();
-  const v = view === 'day' ? $('#view .week') : $('#view'), c = dx < 0 ? 'vers-g' : 'vers-d';
-  v.classList.remove('vers-g', 'vers-d'); void v.offsetWidth; v.classList.add(c);
-  v.addEventListener('animationend', () => v.classList.remove(c), {once:true});
+  // une fois le geste parti à l'horizontale, l'écran ne défile plus : le doigt peut alors dévier sans annuler le balayage.
+  // Un geste court mais vif suffit aussi.
+  const va = g.sens === 'h' && glissePossible(dx) && dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
+  if (!va) return remettreEnPlace(g.el);
+  const sens = dx < 0 ? -1 : 1, el = g.el;
+  const changer = () => {
+    if (view === 'day') { cur = addDays(cur, sens < 0 ? 7 : -7); if (cur > today()) cur = today(); render(true); }   // on reste au même endroit de la page
+    else if (view === 'set') ACT.setBack();
+    else if (view === 'admin') ACT.admRetour();
+    else if (sens < 0) ACT.nextMonth(); else ACT.prevMonth();
+  };
+  if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) { if (el) el.style.transform = ''; return changer(); }
+  const w = el.offsetWidth;
+  el.style.transition = 'transform .15s ease-in'; el.style.transform = `translateX(${sens * w}px)`;
+  setTimeout(() => {
+    el.style.transition = 'none'; el.style.transform = '';
+    changer();
+    const n = cibleGlisse(); if (!n) return;
+    n.style.transition = 'none'; n.style.transform = `translateX(${-sens * w * .35}px)`;
+    void n.offsetWidth;
+    n.style.transition = 'transform .22s cubic-bezier(.2,.8,.3,1)'; n.style.transform = '';
+  }, 150);
 }, {passive:true});
-document.addEventListener('touchcancel', () => { glisse = null; }, {passive:true});
+document.addEventListener('touchcancel', () => { remettreEnPlace(glisse?.el); glisse = null; }, {passive:true});
 /* Un trait sous la date ou le mois quand ils restent collés en haut pendant le défilement */
 function marquerEntete() {
   const h = $('#view .dayhead, #view .calhead');
   h?.classList.toggle('colle', scrollY > 0 && h.getBoundingClientRect().top <= parseFloat(getComputedStyle(h).top) + .5);
 }
-addEventListener('scroll', marquerEntete, {passive:true});
+/* Journal en liste : le mois calM vient se placer juste sous l'en-tête (le mois en cours : tout en haut de la page) */
+function allerAuMois() {
+  const s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`), h = $('#view .calhead');
+  if (!s || !h) return;
+  if (s === $('#view .mois-sep')) return window.scrollTo(0, 0);
+  window.scrollTo(0, Math.max(0, s.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(h).top) + h.offsetHeight + 4)));
+}
+/* … et pendant le défilement, l'en-tête affiche le mois qui est en haut de l'écran */
+function majEnteteListe() {
+  if (view !== 'cal' || calMode !== 'list' || calQ.trim()) return;
+  const h = $('#view .calhead'), seps = [...document.querySelectorAll('#view .mois-sep')];
+  if (!h || !seps.length) return;
+  const bas = h.getBoundingClientRect().bottom + 8;
+  let s = seps[0];
+  for (const x of seps) { if (x.getBoundingClientRect().top <= bas) s = x; else break; }
+  const [y, m] = s.dataset.mois.split('-').map(Number);
+  if (y === calY && m === calM) return;
+  calY = y; calM = m;
+  const now = new Date(), actuel = y === now.getFullYear() && m === now.getMonth();
+  h.querySelector('h1').textContent = `${MOIS[m]} ${y}`;
+  h.querySelector('.eyebrow').innerHTML = actuel ? 'Ce mois-ci' : '<button class="link" data-act="moisEnCours">Revenir au mois en cours</button>';
+  h.querySelector('[data-act=nextMonth]').disabled = actuel;
+}
+addEventListener('scroll', () => { marquerEntete(); majEnteteListe(); }, {passive:true});
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
@@ -3956,9 +4226,12 @@ document.addEventListener('input', e => {
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
-  } else if (t.id === 'admNotesTxt') {
-    data.notesAdmin = t.value; $('#admNotesEtat').textContent = '…';
-    clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#admNotesEtat'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
+  } else if (t.id === 'repQ') {
+    repQ = t.value; $('#repListe').innerHTML = listeRepertoire();
+  } else if (t.dataset.notesAdmin) {
+    const k = t.dataset.notesAdmin, etat = () => $(`[data-etat="${k}"]`);
+    data.notesAdmin[k] = t.value; etat().textContent = '…';
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = etat(); if (s) s.textContent = 'Enregistré ✓'; }), 500);
   } else if (t.id === 'invCode') {   // un lien d'invitation complet collé dans le champ s'ouvre aussitôt
     const v = t.value.trim();
     if (/#i=[0-9a-f]{30}$|#inv=[A-Za-z0-9_-]{40,}$/i.test(v) && v !== t.dataset.ouvert) { t.dataset.ouvert = v; offerInvite(v); }
@@ -3985,7 +4258,11 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (!data) return;
-  if (e.target.id === 'geoloc') { data.settings.geoloc = e.target.checked; save(); }
+  if (e.target.id === 'txtFile') {
+    const f = e.target.files[0]; busy = false;
+    if (f) f.size > 3e6 ? toast('Fichier trop volumineux (3 Mo au plus).') : f.text().then(analyserTexte);
+  }
+  else if (e.target.id === 'geoloc') { data.settings.geoloc = e.target.checked; save(); }
   else if (e.target.dataset.partage && !e.target.closest('#ptForm')) {
     const choix = {...data.settings.partage, [e.target.dataset.partage]:e.target.checked};
     if (!partageValide(choix)) { e.target.checked = true; return toast('Gardez au moins les émotions, les synthèses ou les notes.'); }

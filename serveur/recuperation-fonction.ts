@@ -283,51 +283,37 @@ async function supprimerConfirme(req: Request, code: string, email: string) {
   return fin;
 }
 
-// Modifier son nom, son prénom ou son identifiant : le code reçu par e-mail confirme la demande.
-// Le nom et le prénom restent sur l'appareil (le serveur les reçoit ensuite comme d'habitude) ; seul l'identifiant change ici.
+// Changer d'identifiant : le mot de passe, vérifié ici, confirme la demande.
+// Le nom et le prénom ne passent pas par ici : ils restent sur l'appareil, et le serveur les reçoit ensuite comme d'habitude.
 const ID_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
-async function identifiantLibre(req: Request, identifiant: string): Promise<Response | null> {
-  if (!identifiant) return null;
+async function identiteMotDePasse(req: Request, motDePasse: string, identifiant: string) {
+  const u = await fetch(`${BASE}/auth/v1/user`, {
+    headers: { apikey: ROLE, Authorization: req.headers.get("Authorization") ?? "" },
+  });
+  if (!u.ok) return rep(401, { code: "session", message: "Session invalide" });
+  const { id, email } = await u.json();
   if (!ID_RE.test(identifiant)) return rep(400, { code: "identifiant", message: "Identifiant invalide" });
   const autre = await profilDe(identifiant);
-  if (autre && autre !== (await utilisateur(req))) return rep(409, { code: "pris", message: "Identifiant déjà utilisé" });
-  return null;
-}
-
-async function identiteDemande(req: Request, email: string, identifiant: string) {
-  const refus = await identifiantLibre(req, identifiant);
-  if (refus) return refus;
-  return envoyerCode(req, email, "identite", "Votre code pour modifier vos informations", (code) =>
-    `Votre code pour modifier vos informations Motus (nom, prénom ou identifiant) : ${code}\n\nIl est valable 15 minutes. Si vous n'avez rien demandé, ne le communiquez à personne et changez votre mot de passe.`);
-}
-
-async function identiteConfirme(req: Request, code: string, email: string, identifiant: string) {
-  const refus = await identifiantLibre(req, identifiant);
-  if (refus) return refus;
-  const v = await verifierCode(req, code, "identite");
-  if (v instanceof Response) return v;
-  const { id, ligne: l } = v;
-  if (identifiant) {
-    const ancien = (await db(`profils?id=eq.${id}&select=identifiant`))[0]?.identifiant;
-    // le profil d'abord : son identifiant est unique, deux demandes simultanées ne peuvent pas le prendre toutes les deux
-    try { await db(`profils?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ identifiant }) }); }
-    catch { return rep(409, { code: "pris", message: "Identifiant déjà utilisé" }); }
-    const admin = { apikey: ROLE, Authorization: `Bearer ${ROLE}`, "Content-Type": "application/json" };
-    const u = await fetch(`${BASE}/auth/v1/admin/users/${id}`, { headers: admin });
-    const domaine = String((await u.json()).email ?? "").split("@")[1];
-    const r = domaine && await fetch(`${BASE}/auth/v1/admin/users/${id}`, {
-      method: "PUT", headers: admin, body: JSON.stringify({ email: `${identifiant}@${domaine}`, email_confirm: true }),
-    });
-    if (!r || !r.ok) {
-      console.error("Identifiant", r && r.status, r && await r.text());
-      await db(`profils?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ identifiant: ancien }) });
-      return rep(500, { code: "serveur", message: "Modification impossible" });
-    }
-  }
-  // Mail de confirmation : un échec d'envoi ne change rien à la modification déjà faite
-  if (l.email_empreinte === (await empreinte(`${id}|${email}`))) {
-    await envoyer(email, "Vos informations ont bien été modifiées",
-      `Vos informations Motus ont bien été modifiées.${identifiant ? `\n\nVotre nouvel identifiant de connexion : ${identifiant}` : ""}\n\nSi vous n'êtes pas à l'origine de cette demande, changez votre mot de passe sans attendre.`).catch(console.error);
+  if (autre && autre !== id) return rep(409, { code: "pris", message: "Identifiant déjà utilisé" });
+  const t = await fetch(`${BASE}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: ROLE, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password: motDePasse }),
+  });
+  if (!t.ok) return rep(400, { code: "mot_de_passe", message: "Mot de passe incorrect" });
+  const ancien = (await db(`profils?id=eq.${id}&select=identifiant`))[0]?.identifiant;
+  // le profil d'abord : son identifiant est unique, deux demandes simultanées ne peuvent pas le prendre toutes les deux
+  try { await db(`profils?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ identifiant }) }); }
+  catch { return rep(409, { code: "pris", message: "Identifiant déjà utilisé" }); }
+  const r = await fetch(`${BASE}/auth/v1/admin/users/${id}`, {
+    method: "PUT",
+    headers: { apikey: ROLE, Authorization: `Bearer ${ROLE}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: `${identifiant}@${String(email).split("@")[1]}`, email_confirm: true }),
+  });
+  if (!r.ok) {
+    console.error("Identifiant", r.status, await r.text());
+    await db(`profils?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ identifiant: ancien }) });
+    return rep(500, { code: "serveur", message: "Modification impossible" });
   }
   return rep(200, { ok: true });
 }
@@ -362,8 +348,7 @@ Deno.serve(async (req) => {
     if (b.action === "supprimer_demande") return await supprimerDemande(req, norm(b.email));
     if (b.action === "supprimer_confirme") return await supprimerConfirme(req, String(b.code ?? "").trim(), norm(b.email));
     if (b.action === "supprimer_mdp") return await supprimerMotDePasse(req, String(b.mot_de_passe ?? ""));
-    if (b.action === "identite_demande") return await identiteDemande(req, norm(b.email), norm(b.identifiant));
-    if (b.action === "identite_confirme") return await identiteConfirme(req, String(b.code ?? "").trim(), norm(b.email), norm(b.identifiant));
+    if (b.action === "identite_mdp") return await identiteMotDePasse(req, String(b.mot_de_passe ?? ""), norm(b.identifiant));
     if (b.action === "demande") return await demande(norm(b.identifiant), norm(b.email));
     if (b.action === "confirme") return await confirme(norm(b.identifiant), String(b.code ?? "").trim(), String(b.mot_de_passe ?? ""));
     return rep(400, { code: "action", message: "Action inconnue" });
