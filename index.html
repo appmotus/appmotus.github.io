@@ -101,9 +101,19 @@ textarea[data-notes-admin]{overflow:hidden;resize:none}   /* le cadre suit la lo
 .dayhead::before,.calhead::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:env(safe-area-inset-top);background:var(--bg)}
 .dayhead.colle,.calhead.colle{box-shadow:0 1px 0 var(--border)}
 /* Journal : sous le mois, le choix calendrier/liste, la recherche et les filtres s'effacent en descendant et reviennent dès qu'on remonte */
-#enteteJ{position:sticky;z-index:3;background:var(--bg);margin:0 -20px;padding:0 20px 1px}
-#enteteJ.colle{box-shadow:0 1px 0 var(--border)}
+/* Journal : en haut de page, le choix calendrier/liste, la recherche et les filtres défilent normalement (#enteteJ).
+   Plus bas, une barre compacte (#barreJ) redescend sous le mois dès qu'on remonte : le seul choix calendrier/liste,
+   et en liste un bouton qui déploie la recherche et les filtres. Elle se retire dès qu'on redescend. */
+#barreJ{position:sticky;z-index:3;height:0;margin:0 -20px}
+.barreJ-in{background:var(--bg);padding:6px 20px 8px;box-shadow:0 1px 0 var(--border);visibility:hidden}
+.barreJ-ligne{display:flex;gap:10px;align-items:center}
+.barreJ-ligne .seg{flex:1;margin:0}
+.barreJ-plus{margin-top:10px}
+.barreJ-plus .card{margin-bottom:0}
+.faux-champ{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:13px;padding:11px 12px 11px 40px;color:var(--muted);font:inherit;font-size:16px}
+.faux-champ svg{left:13px}
 .calhead.colle.sans-trait{box-shadow:none}
+.icon-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .dayhead-t{flex:1;min-width:0}
 .dayhead h1{font-size:min(1.5rem,calc((100vw - 140px) / 12));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* « Dimanche 27 septembre » tient sur une ligne : l'en-tête garde la même hauteur d'un jour à l'autre */
 .dayhead .eyebrow{white-space:nowrap}
@@ -177,8 +187,28 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 
 /* Calendrier */
 .calhead{display:flex;align-items:center;gap:8px}
-.calhead h1{white-space:nowrap}
-.calhead h1::first-letter{text-transform:uppercase}
+/* Le nom du mois ouvre le choix d'un autre mois. Un espace le sépare du lien « Revenir au mois en cours », pour qu'on ne
+   touche pas l'un pour l'autre ; la ligne du titre est resserrée d'autant : l'en-tête garde exactement sa hauteur. */
+.calhead h1{white-space:nowrap;line-height:1}
+.calhead .eyebrow{margin-bottom:5px}
+.titre-mois{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-align:left;line-height:1}
+.titre-mois .tm{display:inline-block}
+.titre-mois .tm::first-letter{text-transform:uppercase}
+.titre-mois .tm-fl{width:17px;height:17px;flex:none;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg)}
+/* Fenêtre de choix du mois : l'année, puis les douze mois ; un point sous ceux qui contiennent des notes */
+.annee-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 14px}
+.annee-nav b{font-size:1.3rem;font-weight:600}
+.mois-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mois-grille button{position:relative;border:1px solid var(--border);background:var(--bg);border-radius:13px;padding:10px 4px 6px;font:inherit;font-weight:600;color:inherit}
+.mois-grille button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.mois-grille button:disabled{opacity:.35}
+.mois-grille button small{display:block;min-height:1.1em;margin-top:2px;font-size:.72rem;font-weight:600;color:var(--accent)}
+.mois-grille button.on small{color:inherit}
+.mois-cadre{position:relative;overflow:hidden;touch-action:pan-y}
+/* la fenêtre s'ouvre juste sous le mois (--haut), par-dessus le reste de l'en-tête */
+dialog.en-haut{margin:0 auto;top:var(--haut,0px);bottom:auto;border-radius:0 0 22px 22px;max-height:calc(100dvh - var(--haut,0px) - 12px)}
+dialog.en-haut .dlg-b{padding-top:12px}
+dialog.en-haut .dlg-f{padding-bottom:12px}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cvide{aspect-ratio:1}
 .cal .wd{text-align:center;font-size:.72rem;font-weight:500;color:var(--muted);padding-bottom:2px}
@@ -466,9 +496,9 @@ function sentenceHtml(e) {
   return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
 }
 
-const APP_VERSION = 31;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 32;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 23;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:567, cache:556, envoyes:8.8, ecrits:2};   // en millions, même script, même moment
+const JETONS_CONSOMMES = {total:605, cache:594, envoyes:8.9, ecrits:2.1};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const MAIL_AIDE = {
   client:'Votre mail sert uniquement à récupérer votre compte ou à effacer vos données. Un code vous sera envoyé pour le confirmer.',
@@ -1771,6 +1801,7 @@ const ICO = {
   sablier:'<path d="M6.5 3h11M6.5 21h11"/><path d="M8 3v3.5L12 12l4-5.5V3M8 21v-3.5L12 12l4 5.5V21"/>',
   oeil:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
   importer:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14l3 3 3-3"/>',
+  filtre:'<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/><path d="M8 9h5M8 12h3"/>',
   oeilBarre:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
 };
@@ -1789,7 +1820,7 @@ function markTabs() {
 function render(keepScroll) {
   markTabs();
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
-  if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = 0; }
+  if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = Infinity; entJ.deploye = false; }
   entJ.y = Math.max(0, scrollY); entetesJournal();
   if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();
   listeAPlacer = false;
@@ -2000,21 +2031,29 @@ function vCal() {
   const topW = Object.entries(words).sort((a,b) => b[1]-a[1]).slice(0, 5);
   const famTot = Object.values(fams).reduce((a,b) => a+b, 0);
   const famS = Object.entries(fams).sort((a,b) => b[1]-a[1]);
+  const segJ = `<div class="seg two">
+    <button class="${calMode === 'grid' ? 'on' : ''}" data-act="calMode" data-m="grid" aria-pressed="${calMode === 'grid'}">Calendrier</button>
+    <button class="${calMode === 'list' ? 'on' : ''}" data-act="calMode" data-m="list" aria-pressed="${calMode === 'list'}">Liste</button>
+  </div>`;
   return `
   ${clientBar()}${srcImportCard()}
   <div class="calhead">
     <div class="dayhead-t">
-      <div class="eyebrow">${atCurrent ? 'Ce mois-ci' : '<button class="link" data-act="moisEnCours">Revenir au mois en cours</button>'}</div>
-      <h1>${MOIS[calM]} ${calY}</h1>
+      <div class="eyebrow">${atCurrent ? 'Ce mois-ci' : `<button class="link" data-act="moisEnCours">${calMode === 'list' ? 'Revenir à aujourd’hui' : 'Revenir au mois en cours'}</button>`}</div>
+      <h1><button class="titre-mois" data-act="choisirMois" aria-label="Choisir un autre mois"><span class="tm">${MOIS[calM]} ${calY}</span>${ico('ch', 'tm-fl')}</button></h1>
     </div>
     <button class="icon-btn" data-act="prevMonth" aria-label="Mois précédent">‹</button>
     <button class="icon-btn" data-act="nextMonth" aria-label="Mois suivant" ${atCurrent ? 'disabled' : ''}>›</button>
   </div>
+  <div id="barreJ"><div class="barreJ-in">
+    <div class="barreJ-ligne">${segJ}${calMode === 'list' ? `<button class="icon-btn" data-act="deployerEntete" aria-label="Rechercher et filtrer" aria-expanded="${entJ.deploye}">${ico('filtre', '')}</button>` : ''}</div>
+    ${calMode === 'list' ? `<div class="barreJ-plus" ${entJ.deploye ? '' : 'hidden'}>
+      <button class="champ-recherche faux-champ" data-act="chercherJ">${ico('loupe', '')}<span>${calQ.trim() ? esc(calQ) : 'Rechercher dans toutes les notes'}</span></button>
+      ${filterCard}
+    </div>` : ''}
+  </div></div>
   <div id="enteteJ">
-  <div class="seg two">
-    <button class="${calMode === 'grid' ? 'on' : ''}" data-act="calMode" data-m="grid" aria-pressed="${calMode === 'grid'}">Calendrier</button>
-    <button class="${calMode === 'list' ? 'on' : ''}" data-act="calMode" data-m="list" aria-pressed="${calMode === 'list'}">Liste</button>
-  </div>
+  ${segJ}
   ${calMode === 'list' ? `<div class="champ-recherche">${ico('loupe', '')}<input type="search" id="calQ" value="${esc(calQ)}" placeholder="Rechercher dans toutes les notes" aria-label="Rechercher" autocapitalize="none" enterkeyhint="search"></div>` : ''}
   <div id="filtreJ" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>${filterCard}</div>
   </div>
@@ -3908,6 +3947,16 @@ const ACT = {
   },
   goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
   voirThera: () => { view = 'set'; setPage = 'thera'; render(); synchroCanaux(true); },
+  // Journal en liste : la barre compacte déploie (ou replie) la recherche et les filtres, sans quitter la lecture
+  deployerEntete: () => {
+    if (entJ.deploye) return replierEntete();
+    entJ.deploye = true; entJ.cache = 0;
+    const p = $('#view .barreJ-plus'); if (p) p.hidden = false;
+    $('#view [data-act=deployerEntete]')?.setAttribute('aria-expanded', 'true');
+    entetesJournal();
+  },
+  // la recherche porte sur tous les mois : elle s'ouvre en haut de page, à la place de la liste
+  chercherJ: () => { replierEntete(); window.scrollTo(0, 0); $('#calQ')?.focus(); },
   choisirTxt: () => { busy = true; $('#txtFile').value = ''; $('#txtFile').click(); setTimeout(() => busy = false, 60000); },   // le temps de choisir le fichier, l'app ne se verrouille pas
   analyserCollage: () => analyserTexte($('#txtColle').value),
   envoyerContact: () => {
@@ -4001,6 +4050,7 @@ const ACT = {
   // en liste, la page va au mois voulu (listeAPlacer) ; en calendrier, elle reste au même niveau
   prevMonth: () => { if (view === 'cal' && calMode === 'list') posVoulue = posListe(); if (--calM < 0) { calM = 11; calY--; } listeAPlacer = true; render(true); },
   nextMonth: () => { if (view === 'cal' && calMode === 'list') posVoulue = posListe(); if (++calM > 11) { calM = 0; calY++; } listeAPlacer = true; render(true); },
+  choisirMois: () => choisirMois(),
   moisEnCours: () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); listeAPlacer = true; render(true); },
   setColor: t => {
     const d = ensureDay(cur), c = t.dataset.c;
@@ -4162,7 +4212,14 @@ new MutationObserver(ajouterOeil).observe(document.body, {childList:true, subtre
    Seule la partie balayée bouge, et la page voisine arrive à côté d'elle en suivant le doigt. Le reste de la page se met à jour ensuite. */
 let glisse = null;
 const ECART = 16;   // espace entre la page et sa voisine pendant le geste
+/* Une sélection de texte en cours (dans la page ou dans un champ) : le doigt sélectionne, la page ne doit pas bouger */
+function texteSelectionne() {
+  const a = document.activeElement;
+  try { if (a?.matches('input, textarea') && a.selectionStart !== a.selectionEnd) return true; } catch {}
+  return !!getSelection()?.toString();
+}
 document.addEventListener('touchstart', e => {
+  if (texteSelectionne()) { glisse = null; return; }
   // pour revenir en arrière, le geste peut partir de n'importe où, même d'un champ de saisie (la page des notes en est presque entièrement couverte)
   const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
   const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('.week') : retour;
@@ -4218,7 +4275,11 @@ document.addEventListener('touchmove', e => {
   const g = glisse;
   if (!g || e.touches.length !== 1) return;
   const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
-  if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+  // un doigt resté appuyé avant de bouger commence une sélection de texte, pas un balayage
+  if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = Date.now() - g.t > 450 ? 'selection' : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+  if (g.sens === 'h' && texteSelectionne()) {   // la sélection a commencé en cours de geste : la page revient en place
+    glisse = null; bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); return;
+  }
   if (g.sens !== 'h') return;
   if (e.cancelable) e.preventDefault();
   if (!(g.el ||= cibleGlisse())) return;
@@ -4253,25 +4314,118 @@ function marquerEntete() {
   const h = $('#view .dayhead, #view .calhead');
   h?.classList.toggle('colle', scrollY > 0 && h.getBoundingClientRect().top <= parseFloat(getComputedStyle(h).top) + .5);
 }
-/* Journal : l'en-tête qui suit le doigt. Le mois reste toujours en haut ; en dessous, le choix calendrier/liste, la recherche
-   et les filtres (#enteteJ) s'effacent vers le haut quand on descend, et redescendent d'autant dès qu'on remonte. */
-const entJ = {y:0, cache:0};   // dernière position de la page, et hauteur de l'en-tête déjà cachée
+/* Journal : la barre compacte qui suit le doigt. Le mois reste toujours en haut. Tant que le vrai choix calendrier/liste
+   est visible en haut de page, la barre reste cachée ; plus bas, elle redescend sous le mois au rythme du doigt quand on
+   remonte, et remonte quand on redescend. Déployée (recherche et filtres), elle se replie dès qu'on redescend. */
+const entJ = {y:0, cache:Infinity, deploye:false};   // dernière position de la page, part de la barre cachée, recherche et filtres déployés
 function entetesJournal() {
-  const b = $('#view #enteteJ'), h = $('#view .calhead');
-  if (!b || !h) return;
-  const y = Math.max(0, scrollY), H = b.offsetHeight, haut = parseFloat(getComputedStyle(h).top) + h.offsetHeight;
-  entJ.cache = Math.min(H, Math.max(0, entJ.cache + y - entJ.y)); entJ.y = y;
-  b.style.top = `${haut - entJ.cache}px`;
-  const visible = y > 0 && entJ.cache < H - 1 && b.getBoundingClientRect().top <= haut - entJ.cache + .5;   // collé sous le mois et visible
-  b.classList.toggle('colle', visible); h.classList.toggle('sans-trait', visible);
+  const bar = $('#view #barreJ'), h = $('#view .calhead'), nat = $('#view #enteteJ .seg');
+  if (!bar || !h || !nat) return;
+  const inn = bar.firstElementChild, y = Math.max(0, scrollY), d = y - entJ.y, haut = parseFloat(getComputedStyle(h).top) + h.offsetHeight;
+  entJ.y = y;
+  bar.style.top = `${haut}px`;
+  if (d > 0 && entJ.deploye) replierEntete();
+  const H = inn.offsetHeight;
+  entJ.cache = nat.getBoundingClientRect().bottom > haut ? H : Math.min(H, Math.max(0, entJ.cache + d));
+  inn.style.transform = `translateY(${-entJ.cache}px)`;
+  inn.style.visibility = entJ.cache >= H ? '' : 'visible';
+  h.classList.toggle('sans-trait', entJ.cache < H);
+}
+function replierEntete() {
+  entJ.deploye = false;
+  const p = $('#view .barreJ-plus'); if (p) p.hidden = true;
+  $('#view [data-act=deployerEntete]')?.setAttribute('aria-expanded', 'false');
+}
+/* bas de ce qui reste collé en haut de l'écran : le mois, et la barre compacte si elle est visible */
+function basEntete() {
+  const h = $('#view .calhead'), inn = $('#view .barreJ-in');
+  return Math.max(h ? h.getBoundingClientRect().bottom : 0, inn && inn.style.visibility === 'visible' ? inn.getBoundingClientRect().bottom : 0);
+}
+/* Journal : choisir n'importe quel mois passé, en quelques gestes. La fenêtre s'ouvre juste sous le mois, par-dessus le reste
+   de l'en-tête. L'année se change avec ‹ › ou en balayant les mois (l'année voisine suit le doigt), puis on touche le mois.
+   Sous chaque mois, le nombre de notes : émotions, notes personnelles et synthèses ; les mois à venir sont grisés. */
+const MOIS_COURTS = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+function choisirMois() {
+  const now = new Date(), ny = now.getFullYear(), nm = now.getMonth(), compte = {};
+  for (const [k, d] of Object.entries(D().days)) {
+    const n = (d.entries?.length || 0) + dayNotes(d).length + (d.synth?.trim() ? 1 : 0);
+    if (n) { const c = `${+k.slice(0, 4)}-${+k.slice(5, 7) - 1}`; compte[c] = (compte[c] || 0) + n; }
+  }
+  const cree = !src && data.account?.cree_le ? new Date(data.account.cree_le).getFullYear() : ny;
+  const premiere = Math.min(cree, calY, ...Object.keys(compte).map(x => +x.split('-')[0]));   // on ne remonte pas avant le tout premier mois utile
+  let an = calY;
+  const boutons = y => MOIS_COURTS.map((n, m) => {
+    const c = compte[`${y}-${m}`];
+    return `<button type="button" data-m="${m}" class="${y === calY && m === calM ? 'on' : ''}" ${y === ny && m > nm ? 'disabled' : ''} aria-label="${MOIS[m]} ${y}${c ? `, ${c} note${c > 1 ? 's' : ''}` : ''}">${n}<small>${c || ''}</small></button>`;
+  }).join('');
+  const grille = () => {
+    $('#anChoix').textContent = an;
+    $('#anMoins').disabled = an <= premiere; $('#anPlus').disabled = an >= ny;
+    $('#moisGrille').innerHTML = boutons(an);
+  };
+  const dlg = $('#codeDlg'), h = $('#view .calhead');
+  dlg.innerHTML = `<form method="dialog" id="moisForm">
+    <div class="dlg-b">
+      <div class="annee-nav"><button type="button" class="icon-btn" id="anMoins" aria-label="Année précédente">‹</button><b id="anChoix"></b><button type="button" class="icon-btn" id="anPlus" aria-label="Année suivante">›</button></div>
+      <div class="mois-cadre" id="moisCadre"><div class="mois-grille" id="moisGrille"></div></div>
+      <p class="small muted" style="margin:10px 0 0">Sous chaque mois, le nombre de notes enregistrées : émotions, notes personnelles et synthèses.</p>
+    </div>
+    <div class="dlg-f"><button type="button" class="btn" id="moisNon">Annuler</button><button type="button" class="btn primary" id="moisActuel">Ce mois-ci</button></div>
+  </form>`;
+  dlg.classList.add('en-haut');
+  dlg.style.setProperty('--haut', `${Math.round(h ? h.getBoundingClientRect().bottom : 0)}px`);
+  dlg.addEventListener('close', () => { dlg.classList.remove('en-haut'); dlg.onclick = null; }, {once:true});
+  const aller = (y, m) => { dlg.close(); calY = y; calM = m; listeAPlacer = true; render(true); };
+  $('#anMoins').onclick = () => { an--; grille(); };
+  $('#anPlus').onclick = () => { an++; grille(); };
+  $('#moisGrille').onclick = e => { const b = e.target.closest('button[data-m]'); if (b && !b.disabled) aller(an, +b.dataset.m); };
+  $('#moisNon').onclick = () => dlg.close();
+  $('#moisActuel').onclick = () => aller(ny, nm);
+  dlg.onclick = e => { if (e.target === dlg) dlg.close(); };   // un appui à côté de la fenêtre la ferme
+
+  /* Balayer les mois change d'année, comme ailleurs dans l'app : l'année voisine arrive à côté en suivant le doigt */
+  const cadre = $('#moisCadre');
+  let g = null;
+  const possible = dx => dx > 0 ? an > premiere : an < ny;
+  const placer = (x, transition = 'none') => { for (const e of [$('#moisGrille'), g?.voisine]) if (e) { e.style.transition = transition; e.style.transform = x ? `translateX(${x}px)` : ''; } };
+  const finir = () => { g?.voisine?.remove(); const gr = $('#moisGrille'); gr.style.transition = ''; gr.style.transform = ''; g = null; };
+  cadre.addEventListener('touchstart', e => { g = e.touches.length === 1 && !texteSelectionne() ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, cote:0, voisine:null} : null; }, {passive:true});
+  cadre.addEventListener('touchmove', e => {
+    if (!g || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+    if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = Date.now() - g.t > 450 ? 'selection' : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+    if (g.sens !== 'h') return;
+    if (e.cancelable) e.preventDefault();
+    const cote = possible(dx) ? Math.sign(dx) : 0;
+    if (cote !== g.cote) {
+      g.voisine?.remove(); g.voisine = null; g.cote = cote;
+      if (cote) {
+        const gr = $('#moisGrille'), v = document.createElement('div');
+        v.className = 'mois-grille'; v.setAttribute('aria-hidden', 'true'); v.innerHTML = boutons(an - cote);
+        Object.assign(v.style, {position:'absolute', top:'0', left:`${-cote * (gr.offsetWidth + 16)}px`, width:`${gr.offsetWidth}px`, pointerEvents:'none'});
+        cadre.appendChild(v); g.voisine = v;
+      }
+    }
+    placer(possible(dx) ? dx : dx / 4);
+  }, {passive:false});
+  cadre.addEventListener('touchend', e => {
+    if (!g) return;
+    const dx = e.changedTouches[0].clientX - g.x, dy = e.changedTouches[0].clientY - g.y, dt = Date.now() - g.t;
+    const va = g.sens === 'h' && possible(dx) && dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 50 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
+    if (!va) { placer(0, 'transform .2s ease-out'); setTimeout(finir, 220); return; }
+    const cote = Math.sign(dx);
+    placer(cote * ($('#moisGrille').offsetWidth + 16), 'transform .18s ease-out');
+    setTimeout(() => { an -= cote; grille(); finir(); }, 180);
+  }, {passive:true});
+
+  grille();
+  dlg.showModal();
 }
 /* Journal en liste : où se trouve, à l'écran, le nom du mois affiché. Quand on change de mois (balayage ou flèches),
    le nouveau mois prend exactement cette place : seules les notes changent, l'en-tête ne bouge pas. */
 function posListe() {
-  const h = $('#view .calhead'), b = $('#view #enteteJ'), s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`);
-  if (!h || !s) return null;
-  const haut = Math.max(h.getBoundingClientRect().bottom, b?.classList.contains('colle') ? b.getBoundingClientRect().bottom : 0) + 4;
-  return Math.max(s.getBoundingClientRect().top, haut);
+  const s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`);
+  return s ? Math.max(s.getBoundingClientRect().top, basEntete() + 4) : null;
 }
 let posVoulue = null;   // place à l'écran du nom du mois, notée avant de changer de mois
 /* Journal en liste : amène le mois calM à la place voulue ; sinon (ouverture, « Revenir au mois en cours »),
@@ -4280,30 +4434,32 @@ function allerAuMois() {
   const s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`), h = $('#view .calhead'), pos = posVoulue;
   posVoulue = null;
   if (!s || !h) return;
-  if (pos != null) window.scrollTo(0, Math.max(0, s.getBoundingClientRect().top + scrollY - pos));   // l'en-tête garde son état
-  else if (s === $('#view .mois-sep')) { entJ.cache = 0; window.scrollTo(0, 0); }
-  else {
-    entJ.cache = $('#view #enteteJ')?.offsetHeight || 0;   // on arrive sur les notes du mois : les filtres restent cachés jusqu'à ce qu'on remonte
-    window.scrollTo(0, Math.max(0, s.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(h).top) + h.offsetHeight + 4)));
-  }
-  entJ.y = scrollY; entetesJournal();
+  if (pos != null) window.scrollTo(0, Math.max(0, s.getBoundingClientRect().top + scrollY - pos));   // la barre garde son état
+  else if (s === $('#view .mois-sep')) window.scrollTo(0, 0);
+  else window.scrollTo(0, Math.max(0, s.getBoundingClientRect().top + scrollY - (basEntete() + 4)));
+  entJ.y = Math.max(0, scrollY); entetesJournal();
 }
 /* … et pendant le défilement, l'en-tête affiche le mois qui est en haut de l'écran */
 function majEnteteListe() {
   if (view !== 'cal' || calMode !== 'list' || calQ.trim()) return;
-  const h = $('#view .calhead'), b = $('#view #enteteJ'), seps = [...document.querySelectorAll('#view .mois-sep')];
+  const h = $('#view .calhead'), seps = [...document.querySelectorAll('#view .mois-sep')];
   if (!h || !seps.length) return;
   // le mois lu est celui dont le nom est passé sous l'en-tête (ou juste en dessous)
-  const bas = Math.max(h.getBoundingClientRect().bottom, b?.classList.contains('colle') ? b.getBoundingClientRect().bottom : 0) + 40;
+  const bas = basEntete() + 40;
   let s = seps[0];
   for (const x of seps) { if (x.getBoundingClientRect().top <= bas) s = x; else break; }
-  const [y, m] = s.dataset.mois.split('-').map(Number);
-  if (y === calY && m === calM) return;
-  calY = y; calM = m;
-  const now = new Date(), actuel = y === now.getFullYear() && m === now.getMonth();
-  h.querySelector('h1').textContent = `${MOIS[m]} ${y}`;
-  h.querySelector('.eyebrow').innerHTML = actuel ? 'Ce mois-ci' : '<button class="link" data-act="moisEnCours">Revenir au mois en cours</button>';
-  h.querySelector('[data-act=nextMonth]').disabled = actuel;
+  const [y, m] = s.dataset.mois.split('-').map(Number), now = new Date(), actuel = y === now.getFullYear() && m === now.getMonth();
+  if (y !== calY || m !== calM) {
+    calY = y; calM = m;
+    h.querySelector('h1 .tm').textContent = `${MOIS[m]} ${y}`;
+    h.querySelector('[data-act=nextMonth]').disabled = actuel;
+  }
+  // en haut de la liste : « Ce mois-ci » ; dès qu'on est descendu dans les notes : de quoi revenir à aujourd'hui, tout en haut
+  const enHaut = actuel && seps[0].getBoundingClientRect().top > basEntete(), e = h.querySelector('.eyebrow');
+  if (e.dataset.etat !== String(enHaut)) {
+    e.dataset.etat = enHaut;
+    e.innerHTML = enHaut ? 'Ce mois-ci' : '<button class="link" data-act="moisEnCours">Revenir à aujourd’hui</button>';
+  }
 }
 addEventListener('scroll', () => { marquerEntete(); entetesJournal(); majEnteteListe(); }, {passive:true});
 document.addEventListener('click', e => {
