@@ -154,28 +154,38 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .entry b{color:var(--fc);font-weight:700}
 .empty{color:var(--muted);margin:4px 0 0}
 .note-txt{white-space:pre-wrap;overflow-wrap:anywhere}
-/* Connecteurs (@travail) : ils ressortent dans le texte ; dans le Journal, les toucher affiche les notes qui les contiennent */
-.conn{color:var(--accent);font-weight:600}
-[data-theme=dark] .conn{color:color-mix(in srgb,var(--accent) 55%,#fff)}
-.conn[data-act]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;text-decoration-thickness:1px}
+/* Connecteurs (@travail) : en italique, soulignés d'un trait fin de la couleur de l'app (son choix, v36) : ni gras ni couleur,
+   pour ne pas ressembler aux émotions. Dans le Journal, les toucher affiche les notes qui les contiennent. Jamais de gras ni de
+   changement de taille : pendant la frappe, le texte affiché doit garder exactement la place de celui du champ. */
+.conn{font-style:italic;text-decoration:underline 1px var(--accent);text-underline-offset:3px}
+.conn[data-act]{cursor:pointer}
 .conn-ancre{position:relative;height:0}
-/* surlignage des connecteurs pendant la frappe, sous le texte du champ */
+/* Pendant la frappe : le texte du champ est invisible (seul son curseur se voit) ; une copie placée juste dessous, à la même place,
+   l'affiche avec les connecteurs mis en forme comme une fois la note enregistrée. Le champ s'allonge avec son texte : il ne
+   défile jamais à l'intérieur, la copie ne peut donc pas se décaler. */
 .conn-cadre{position:relative}
-.conn-cadre textarea{position:relative;z-index:1}
-.conn-fond{position:absolute;z-index:0;margin:0;border-style:solid;border-color:transparent;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;color:transparent;pointer-events:none}
-.conn-fond mark{color:transparent;background:color-mix(in srgb,var(--accent) 24%,transparent);border-radius:4px;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 24%,transparent)}
+.conn-cadre textarea{position:relative;z-index:1;display:block;resize:none;overflow:hidden;color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--text)}
+.conn-cadre textarea::placeholder{color:var(--muted);-webkit-text-fill-color:var(--muted)}
+.conn-fond{position:absolute;z-index:0;margin:0;border-style:solid;border-color:transparent;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;color:var(--text);pointer-events:none}
+.conn-fond .at{opacity:.4}
+.conn-fond .ti{color:transparent}
 .conn-sugg{position:absolute;left:0;top:0;z-index:10;width:max-content;min-width:120px;max-width:min(240px,75vw);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18);overflow:hidden}
 .conn-sugg button{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:4px 10px;border:0;background:none;font:inherit;font-size:.88rem;line-height:1.35;text-align:left;color:inherit}
 .conn-sugg .conn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conn-sugg button+button{border-top:1px solid var(--border)}
 .conn-sugg small,.conn-ligne small{color:var(--muted);white-space:nowrap}
 .conn-liste{max-height:45vh;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;border:1px solid var(--border);border-radius:12px}
-/* la fenêtre des connecteurs : en colonne, la liste prend la place qui reste et défile seule (même quand le clavier réduit la fenêtre) */
+/* la fenêtre des connecteurs : en colonne, la liste prend la place qui reste et défile seule (même quand le clavier réduit la fenêtre).
+   « flex:1 1 auto » et non « flex:1 » : sur iPhone, une base de 0 % écrasait la fenêtre à une hauteur nulle (v35 : l'app semblait figée) */
 dialog.conn-dlg[open]{display:flex;flex-direction:column;overflow:hidden}
-.conn-dlg form{display:flex;flex-direction:column;flex:1;min-height:0}
-.conn-dlg .dlg-b{display:flex;flex-direction:column;flex:1;min-height:0}
+.conn-dlg form{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+.conn-dlg .dlg-b{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+.conn-dlg .dlg-h,.conn-dlg .dlg-f,.conn-dlg .champ-recherche,.conn-dlg #connInfo,.conn-dlg #connAide{flex:none}
 .conn-dlg .conn-liste{flex:0 1 auto;min-height:90px}
 .conn-dlg h2:focus{outline:none}
+.dlg-h .titre-i{display:flex;align-items:center;gap:8px}
+.btn-i{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--muted);background:none;color:var(--muted);font:italic 700 .8rem/1 Georgia,serif;display:inline-grid;place-items:center;padding:0}
+.btn-i[aria-expanded=true]{border-color:var(--accent);color:var(--accent)}
 .conn-ligne{display:flex;align-items:center;gap:10px;padding:11px 12px}
 .conn-ligne:not([hidden])~.conn-ligne:not([hidden]){border-top:1px solid var(--border)}
 .conn-ligne span{flex:1;overflow-wrap:anywhere}
@@ -186,6 +196,15 @@ dialog.conn-dlg[open]{display:flex;flex-direction:column;overflow:hidden}
 .btn-conn.on{border-color:var(--accent)}
 .btn-conn .nb{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-size:.72rem;font-weight:700;display:inline-grid;place-items:center}
 #connMode{margin-top:10px}
+/* Paramètres › Connecteurs */
+.ex-conn{background:var(--bg);border-radius:14px;padding:10px 12px;margin:12px 0 4px}
+.ex-conn p{margin:2px 0 8px;font-size:.92rem}
+.ex-conn p:last-child{margin-bottom:0}
+.liste-aide{margin:10px 0 0;padding-left:18px;color:var(--muted)}
+.liste-aide li+li{margin-top:5px}
+.conn-gestion{max-height:none;margin-top:10px;background:var(--bg)}
+button.conn-ligne{width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left}
+button.conn-ligne .rc{width:16px;height:16px;flex:none}
 
 /* Couleurs de journée */
 .colors{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
@@ -368,14 +387,15 @@ dialog{border:0;padding:0;background:var(--bg);color:var(--text);width:100%;max-
 dialog textarea{overscroll-behavior:contain}
 dialog::backdrop{background:rgba(15,15,40,.4)}
 @media (min-width:600px){dialog{border-radius:24px;margin:auto}}
-.dlg-h{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:1}
+/* z-index 5 : au-dessus du champ de texte mis en forme (.conn-cadre, 1), sous la liste des propositions (10) */
+.dlg-h{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:5}
 .dlg-b{padding:4px 16px 16px}
 /* Politique de confidentialité : affichée dans l'app, car une app installée sur iPhone n'a pas de bouton Retour */
 dialog.pleine{width:100%;max-width:none;height:100dvh;max-height:none;margin:0;border-radius:0}
 dialog.pleine[open]{display:flex;flex-direction:column;overflow:hidden}
 .pleine .dlg-h{position:static;flex:none;justify-content:flex-start;gap:10px;padding:calc(env(safe-area-inset-top) + 16px) 20px 12px}
 .pleine iframe{flex:1;min-height:0;width:100%;border:0;background:var(--bg)}
-.dlg-f{position:sticky;bottom:0;background:var(--bg);display:flex;gap:10px;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--border)}
+.dlg-f{position:sticky;bottom:0;z-index:5;background:var(--bg);display:flex;gap:10px;padding:12px 16px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--border)}
 .dlg-f .btn{flex:1}
 .err{color:var(--rouge-txt);font-size:.88rem;min-height:1.3em;margin-top:8px}
 
@@ -559,7 +579,8 @@ function sentenceHtml(e, actif = false) {
    et s'affiche comme un espace. Les villes et lieux déjà saisis sont aussi des connecteurs. Rien n'est enregistré à part :
    tout se déduit des notes. Deux écritures d'un même connecteur se rejoignent, sans tenir compte des majuscules, des accents,
    ni des espaces, tirets ou signes (clé : « saint-etienne » pour « @Saint-Étienne » comme pour la ville « Saint-Étienne »). */
-const RE_CONN = /(^|[^\p{L}\p{N}_@'’])@([\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*)/gu;
+// une apostrophe peut précéder le @ : « l’@atelier », « d’@Annecy »
+const RE_CONN = /(^|[^\p{L}\p{N}_@])@([\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*)/gu;
 const cleConn = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   .replace(/’/g, "'").replace(/[^\p{L}\p{N}']+/gu, '-').replace(/^-+|-+$/g, '');
 const motConn = label => '@' + String(label).trim().replace(/[^\p{L}\p{N}'’]+/gu, '-').replace(/^-+|-+$/g, '');   // ce qu'on écrit
@@ -604,9 +625,9 @@ function clesDe(texte, ville, lieu) {
   return s;
 }
 
-const APP_VERSION = 35;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 36;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 26;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:656, cache:644, envoyes:9.7, ecrits:2.3};   // en millions, même script, même moment
+const JETONS_CONSOMMES = {total:684, cache:672, envoyes:10, ecrits:2.4};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
@@ -1949,6 +1970,7 @@ const ICO = {
   sablier:'<path d="M6.5 3h11M6.5 21h11"/><path d="M8 3v3.5L12 12l4-5.5V3M8 21v-3.5L12 12l4 5.5V21"/>',
   oeil:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
   importer:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14l3 3 3-3"/>',
+  at:'<circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.9 7.9"/>',
   filtre:'<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/><path d="M8 9h5M8 12h3"/>',
   oeilBarre:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
@@ -2259,8 +2281,36 @@ function resultatsRecherche(q) {
       ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
     </section>`;
   }).join('');
-  return cartes ? `<p class="small muted" style="margin:0 2px 10px">${n} résultat${n > 1 ? 's' : ''} pour « ${esc(q.trim())} »</p>${cartes}`
-    : `<section class="card"><p class="empty">Aucun résultat pour « ${esc(q.trim())} ».</p></section>`;
+  if (!cartes) return `<section class="card"><p class="empty">Aucun résultat pour « ${esc(q.trim())} ».</p></section>`;
+  // ce qui a été trouvé est surligné dans le texte des notes, comme dans le Répertoire
+  const tpl = document.createElement('template');
+  tpl.innerHTML = cartes;
+  tpl.content.querySelectorAll('.occ .meta, .occ .txt').forEach(el => marquerTexte(el, m));
+  return `<p class="small muted" style="margin:0 2px 10px">${n} résultat${n > 1 ? 's' : ''} pour « ${esc(q.trim())} »</p>${tpl.innerHTML}`;
+}
+/* Entoure de <mark> chaque passage de q (déjà sans accents ni majuscules) dans les textes de el. Chaque lettre est comparée
+   sans son accent, une par une : les positions trouvées sont donc exactement celles du texte affiché. */
+function marquerTexte(el, q) {
+  if (!q) return;
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), noeuds = [];
+  while (w.nextNode()) noeuds.push(w.currentNode);
+  for (const nd of noeuds) {
+    const s = nd.data, pos = [];
+    let plat = '';
+    for (let i = 0; i < s.length; i++) { const c = sansAccent(s[i]); plat += c; for (let j = 0; j < c.length; j++) pos.push(i); }
+    let i = plat.indexOf(q);
+    if (i < 0) continue;
+    const f = document.createDocumentFragment();
+    let fin = 0;
+    for (; i >= 0; i = plat.indexOf(q, i + q.length)) {
+      const a = pos[i], b = pos[i + q.length - 1] + 1;
+      if (a < fin) continue;
+      const mk = document.createElement('mark'); mk.textContent = s.slice(a, b);
+      f.append(s.slice(fin, a), mk); fin = b;
+    }
+    f.append(s.slice(fin));
+    nd.replaceWith(f);
+  }
 }
 
 /* — Vue Répertoire — avec une recherche, sans tenir compte des accents ni des majuscules */
@@ -2328,6 +2378,7 @@ function vSetMenu() {
     ligneMenu('send', 'Partage et export', {page:'partage'}),
     ligneMenu('shield', 'Données transmises', {val:resumePartage(), page:'donnees'}),
     ligneMenu('col', 'Code couleur', {page:'couleurs'}),
+    ligneMenu('at', 'Connecteurs', {val:connecteurs().size ? String(connecteurs().size) : '', page:'connecteurs'}),
     ligneMenu('pin', 'Localisation', {val:data.settings.geoloc ? 'Activée' : 'Désactivée', page:'geo'}),
   ])}
   ${groupeMenu('Mes données', [
@@ -2728,7 +2779,117 @@ const PAGES_REGLAGES = {
   invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
   sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
   apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos], contact:['Nous contacter', pageContact], importer:['Importer des notes', pageImporter],
+  connecteurs:['Connecteurs', pageConnecteurs],
 };
+
+/* ───────────── Paramètres › Connecteurs : explication, exemple, et renommage dans toutes les notes ───────────── */
+let connQ = '';   // recherche dans la liste des connecteurs
+function pageConnecteurs() {
+  const tous = [...connecteurs().values()].sort((a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
+  const q = sansAccent(connQ.trim()), k = cleConn(connQ);
+  return `<section class="card">
+    <h2>Relier ses notes</h2>
+    <p class="small muted" style="margin:6px 0 0">Un connecteur relie les notes qui parlent d’une même personne, d’un même lieu ou d’un même sujet. Écrivez @ suivi d’un mot, sans espace, dans une émotion (… car), une note personnelle ou une synthèse.</p>
+    <div class="ex-conn">
+      <div class="eyebrow">Ce que vous écrivez</div>
+      <p>… car la réunion avec @Paul sur le @projet-Atlas a mal tourné.</p>
+      <div class="eyebrow">Ce qui s’affiche</div>
+      <p>… car la réunion avec <span class="conn">Paul</span> sur le <span class="conn">projet Atlas</span> a mal tourné.</p>
+    </div>
+    <ul class="small liste-aide">
+      <li>Le tiret remplace l’espace : @un-ami s’affiche « un ami ».</li>
+      <li>Dès la première lettre après le @, Motus propose les connecteurs déjà utilisés.</li>
+      <li>Majuscules et accents ne comptent pas : @Écriture et @ecriture sont un seul connecteur.</li>
+      <li>Les villes et les lieux saisis avec vos notes sont aussi des connecteurs.</li>
+      <li>Journal, en liste : le bouton « @ Connecteurs » affiche les notes qui contiennent un, deux ou trois connecteurs ; toucher un connecteur dans une note affiche toutes celles qui le contiennent.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>Mes connecteurs</h2>
+    ${tous.length ? `<p class="small muted" style="margin:6px 0 10px">Touchez un connecteur pour le renommer : il change dans toutes les notes qui le contiennent.</p>
+    ${tous.length > 8 ? champRecherche('connGQ', connQ, 'Rechercher un connecteur') : ''}
+    <div class="conn-liste conn-gestion" id="connGestion">${tous.map(c => `<button type="button" class="conn-ligne" data-act="renommerConn" data-k="${esc(c.k)}" data-t="${esc(sansAccent(c.label))}" ${q && !c.k.includes(k) && !sansAccent(c.label).includes(q) ? 'hidden' : ''}><span>${esc(c.label)}</span><small>${c.n} note${c.n > 1 ? 's' : ''}${c.lieu ? ' · lieu' : ''}</small>${ico('ch', 'rc')}</button>`).join('')}</div>`
+    : '<p class="small muted" style="margin:6px 0 0">Aucun connecteur pour l’instant. Le premier apparaîtra ici dès que vous en écrirez un.</p>'}
+  </section>`;
+}
+/* Ce que touche un renommage : les textes qui contiennent le connecteur, et les villes ou lieux qui portent ce nom */
+function usagesConn(k) {
+  let textes = 0, lieux = 0;
+  const dans = s => [...String(s ?? '').matchAll(RE_CONN)].some(x => cleConn(x[2]) === k);
+  for (const d of Object.values(data.days)) {
+    for (const o of [...(d.entries || []).map(e => [e.car, e]), ...dayNotes(d).map(n => [n.text, n])]) {
+      if (dans(o[0])) textes++;
+      if (cleConn(o[1].ville) === k || cleConn(o[1].lieu) === k) lieux++;
+    }
+    if (dans(d.synth)) textes++;
+  }
+  return {textes, lieux};
+}
+const RE_MOT_CONN = /^@[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*$/u;
+function ouvrirRenommer(k) {
+  const c = connecteurs().get(k);
+  if (!c) return;
+  const D = $('#codeDlg'), u = usagesConn(k), s = n => n > 1 ? 's' : '';
+  D.innerHTML = `<form method="dialog" id="rnForm">
+    <div class="dlg-h"><h2>Renommer « ${esc(c.label)} »</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-b">
+      <label class="label" for="rnNom">Nouveau nom</label>
+      <input type="text" id="rnNom" value="${esc(c.label)}" autocomplete="off" enterkeyhint="done">
+      <p class="small muted" id="rnApercu" style="margin:8px 2px 0"></p>
+      <p class="small muted" style="margin:6px 2px 0">${[u.textes ? `Il sera remplacé dans ${u.textes} texte${s(u.textes)} (émotion, note ou synthèse).` : '',
+        u.lieux ? `C’est aussi la ville ou le lieu de ${u.lieux} note${s(u.lieux)} : ce champ prendra le nouveau nom.` : ''].filter(Boolean).join(' ')}</p>
+      <p class="small" id="rnFusion" hidden style="margin:6px 2px 0"></p>
+      <div class="err" id="rnErr"></div>
+    </div>
+    <div class="dlg-f"><button type="button" class="btn" id="rnNon">Annuler</button><button class="btn primary">Renommer</button></div>
+  </form>`;
+  const champ = $('#rnNom');
+  const lire = () => {
+    const nom = champ.value.replace(/^\s*@/, '').trim().replace(/\s+/g, ' '), mot = motConn(nom), nk = cleConn(nom), autre = nk !== k && connecteurs().get(nk);
+    return {nom, mot, nk, autre, ok:!!nom && RE_MOT_CONN.test(mot)};
+  };
+  const maj = () => {
+    const r = lire();
+    $('#rnApercu').innerHTML = r.ok ? `S’écrira ${esc(r.mot)}, et s’affichera <span class="conn">${esc(r.nom)}</span>.` : '';
+    $('#rnFusion').hidden = !r.autre;
+    if (r.autre) $('#rnFusion').textContent = `« ${r.autre.label} » existe déjà : les deux connecteurs n’en feront plus qu’un.`;
+    $('#rnErr').textContent = '';
+  };
+  champ.oninput = maj;
+  $('#rnNon').onclick = () => D.close();
+  $('#rnForm').onsubmit = e => {
+    e.preventDefault();
+    const r = lire();
+    if (!r.ok) return $('#rnErr').textContent = 'Utilisez des lettres et des chiffres, séparés au besoin par des espaces, des tirets ou une apostrophe.';
+    if (r.nom === c.label) return D.close();
+    const n = renommerConnecteur(k, r.nom);
+    D.close();
+    calC = [...new Set(calC.map(x => x === k ? r.nk : x))];
+    save(); render(true);
+    toast(`Connecteur renommé${n ? ` dans ${n} note${s(n)}` : ''}`);
+  };
+  maj();
+  D.showModal();
+}
+/* Remplace le connecteur k partout dans le journal ; renvoie le nombre d'émotions, de notes et de synthèses modifiées */
+function renommerConnecteur(k, nom) {
+  const mot = motConn(nom);
+  const rempl = s => typeof s === 'string' ? s.replace(RE_CONN, (x, avant, w) => cleConn(w) === k ? avant + mot : x) : s;
+  let n = 0;
+  for (const d of Object.values(data.days)) {
+    for (const [o, champ] of [...(d.entries || []).map(e => [e, 'car']), ...dayNotes(d).map(x => [x, 'text'])]) {
+      const avant = JSON.stringify([o[champ], o.ville, o.lieu]);
+      o[champ] = rempl(o[champ]);
+      if (cleConn(o.ville) === k) o.ville = nom;
+      if (cleConn(o.lieu) === k) o.lieu = nom;
+      if (JSON.stringify([o[champ], o.ville, o.lieu]) !== avant) n++;
+    }
+    const sy = rempl(d.synth);
+    if (sy !== d.synth) { d.synth = sy; n++; }
+  }
+  connCache = null;
+  return n;
+}
 
 /* ───────────── Lien client ↔ thérapeute (sans serveur) ─────────────
    Le thérapeute possède une paire de clés ECDH P-256 ; sa clé publique circule dans le lien d'invitation.
@@ -4197,6 +4358,8 @@ const ACT = {
   calFilter: t => { calF = t.dataset.f || null; calW = null; listeAPlacer = true; render(); },
   calWord: t => { calW = t.dataset.w || null; listeAPlacer = true; render(); },
   choisirConn: () => ouvrirConnecteurs(),
+  voirConnecteurs: t => { t.closest('dialog')?.close(); if (!setPage) menuScroll = 0; view = 'set'; setPage = 'connecteurs'; connQ = ''; render(); window.scrollTo(0, 0); },
+  renommerConn: t => ouvrirRenommer(t.dataset.k),
   // toucher un connecteur dans le Journal : toutes les notes qui le contiennent, en liste
   connecteur: t => { calC = [t.dataset.c]; calF = calW = null; calQ = ''; view = 'cal'; calMode = 'list'; listeAPlacer = true; render(true); },
   calMode: t => { calMode = t.dataset.m; listeAPlacer = true; render(); },
@@ -4585,8 +4748,9 @@ function ouvrirConnecteurs() {
   const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
   let choix = calC.filter(k => connecteurs().has(k)), et = calCEt;
   D.innerHTML = `<form method="dialog" id="connForm">
-    <div class="dlg-h"><h2 tabindex="-1" autofocus>Connecteurs</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
-    <div class="dlg-b">${tous.length ? `
+    <div class="dlg-h"><div class="titre-i"><h2 tabindex="-1" autofocus>Connecteurs</h2><button type="button" class="btn-i" id="connI" aria-expanded="false" aria-controls="connAide" aria-label="Qu’est-ce qu’un connecteur ?">i</button></div><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-b">
+      <p class="small muted" id="connAide" hidden style="margin:10px 2px 0">Un connecteur relie des notes entre elles : écrivez @ suivi d’un mot dans une émotion, une note ou une synthèse (@travail, @un-ami). Exemples, explications et modification d’un connecteur : <button type="button" class="link" data-act="voirConnecteurs">Paramètres › Connecteurs</button>.</p>${tous.length ? `
       ${champRecherche('connQ', '', 'Rechercher un connecteur')}
       <p class="small muted" id="connInfo" style="margin:8px 2px 0"></p>
       <div class="seg two" id="connMode" hidden><button type="button" data-et="1">Tous à la fois</button><button type="button" data-et="">Au moins un</button></div>
@@ -4616,9 +4780,11 @@ function ouvrirConnecteurs() {
     $('#connRien').hidden = n > 0;
   };
   const eff = $('#connEff'); if (eff) eff.onclick = () => { cases.forEach(c => c.checked = false); maj(); };
+  $('#connI').onclick = () => { const a = $('#connAide'), b = $('#connI'); a.hidden = !a.hidden; b.setAttribute('aria-expanded', !a.hidden); };
   $('#connForm').onsubmit = e => { e.preventDefault(); D.close(); calC = choix; calCEt = et; listeAPlacer = true; render(true); };
   maj();
   D.classList.add('conn-dlg');
+  D.onclick = e => { if (e.target === D) D.close(); };   // un appui sur le voile, à côté de la fenêtre, la ferme toujours
   // le clavier ne cache jamais la fenêtre : elle se pose juste au-dessus et rétrécit, seule la liste défile
   const vv = window.visualViewport, ac = new AbortController(), o = {signal:ac.signal, passive:false};
   const caler = () => {
@@ -4650,26 +4816,46 @@ function ouvrirConnecteurs() {
     } else { D.style.transition = 'transform .2s ease-out'; D.style.transform = ''; }
   }, o);
   D.addEventListener('close', () => {
-    ac.abort(); D.classList.remove('conn-dlg');
+    ac.abort(); D.classList.remove('conn-dlg'); D.onclick = null;
     Object.assign(D.style, {transform:'', transition:'', marginBottom:'', maxHeight:''});
   }, {once:true});
   D.showModal();
+  // sécurité : si la mise en page en colonne écrasait la fenêtre (cas de la v35 sur iPhone), on revient à la fenêtre ordinaire
+  if (D.querySelector('form').offsetHeight < 60) D.classList.remove('conn-dlg');
 }
 /* Une fenêtre ouverte (émotion, note, connecteurs, choix du mois…) : le fond de l'app ne bouge jamais. Seul ce qui peut défiler
    dans la fenêtre défile, et sans entraîner le fond une fois au bout (overscroll-behavior). Un doigt resté appuyé dans un champ
    (sélection de texte, curseur déplacé) n'est pas gêné. */
-const appui = {t:0, attente:null};   // début du toucher, et temps resté immobile avant de bouger
-document.addEventListener('touchstart', () => { appui.t = Date.now(); appui.attente = null; }, {passive:true, capture:true});
+/* Ce qui défile ne défile que dans son sens possible : arrivé tout en haut (ou tout en bas), le geste ne passe plus au fond
+   (la fenêtre d'émotion, plus haute que l'écran, entraînait la page derrière elle sur iPhone).
+   Le clavier, lui, se range toujours d'un geste vers le bas : le doigt qui descend jusqu'au clavier, ou qui glisse vers le bas
+   sur ce qui ne défile pas (haut d'une fenêtre, fenêtre déjà tout en haut). Un doigt resté appuyé (sélection, curseur) n'y touche pas. */
+const appui = {t:0, attente:null, y0:0, y:0, bloque:0};   // début du toucher, temps immobile avant de bouger, positions, chemin bloqué vers le bas
+document.addEventListener('touchstart', e => {
+  const y = e.touches[0]?.clientY ?? 0;
+  Object.assign(appui, {t:Date.now(), attente:null, y0:y, y, bloque:0});
+}, {passive:true, capture:true});
+const clavierOuvert = () => { const vv = window.visualViewport, a = document.activeElement; return !!vv && innerHeight - vv.height > 120 && !!a?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea'); };
+function peutDefiler(el, dy) {
+  const oy = getComputedStyle(el).overflowY;
+  if ((oy !== 'auto' && oy !== 'scroll') || el.scrollHeight <= el.clientHeight + 1) return false;
+  return dy > 0 ? el.scrollTop > 0 : dy < 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : true;
+}
 document.addEventListener('touchmove', e => {
   appui.attente ??= Date.now() - appui.t;
+  const y = e.touches[0]?.clientY ?? appui.y, dy = y - appui.y;
+  appui.y = y;
+  const long = appui.attente > 450, vv = window.visualViewport;
+  // le doigt qui descend jusqu'au clavier le range, où qu'il soit
+  if (!long && dy > 0 && clavierOuvert() && y > vv.offsetTop + vv.height - 40) document.activeElement.blur();
   const d = e.target.closest?.('dialog[open]');
   if (!d || !e.cancelable) return;
-  for (let el = e.target; el && el !== d.parentElement; el = el.parentElement) {
-    const oy = getComputedStyle(el).overflowY;
-    if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) return;
-  }
-  if (e.target.closest('input, textarea, select') && appui.attente > 450) return;
+  if (e.target.closest('input, textarea, select') && long) return;
+  for (let el = e.target; el && el !== d.parentElement; el = el.parentElement) if (peutDefiler(el, dy)) return;
   e.preventDefault();
+  // rien ne bouge : un geste franc vers le bas range le clavier
+  if (dy > 0) appui.bloque += dy;
+  if (!long && appui.bloque > 50 && clavierOuvert()) document.activeElement.blur();
 }, {passive:false});
 /* Un trait sous la date ou le mois quand ils restent collés en haut pendant le défilement */
 function marquerEntete() {
@@ -4876,7 +5062,8 @@ function positionDans(ta, i) {
   const s = getComputedStyle(ta), m = document.createElement('div'), b = document.createElement('span');
   for (const p of ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
     'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize']) m.style[p] = s[p];
-  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:'pre-wrap', overflowWrap:'break-word', borderStyle:'solid'});
+  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:'pre-wrap', overflowWrap:'break-word', borderStyle:'solid',
+    paddingLeft:`${parseFloat(s.paddingLeft) + RETRAIT_IOS}px`, paddingRight:`${parseFloat(s.paddingRight) + RETRAIT_IOS}px`});
   m.textContent = ta.value.slice(0, i); b.textContent = '​'; m.appendChild(b);
   document.body.appendChild(m);
   const r = {x:b.offsetLeft, y:b.offsetTop - ta.scrollTop, h:parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.25};
@@ -4885,7 +5072,8 @@ function positionDans(ta, i) {
 }
 function suggererConn(ta) {
   const avant = ta.value.slice(0, ta.selectionStart);
-  const m = ta.selectionStart === ta.selectionEnd && avant.match(/(?:^|[^\p{L}\p{N}_@'’])@([\p{L}\p{N}'’-]*)$/u);
+  // rien tant qu'aucune lettre ne suit le @
+  const m = ta.selectionStart === ta.selectionEnd && avant.match(/(?:^|[^\p{L}\p{N}_@])@([\p{L}\p{N}][\p{L}\p{N}'’-]*)$/u);
   let a = ancreConn(ta);
   const q = m ? cleConn(m[1]) : null, tous = m ? [...connecteurs().values()] : [];
   const tri = (x, y) => y.n - x.n || x.label.localeCompare(y.label, 'fr');
@@ -4909,9 +5097,16 @@ function placerConn(ta, label) {
   ta.setSelectionRange(debut.length + mot.length, debut.length + mot.length);
   ta.dispatchEvent(new Event('input', {bubbles:true}));   // enregistrement de la synthèse, et la liste se referme
 }
-/* Pendant la frappe, chaque connecteur est aussitôt surligné dans le champ : un fond placé sous le texte du champ en reprend
-   exactement la mise en page (même police, mêmes marges) et colore la place de chaque connecteur. Le texte lui-même reste
-   celui du champ : si le fond se décalait, seul le surlignage serait faux, jamais ce qu'on écrit. */
+/* Pendant la frappe, chaque connecteur prend aussitôt sa mise en forme définitive (italique, trait fin) : le texte du champ est
+   rendu invisible, et une copie placée juste dessous, même police et mêmes marges, l'affiche mis en forme ; le curseur reste
+   celui du champ. Le @ reste visible en plus pâle, le tiret s'efface comme un espace. Le champ s'allonge avec son texte et ne
+   défile jamais à l'intérieur : la copie suit donc exactement chaque mouvement. */
+const RETRAIT_IOS = IOS ? 3 : 0;   // sur iPhone, le texte d'un champ commence 3 px après sa marge, de chaque côté
+function allonger(ta) {
+  const s = getComputedStyle(ta);
+  ta.style.height = 'auto';
+  ta.style.height = `${ta.scrollHeight + parseFloat(s.borderTopWidth) + parseFloat(s.borderBottomWidth)}px`;
+}
 function surlignage(ta) {
   if (!ta || ta.dataset.surligne) return;
   ta.dataset.surligne = '1';
@@ -4919,9 +5114,14 @@ function surlignage(ta) {
   cadre.className = 'conn-cadre'; fond.className = 'conn-fond'; fond.setAttribute('aria-hidden', 'true');
   ta.before(cadre); cadre.append(ta, fond);
   for (const p of ['boxSizing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-    'borderRadius', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize', 'textAlign']) fond.style[p] = s[p];
+    'borderRadius', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize', 'textAlign',
+    'fontFeatureSettings', 'fontKerning', 'fontVariantLigatures']) fond.style[p] = s[p];
+  fond.dataset.pg = parseFloat(s.paddingLeft) + RETRAIT_IOS;
+  fond.dataset.pd = parseFloat(s.paddingRight) + RETRAIT_IOS;
+  fond.style.paddingLeft = `${fond.dataset.pg}px`;
   fond.style.backgroundColor = s.backgroundColor;
   ta.style.backgroundColor = 'transparent';
+  allonger(ta);
   new ResizeObserver(() => majSurlignage(ta)).observe(ta);
   majSurlignage(ta);
 }
@@ -4930,12 +5130,12 @@ function majSurlignage(ta) {
   if (!fond?.classList.contains('conn-fond')) return;
   const s = getComputedStyle(ta), bords = parseFloat(s.borderLeftWidth) + parseFloat(s.borderRightWidth);
   Object.assign(fond.style, {top:`${ta.offsetTop}px`, left:`${ta.offsetLeft}px`, width:`${ta.offsetWidth}px`, height:`${ta.offsetHeight}px`,
-    paddingRight:`${parseFloat(s.paddingRight) + Math.max(0, ta.offsetWidth - ta.clientWidth - bords)}px`});   // la place de la barre de défilement
+    paddingRight:`${+fond.dataset.pd + Math.max(0, ta.offsetWidth - ta.clientWidth - bords)}px`});   // la place d'une éventuelle barre de défilement
   const v = ta.value;
   let html = '', i = 0;
   for (const x of v.matchAll(RE_CONN)) {
     const d = x.index + x[1].length, f = d + 1 + x[2].length;
-    html += esc(v.slice(i, d)) + `<mark>${esc(v.slice(d, f))}</mark>`; i = f;
+    html += esc(v.slice(i, d)) + `<span class="at">@</span><span class="conn">${esc(x[2]).replace(/-/g, '<span class="ti">-</span>')}</span>`; i = f;
   }
   fond.innerHTML = html + esc(v.slice(i)) + '\n';
   fond.scrollTop = ta.scrollTop;
@@ -4947,7 +5147,9 @@ for (const ev of ['pointerdown', 'mousedown']) document.addEventListener(ev, e =
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-conn-mot]');
   if (b) { e.preventDefault(); const ta = b.closest('.conn-ancre')?.nextElementSibling; if (ta) placerConn(ta, b.dataset.connMot); }
-  else if (CHAMPS_CONN.includes(e.target.id)) suggererConn(e.target);   // le curseur a été déplacé dans le texte
+  // un appui dans le texte : l'iPhone peut y ouvrir sa barre (Sélectionner, Copier…) ; la liste se retire pour ne pas passer
+  // dessous, et revient dès la lettre suivante
+  else if (CHAMPS_CONN.includes(e.target.id)) ancreConn(e.target)?.remove();
 });
 document.addEventListener('focusout', e => {
   const ta = e.target;
@@ -4957,10 +5159,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CON
 document.addEventListener('input', e => {
   const t = e.target;
   if (!data) return;
-  if (CHAMPS_CONN.includes(t.id)) { suggererConn(t); majSurlignage(t); }
+  if (CHAMPS_CONN.includes(t.id)) { if (t.dataset.surligne) allonger(t); majSurlignage(t); suggererConn(t); }
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
+  } else if (t.id === 'connGQ') {   // Paramètres › Connecteurs : la liste se filtre, le clavier reste ouvert
+    connQ = t.value;
+    const q = sansAccent(connQ.trim()), k = cleConn(connQ);
+    document.querySelectorAll('#connGestion .conn-ligne').forEach(l => l.hidden = !!q && !l.dataset.k.includes(k) && !l.dataset.t.includes(q));
   } else if (t.id === 'repQ') {
     repQ = t.value; $('#repListe').innerHTML = listeRepertoire();
   } else if (t.dataset.notesAdmin) {
