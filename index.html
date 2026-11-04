@@ -160,15 +160,9 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .conn{font-style:italic;text-decoration:underline 1px var(--accent);text-underline-offset:3px}
 .conn[data-act]{cursor:pointer}
 .conn-ancre{position:relative;height:0}
-/* Pendant la frappe : le texte du champ est invisible (seul son curseur se voit) ; une copie placée juste dessous, à la même place,
-   l'affiche avec les connecteurs mis en forme comme une fois la note enregistrée. Le champ s'allonge avec son texte : il ne
-   défile jamais à l'intérieur, la copie ne peut donc pas se décaler. */
-.conn-cadre{position:relative}
-.conn-cadre textarea{position:relative;z-index:1;display:block;resize:none;overflow:hidden;color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--text)}
-.conn-cadre textarea::placeholder{color:var(--muted);-webkit-text-fill-color:var(--muted)}
-.conn-fond{position:absolute;z-index:0;margin:0;border-style:solid;border-color:transparent;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;color:var(--text);pointer-events:none}
-.conn-fond .at{opacity:.4}
-.conn-fond .ti{color:transparent}
+/* Pendant la frappe, le champ montre son vrai texte (pas de copie mise en forme : sur iPhone elle se décalait du curseur) ;
+   il s'allonge avec son texte (allonger) */
+textarea.auto-h{resize:none;overflow:hidden}
 .conn-sugg{position:absolute;left:0;top:0;z-index:10;width:max-content;min-width:120px;max-width:min(240px,75vw);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18);overflow:hidden}
 .conn-sugg button{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:4px 10px;border:0;background:none;font:inherit;font-size:.88rem;line-height:1.35;text-align:left;color:inherit}
 .conn-sugg .conn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -388,7 +382,7 @@ dialog{border:0;padding:0;background:var(--bg);color:var(--text);width:100%;max-
 dialog textarea{overscroll-behavior:contain}
 dialog::backdrop{background:rgba(15,15,40,.4)}
 @media (min-width:600px){dialog{border-radius:24px;margin:auto}}
-/* z-index 5 : au-dessus du champ de texte mis en forme (.conn-cadre, 1), sous la liste des propositions (10) */
+/* z-index 5 : au-dessus du contenu de la fenêtre, sous la liste des propositions (10) */
 .dlg-h{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:5}
 .dlg-b{padding:4px 16px 16px}
 /* Politique de confidentialité : affichée dans l'app, car une app installée sur iPhone n'a pas de bouton Retour */
@@ -626,9 +620,9 @@ function clesDe(texte, ville, lieu) {
   return s;
 }
 
-const APP_VERSION = 37;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 27;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:702, cache:690, envoyes:10.1, ecrits:2.5};   // en millions, même script, même moment
+const APP_VERSION = 38;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 28;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:710, cache:697, envoyes:10.1, ecrits:2.5};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
@@ -5146,8 +5140,7 @@ function positionDans(ta, i) {
   const s = getComputedStyle(ta), m = document.createElement('div'), b = document.createElement('span');
   for (const p of ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
     'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize']) m.style[p] = s[p];
-  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:'pre-wrap', overflowWrap:'break-word', borderStyle:'solid',
-    paddingLeft:`${parseFloat(s.paddingLeft) + RETRAIT_IOS}px`, paddingRight:`${parseFloat(s.paddingRight) + RETRAIT_IOS}px`});
+  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:'pre-wrap', overflowWrap:'break-word', borderStyle:'solid'});
   m.textContent = ta.value.slice(0, i); b.textContent = '​'; m.appendChild(b);
   document.body.appendChild(m);
   const r = {x:b.offsetLeft, y:b.offsetTop - ta.scrollTop, h:parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.25};
@@ -5181,11 +5174,10 @@ function placerConn(ta, label) {
   ta.setSelectionRange(debut.length + mot.length, debut.length + mot.length);
   ta.dispatchEvent(new Event('input', {bubbles:true}));   // enregistrement de la synthèse, et la liste se referme
 }
-/* Pendant la frappe, chaque connecteur prend aussitôt sa mise en forme définitive (italique, trait fin) : le texte du champ est
-   rendu invisible, et une copie placée juste dessous, même police et mêmes marges, l'affiche mis en forme ; le curseur reste
-   celui du champ. Le @ reste visible en plus pâle, le tiret s'efface comme un espace. Le champ s'allonge avec son texte et ne
-   défile jamais à l'intérieur : la copie suit donc exactement chaque mouvement. */
-const RETRAIT_IOS = IOS ? 3 : 0;   // sur iPhone, le texte d'un champ commence 3 px après sa marge, de chaque côté
+/* Pendant la frappe, le champ affiche son propre texte, sans mise en forme : les connecteurs prennent la leur une fois la note
+   enregistrée. (v36-37 : le texte du champ était invisible sous une copie mise en forme ; sur iPhone, la copie se décalait du
+   vrai texte et le curseur ne tombait plus au bon endroit. Ne pas y revenir sans pouvoir l'essayer sur un iPhone.)
+   Le champ s'allonge avec son texte, sans barre de défilement à l'intérieur. */
 function allonger(ta) {
   const s = getComputedStyle(ta);
   sansSaut(ta, () => {   // même précaution que pour les notes de l'administrateur : la fenêtre ne saute pas
@@ -5193,41 +5185,13 @@ function allonger(ta) {
     ta.style.height = `${ta.scrollHeight + parseFloat(s.borderTopWidth) + parseFloat(s.borderBottomWidth)}px`;
   });
 }
-function surlignage(ta) {
+function champAllonge(ta) {
   if (!ta || ta.dataset.surligne) return;
   ta.dataset.surligne = '1';
-  const cadre = document.createElement('div'), fond = document.createElement('div'), s = getComputedStyle(ta);
-  cadre.className = 'conn-cadre'; fond.className = 'conn-fond'; fond.setAttribute('aria-hidden', 'true');
-  ta.before(cadre); cadre.append(ta, fond);
-  for (const p of ['boxSizing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-    'borderRadius', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize', 'textAlign',
-    'fontFeatureSettings', 'fontKerning', 'fontVariantLigatures']) fond.style[p] = s[p];
-  fond.dataset.pg = parseFloat(s.paddingLeft) + RETRAIT_IOS;
-  fond.dataset.pd = parseFloat(s.paddingRight) + RETRAIT_IOS;
-  fond.style.paddingLeft = `${fond.dataset.pg}px`;
-  fond.style.backgroundColor = s.backgroundColor;
-  ta.style.backgroundColor = 'transparent';
+  ta.classList.add('auto-h');
   allonger(ta);
-  new ResizeObserver(() => majSurlignage(ta)).observe(ta);
-  majSurlignage(ta);
 }
-function majSurlignage(ta) {
-  const fond = ta?.nextElementSibling;
-  if (!fond?.classList.contains('conn-fond')) return;
-  const s = getComputedStyle(ta), bords = parseFloat(s.borderLeftWidth) + parseFloat(s.borderRightWidth);
-  Object.assign(fond.style, {top:`${ta.offsetTop}px`, left:`${ta.offsetLeft}px`, width:`${ta.offsetWidth}px`, height:`${ta.offsetHeight}px`,
-    paddingRight:`${+fond.dataset.pd + Math.max(0, ta.offsetWidth - ta.clientWidth - bords)}px`});   // la place d'une éventuelle barre de défilement
-  const v = ta.value;
-  let html = '', i = 0;
-  for (const x of v.matchAll(RE_CONN)) {
-    const d = x.index + x[1].length, f = d + 1 + x[2].length;
-    html += esc(v.slice(i, d)) + `<span class="at">@</span><span class="conn">${esc(x[2]).replace(/-/g, '<span class="ti">-</span>')}</span>`; i = f;
-  }
-  fond.innerHTML = html + esc(v.slice(i)) + '\n';
-  fond.scrollTop = ta.scrollTop;
-}
-function surlignerChamps() { document.querySelectorAll('#eCar, #nText, #synth').forEach(surlignage); }   // les champs de CHAMPS_CONN
-document.addEventListener('scroll', e => { if (CHAMPS_CONN.includes(e.target.id)) majSurlignage(e.target); }, true);
+function surlignerChamps() { document.querySelectorAll('#eCar, #nText, #synth').forEach(champAllonge); }   // les champs de CHAMPS_CONN
 // toucher une proposition ne doit pas fermer le clavier
 for (const ev of ['pointerdown', 'mousedown']) document.addEventListener(ev, e => { if (e.target.closest('[data-conn-mot]')) e.preventDefault(); });
 document.addEventListener('click', e => {
@@ -5245,7 +5209,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CON
 document.addEventListener('input', e => {
   const t = e.target;
   if (!data) return;
-  if (CHAMPS_CONN.includes(t.id)) { if (t.dataset.surligne) allonger(t); majSurlignage(t); suggererConn(t); }
+  if (CHAMPS_CONN.includes(t.id)) { if (t.dataset.surligne) allonger(t); suggererConn(t); }
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
