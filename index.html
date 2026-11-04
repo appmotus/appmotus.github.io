@@ -159,11 +159,23 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 [data-theme=dark] .conn{color:color-mix(in srgb,var(--accent) 55%,#fff)}
 .conn[data-act]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;text-decoration-thickness:1px}
 .conn-ancre{position:relative;height:0}
-.conn-sugg{position:absolute;left:0;right:0;bottom:6px;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.16);overflow:hidden}
-.conn-sugg button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;background:none;font:inherit;text-align:left;color:inherit}
+/* surlignage des connecteurs pendant la frappe, sous le texte du champ */
+.conn-cadre{position:relative}
+.conn-cadre textarea{position:relative;z-index:1}
+.conn-fond{position:absolute;z-index:0;margin:0;border-style:solid;border-color:transparent;overflow:hidden;white-space:pre-wrap;overflow-wrap:break-word;color:transparent;pointer-events:none}
+.conn-fond mark{color:transparent;background:color-mix(in srgb,var(--accent) 24%,transparent);border-radius:4px;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 24%,transparent)}
+.conn-sugg{position:absolute;left:0;top:0;z-index:10;width:max-content;min-width:120px;max-width:min(240px,75vw);background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18);overflow:hidden}
+.conn-sugg button{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:4px 10px;border:0;background:none;font:inherit;font-size:.88rem;line-height:1.35;text-align:left;color:inherit}
+.conn-sugg .conn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conn-sugg button+button{border-top:1px solid var(--border)}
 .conn-sugg small,.conn-ligne small{color:var(--muted);white-space:nowrap}
-.conn-liste{max-height:45vh;overflow-y:auto;margin-top:10px;border:1px solid var(--border);border-radius:12px}
+.conn-liste{max-height:45vh;overflow-y:auto;overscroll-behavior:contain;margin-top:10px;border:1px solid var(--border);border-radius:12px}
+/* la fenêtre des connecteurs : en colonne, la liste prend la place qui reste et défile seule (même quand le clavier réduit la fenêtre) */
+dialog.conn-dlg[open]{display:flex;flex-direction:column;overflow:hidden}
+.conn-dlg form{display:flex;flex-direction:column;flex:1;min-height:0}
+.conn-dlg .dlg-b{display:flex;flex-direction:column;flex:1;min-height:0}
+.conn-dlg .conn-liste{flex:0 1 auto;min-height:90px}
+.conn-dlg h2:focus{outline:none}
 .conn-ligne{display:flex;align-items:center;gap:10px;padding:11px 12px}
 .conn-ligne:not([hidden])~.conn-ligne:not([hidden]){border-top:1px solid var(--border)}
 .conn-ligne span{flex:1;overflow-wrap:anywhere}
@@ -352,7 +364,8 @@ nav.tabs button.on::before{content:"";position:absolute;top:-8px;left:28%;right:
 .choix.on i{box-shadow:inset 0 0 0 5px var(--accent)}
 
 /* Dialogues */
-dialog{border:0;padding:0;background:var(--bg);color:var(--text);width:100%;max-width:560px;max-height:92dvh;border-radius:24px 24px 0 0;margin:auto auto 0;overflow:auto}
+dialog{border:0;padding:0;background:var(--bg);color:var(--text);width:100%;max-width:560px;max-height:92dvh;border-radius:24px 24px 0 0;margin:auto auto 0;overflow:auto;overscroll-behavior:contain}
+dialog textarea{overscroll-behavior:contain}
 dialog::backdrop{background:rgba(15,15,40,.4)}
 @media (min-width:600px){dialog{border-radius:24px;margin:auto}}
 .dlg-h{position:sticky;top:0;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);z-index:1}
@@ -591,9 +604,9 @@ function clesDe(texte, ville, lieu) {
   return s;
 }
 
-const APP_VERSION = 34;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 25;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:641, cache:629, envoyes:9.6, ecrits:2.2};   // en millions, même script, même moment
+const APP_VERSION = 35;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 26;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:656, cache:644, envoyes:9.7, ecrits:2.3};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
@@ -1966,6 +1979,7 @@ function render(keepScroll) {
   listeAPlacer = false;
   document.querySelectorAll('#view textarea[data-notes-admin]').forEach(ajusterHauteur);
   marquerEntete();
+  surlignerChamps();   // la synthèse du jour
   montrerAvis();   // une fin de suivi ou une acceptation reçue s'affiche quelle que soit la page
 }
 
@@ -3705,6 +3719,7 @@ function openEntry(id) {
   </form>`;
   renderPicker();
   D.showModal();
+  surlignerChamps();
   D.scrollTop = 0;
   if (!e && cur === today() && data.settings.geoloc) locate(false);
 }
@@ -3730,6 +3745,7 @@ function openNote(id) {
     </div>
   </form>`;
   dlg.showModal();
+  surlignerChamps();
   dlg.scrollTop = 0;
   if (!n && cur === today() && data.settings.geoloc) locate(false);
 }
@@ -4569,7 +4585,7 @@ function ouvrirConnecteurs() {
   const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
   let choix = calC.filter(k => connecteurs().has(k)), et = calCEt;
   D.innerHTML = `<form method="dialog" id="connForm">
-    <div class="dlg-h"><h2>Connecteurs</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-h"><h2 tabindex="-1" autofocus>Connecteurs</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
     <div class="dlg-b">${tous.length ? `
       ${champRecherche('connQ', '', 'Rechercher un connecteur')}
       <p class="small muted" id="connInfo" style="margin:8px 2px 0"></p>
@@ -4602,8 +4618,59 @@ function ouvrirConnecteurs() {
   const eff = $('#connEff'); if (eff) eff.onclick = () => { cases.forEach(c => c.checked = false); maj(); };
   $('#connForm').onsubmit = e => { e.preventDefault(); D.close(); calC = choix; calCEt = et; listeAPlacer = true; render(true); };
   maj();
+  D.classList.add('conn-dlg');
+  // le clavier ne cache jamais la fenêtre : elle se pose juste au-dessus et rétrécit, seule la liste défile
+  const vv = window.visualViewport, ac = new AbortController(), o = {signal:ac.signal, passive:false};
+  const caler = () => {
+    const bas = vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
+    D.style.marginBottom = bas > 0 ? `${bas}px` : '';
+    D.style.maxHeight = bas > 0 ? `${vv.height - 8}px` : '';
+  };
+  vv?.addEventListener('resize', caler, {signal:ac.signal}); vv?.addEventListener('scroll', caler, {signal:ac.signal});
+  /* Gestes : la liste défile ; le doigt qui y descend jusqu'au clavier le range ; glisser vers le bas depuis le haut de la fenêtre
+     (titre, recherche) la ferme ; partout ailleurs, rien ne bouge, ni la fenêtre ni le fond de l'app */
+  let g = null;
+  D.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    g = e.touches.length === 1 ? {y:t.clientY, t:Date.now(), dy:0, liste:!!e.target.closest('.conn-liste'), fermer:!e.target.closest('.conn-liste, .dlg-f')} : null;
+  }, o);
+  D.addEventListener('touchmove', e => {
+    if (!g) return;
+    const t = e.touches[0], q = $('#connQ');
+    if (q && document.activeElement === q && vv && t.clientY > vv.offsetTop + vv.height - 40) q.blur();
+    if (g.liste) return;
+    if (e.cancelable) e.preventDefault();
+    if (g.fermer) { g.dy = Math.max(0, t.clientY - g.y); D.style.transition = 'none'; D.style.transform = g.dy ? `translateY(${g.dy}px)` : ''; }
+  }, o);
+  D.addEventListener('touchend', () => {
+    const x = g; g = null;
+    if (!x?.dy) return;
+    if (x.dy > 90 || (x.dy > 30 && x.dy / (Date.now() - x.t) > .5)) {
+      D.style.transition = 'transform .18s ease-in'; D.style.transform = `translateY(${D.offsetHeight}px)`; setTimeout(() => D.close(), 180);
+    } else { D.style.transition = 'transform .2s ease-out'; D.style.transform = ''; }
+  }, o);
+  D.addEventListener('close', () => {
+    ac.abort(); D.classList.remove('conn-dlg');
+    Object.assign(D.style, {transform:'', transition:'', marginBottom:'', maxHeight:''});
+  }, {once:true});
   D.showModal();
 }
+/* Une fenêtre ouverte (émotion, note, connecteurs, choix du mois…) : le fond de l'app ne bouge jamais. Seul ce qui peut défiler
+   dans la fenêtre défile, et sans entraîner le fond une fois au bout (overscroll-behavior). Un doigt resté appuyé dans un champ
+   (sélection de texte, curseur déplacé) n'est pas gêné. */
+const appui = {t:0, attente:null};   // début du toucher, et temps resté immobile avant de bouger
+document.addEventListener('touchstart', () => { appui.t = Date.now(); appui.attente = null; }, {passive:true, capture:true});
+document.addEventListener('touchmove', e => {
+  appui.attente ??= Date.now() - appui.t;
+  const d = e.target.closest?.('dialog[open]');
+  if (!d || !e.cancelable) return;
+  for (let el = e.target; el && el !== d.parentElement; el = el.parentElement) {
+    const oy = getComputedStyle(el).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) return;
+  }
+  if (e.target.closest('input, textarea, select') && appui.attente > 450) return;
+  e.preventDefault();
+}, {passive:false});
 /* Un trait sous la date ou le mois quand ils restent collés en haut pendant le défilement */
 function marquerEntete() {
   const h = $('#view .dayhead, #view .calhead');
@@ -4798,20 +4865,41 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
 });
-/* Saisie : dès qu'on tape « @ », une petite liste (5 lignes au plus) propose les connecteurs déjà utilisés qui commencent par
-   ce qui est tapé (puis ceux qui le contiennent), les plus fréquents d'abord. Elle s'ouvre au-dessus du champ, que le clavier ne cache pas. */
+/* Saisie : dès qu'on tape « @ », une petite liste (4 lignes au plus) propose les connecteurs déjà utilisés qui commencent par
+   ce qui est tapé (puis ceux qui le contiennent), les plus fréquents d'abord. Elle s'ouvre juste sous la ligne en cours, à partir
+   du @ ; au-dessus seulement si le clavier la cacherait. */
 const CHAMPS_CONN = ['eCar', 'nText', 'synth'];
+const CONN_PROPOSES = 4;
 const ancreConn = ta => ta.previousElementSibling?.classList.contains('conn-ancre') ? ta.previousElementSibling : null;
+/* Où se trouve, dans le champ, le caractère n° i : une copie invisible du champ, même largeur et même police, le mesure */
+function positionDans(ta, i) {
+  const s = getComputedStyle(ta), m = document.createElement('div'), b = document.createElement('span');
+  for (const p of ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+    'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize']) m.style[p] = s[p];
+  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:'pre-wrap', overflowWrap:'break-word', borderStyle:'solid'});
+  m.textContent = ta.value.slice(0, i); b.textContent = '​'; m.appendChild(b);
+  document.body.appendChild(m);
+  const r = {x:b.offsetLeft, y:b.offsetTop - ta.scrollTop, h:parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.25};
+  m.remove();
+  return r;
+}
 function suggererConn(ta) {
   const avant = ta.value.slice(0, ta.selectionStart);
   const m = ta.selectionStart === ta.selectionEnd && avant.match(/(?:^|[^\p{L}\p{N}_@'’])@([\p{L}\p{N}'’-]*)$/u);
   let a = ancreConn(ta);
   const q = m ? cleConn(m[1]) : null, tous = m ? [...connecteurs().values()] : [];
   const tri = (x, y) => y.n - x.n || x.label.localeCompare(y.label, 'fr');
-  const liste = [...tous.filter(c => c.k.startsWith(q)).sort(tri), ...(q ? tous.filter(c => !c.k.startsWith(q) && c.k.includes(q)).sort(tri) : [])].slice(0, 5);
+  const liste = [...tous.filter(c => c.k.startsWith(q)).sort(tri), ...(q ? tous.filter(c => !c.k.startsWith(q) && c.k.includes(q)).sort(tri) : [])].slice(0, CONN_PROPOSES);
   if (!liste.length) { a?.remove(); return; }
   if (!a) { a = document.createElement('div'); a.className = 'conn-ancre'; ta.before(a); }
   a.innerHTML = `<div class="conn-sugg" role="listbox" aria-label="Connecteurs">${liste.map(c => `<button type="button" role="option" data-conn-mot="${esc(c.label)}"><span class="conn">${esc(c.label)}</span><small>${c.n}</small></button>`).join('')}</div>`;
+  const menu = a.firstElementChild, p = positionDans(ta, avant.length - m[1].length - 1), rt = ta.getBoundingClientRect(), ra = a.getBoundingClientRect();
+  const ligne = Math.min(Math.max(p.y, 0), ta.clientHeight - p.h);   // la ligne du @, gardée dans la partie visible du champ
+  menu.style.left = `${rt.left - ra.left + Math.max(0, Math.min(p.x, ta.clientWidth - menu.offsetWidth))}px`;
+  let top = rt.top - ra.top + ligne + p.h + 2;
+  const vv = window.visualViewport, basVisible = vv ? vv.offsetTop + vv.height : innerHeight;
+  if (ra.top + top + menu.offsetHeight > basVisible - 4) top = rt.top - ra.top + ligne - menu.offsetHeight - 2;
+  menu.style.top = `${top}px`;
 }
 function placerConn(ta, label) {
   const pos = ta.selectionStart, debut = ta.value.slice(0, pos).replace(/@[\p{L}\p{N}'’-]*$/u, ''), apres = ta.value.slice(pos).replace(/^[\p{L}\p{N}'’-]*/u, '');
@@ -4821,6 +4909,39 @@ function placerConn(ta, label) {
   ta.setSelectionRange(debut.length + mot.length, debut.length + mot.length);
   ta.dispatchEvent(new Event('input', {bubbles:true}));   // enregistrement de la synthèse, et la liste se referme
 }
+/* Pendant la frappe, chaque connecteur est aussitôt surligné dans le champ : un fond placé sous le texte du champ en reprend
+   exactement la mise en page (même police, mêmes marges) et colore la place de chaque connecteur. Le texte lui-même reste
+   celui du champ : si le fond se décalait, seul le surlignage serait faux, jamais ce qu'on écrit. */
+function surlignage(ta) {
+  if (!ta || ta.dataset.surligne) return;
+  ta.dataset.surligne = '1';
+  const cadre = document.createElement('div'), fond = document.createElement('div'), s = getComputedStyle(ta);
+  cadre.className = 'conn-cadre'; fond.className = 'conn-fond'; fond.setAttribute('aria-hidden', 'true');
+  ta.before(cadre); cadre.append(ta, fond);
+  for (const p of ['boxSizing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+    'borderRadius', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize', 'textAlign']) fond.style[p] = s[p];
+  fond.style.backgroundColor = s.backgroundColor;
+  ta.style.backgroundColor = 'transparent';
+  new ResizeObserver(() => majSurlignage(ta)).observe(ta);
+  majSurlignage(ta);
+}
+function majSurlignage(ta) {
+  const fond = ta?.nextElementSibling;
+  if (!fond?.classList.contains('conn-fond')) return;
+  const s = getComputedStyle(ta), bords = parseFloat(s.borderLeftWidth) + parseFloat(s.borderRightWidth);
+  Object.assign(fond.style, {top:`${ta.offsetTop}px`, left:`${ta.offsetLeft}px`, width:`${ta.offsetWidth}px`, height:`${ta.offsetHeight}px`,
+    paddingRight:`${parseFloat(s.paddingRight) + Math.max(0, ta.offsetWidth - ta.clientWidth - bords)}px`});   // la place de la barre de défilement
+  const v = ta.value;
+  let html = '', i = 0;
+  for (const x of v.matchAll(RE_CONN)) {
+    const d = x.index + x[1].length, f = d + 1 + x[2].length;
+    html += esc(v.slice(i, d)) + `<mark>${esc(v.slice(d, f))}</mark>`; i = f;
+  }
+  fond.innerHTML = html + esc(v.slice(i)) + '\n';
+  fond.scrollTop = ta.scrollTop;
+}
+function surlignerChamps() { document.querySelectorAll('#eCar, #nText, #synth').forEach(surlignage); }   // les champs de CHAMPS_CONN
+document.addEventListener('scroll', e => { if (CHAMPS_CONN.includes(e.target.id)) majSurlignage(e.target); }, true);
 // toucher une proposition ne doit pas fermer le clavier
 for (const ev of ['pointerdown', 'mousedown']) document.addEventListener(ev, e => { if (e.target.closest('[data-conn-mot]')) e.preventDefault(); });
 document.addEventListener('click', e => {
@@ -4836,7 +4957,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CON
 document.addEventListener('input', e => {
   const t = e.target;
   if (!data) return;
-  if (CHAMPS_CONN.includes(t.id)) suggererConn(t);
+  if (CHAMPS_CONN.includes(t.id)) { suggererConn(t); majSurlignage(t); }
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
