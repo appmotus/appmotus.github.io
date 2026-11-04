@@ -186,7 +186,8 @@ dialog.conn-dlg[open]{display:flex;flex-direction:column;overflow:hidden}
 .dlg-h .titre-i{display:flex;align-items:center;gap:8px}
 .btn-i{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--muted);background:none;color:var(--muted);font:italic 700 .8rem/1 Georgia,serif;display:inline-grid;place-items:center;padding:0}
 .btn-i[aria-expanded=true]{border-color:var(--accent);color:var(--accent)}
-.conn-ligne{display:flex;align-items:center;gap:10px;padding:11px 12px}
+.conn-ligne{display:flex;align-items:center;gap:10px;padding:7px 12px}
+.conn-ligne:has(input:checked){background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .conn-ligne:not([hidden])~.conn-ligne:not([hidden]){border-top:1px solid var(--border)}
 .conn-ligne span{flex:1;overflow-wrap:anywhere}
 .conn-ligne:has(input:disabled){opacity:.45}
@@ -625,9 +626,9 @@ function clesDe(texte, ville, lieu) {
   return s;
 }
 
-const APP_VERSION = 36;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 26;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:684, cache:672, envoyes:10, ecrits:2.4};   // en millions, même script, même moment
+const APP_VERSION = 37;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 27;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:702, cache:690, envoyes:10.1, ecrits:2.5};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
@@ -1971,6 +1972,7 @@ const ICO = {
   oeil:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
   importer:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14l3 3 3-3"/>',
   at:'<circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.9 7.9"/>',
+  copie:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
   filtre:'<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/><path d="M8 9h5M8 12h3"/>',
   oeilBarre:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
@@ -2180,8 +2182,11 @@ function vCal() {
     let premier = [ks[0], cree, ymd(new Date(calY, calM, 1))].filter(Boolean).sort()[0];
     const fin = parse(premier), mois = [];
     for (let y = now.getFullYear(), m = now.getMonth(); y > fin.getFullYear() || (y === fin.getFullYear() && m >= fin.getMonth()); m === 0 ? (m = 11, y--) : m--) mois.push([y, m]);
-    return `<div id="listeNotes">${mois.map(([y, m]) => `<div class="mois-bloc" data-mois="${y}-${m}"><div class="mois-sep" data-mois="${y}-${m}"><span>${MOIS[m]} ${y}</span></div>
-      ${listCards(y, m) || `<p class="small muted mois-vide">${filtre || calC.length ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[m]}.</p>`}</div>`).join('')}</div>`
+    // avec un filtre (pastilles ou connecteurs), les mois où rien ne correspond ne sont pas affichés
+    const tri = filtre || calC.length, blocs = mois.map(([y, m]) => [y, m, listCards(y, m)]).filter(b => b[2] || !tri);
+    return `<div id="listeNotes">${blocs.map(([y, m, c]) => `<div class="mois-bloc" data-mois="${y}-${m}"><div class="mois-sep" data-mois="${y}-${m}"><span>${MOIS[m]} ${y}</span></div>
+      ${c || `<p class="small muted mois-vide">Rien de noté en ${MOIS[m]}.</p>`}</div>`).join('')
+      || '<section class="card"><p class="empty">Aucune note ne correspond à ce filtre.</p></section>'}</div>`
       + '<div class="fin-liste"></div>';   // de la place en bas : le mois le plus ancien peut lui aussi remonter sous l'en-tête
   }
   function listCards(y, m) {
@@ -2265,12 +2270,13 @@ function resultatsRecherche(q) {
   let n = 0;
   const cartes = Object.keys(D().days).filter(k => k <= t).sort().reverse().map(k => {
     const d = D().days[k];
+    // seul le texte compte : les émotions choisies et ce qu'on a écrit, jamais l'heure, le lieu ou les mentions de l'app
+    // (« Je me sens », « Note personnelle »). Le texte tel qu'il est écrit (« @un-ami ») et tel qu'il s'affiche (« un ami »).
     const lignes = [
-      // le texte tel qu'il est écrit (« @un-ami ») et tel qu'il s'affiche (« un ami ») : les deux se cherchent
-      ...(d.entries || []).filter(e => contient(`${sentence(e)} ${sansArobase(e.car)} ${where(e)} ${e.emos.map(x => FAMK[x.f].n).join(' ')}`))
-        .map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e, true)}</div>`})),
-      ...(src ? [] : dayNotes(d).filter(x => contient(`${x.text} ${sansArobase(x.text)} ${where(x)}`))
-        .map(x => ({time:x.time, html:`<div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt">${avecConnecteurs(x.text, true)}</div>`}))),
+      ...(d.entries || []).filter(e => e.emos.some(x => contient(lc(x.w))) || contient(cleanCar(e)) || contient(sansArobase(cleanCar(e))))
+        .map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${phraseRecherche(e)}</div>`})),
+      ...(src ? [] : dayNotes(d).filter(x => contient(x.text) || contient(sansArobase(x.text)))
+        .map(x => ({time:x.time, html:`<div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt rq">${avecConnecteurs(x.text, true)}</div>`}))),
     ].sort((a, b) => a.time.localeCompare(b.time));
     const synth = d.synth?.trim() && contient(`${d.synth} ${sansArobase(d.synth)}`);
     if (!lignes.length && !synth) return '';
@@ -2278,15 +2284,20 @@ function resultatsRecherche(q) {
     return `<section class="card lday">
       <button class="lhead" data-act="openDay" data-k="${k}"><span>${JOURS[parse(k).getDay()]} ${fmtLong(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
       ${lignes.map(l => `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
-      ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
+      ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt rq">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
     </section>`;
   }).join('');
   if (!cartes) return `<section class="card"><p class="empty">Aucun résultat pour « ${esc(q.trim())} ».</p></section>`;
-  // ce qui a été trouvé est surligné dans le texte des notes, comme dans le Répertoire
+  // ce qui a été trouvé est surligné dans le texte des notes (pas dans l'heure ni les mentions), comme dans le Répertoire
   const tpl = document.createElement('template');
   tpl.innerHTML = cartes;
-  tpl.content.querySelectorAll('.occ .meta, .occ .txt').forEach(el => marquerTexte(el, m));
+  tpl.content.querySelectorAll('.occ .rq, .occ .txt b').forEach(el => marquerTexte(el, m));
   return `<p class="small muted" style="margin:0 2px 10px">${n} résultat${n > 1 ? 's' : ''} pour « ${esc(q.trim())} »</p>${tpl.innerHTML}`;
+}
+/* La phrase d'une émotion dans les résultats : le texte écrit (après « car ») est marqué .rq, seul endroit où surligner avec les émotions */
+function phraseRecherche(e) {
+  const car = cleanCar(e);
+  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ` car <span class="rq">${avecConnecteurs(car, true)}</span>` : '') + '.';
 }
 /* Entoure de <mark> chaque passage de q (déjà sans accents ni majuscules) dans les textes de el. Chaque lettre est comparée
    sans son accent, une par une : les positions trouvées sont donc exactement celles du texte affiché. */
@@ -2810,8 +2821,19 @@ function pageConnecteurs() {
     ${tous.length > 8 ? champRecherche('connGQ', connQ, 'Rechercher un connecteur') : ''}
     <div class="conn-liste conn-gestion" id="connGestion">${tous.map(c => `<button type="button" class="conn-ligne" data-act="renommerConn" data-k="${esc(c.k)}" data-t="${esc(sansAccent(c.label))}" ${q && !c.k.includes(k) && !sansAccent(c.label).includes(q) ? 'hidden' : ''}><span>${esc(c.label)}</span><small>${c.n} note${c.n > 1 ? 's' : ''}${c.lieu ? ' · lieu' : ''}</small>${ico('ch', 'rc')}</button>`).join('')}</div>`
     : '<p class="small muted" style="margin:6px 0 0">Aucun connecteur pour l’instant. Le premier apparaîtra ici dès que vous en écrirez un.</p>'}
-  </section>`;
+  </section>
+  <div id="connEspace"></div>`;
 }
+/* Dès qu'on cherche un connecteur, la recherche monte en haut de l'écran et n'en bouge plus : la place laissée sous la liste
+   (#connEspace) garde la page assez longue, même quand il ne reste qu'un ou deux connecteurs */
+const hautSur = () => { const p = document.createElement('div'); p.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top);visibility:hidden'; document.body.appendChild(p); const h = p.offsetHeight; p.remove(); return h; };
+function rechercheEnHaut() {
+  const c = $('#connGQ')?.closest('.champ-recherche'), e = $('#connEspace');
+  if (!c || !e) return;
+  e.style.height = `${innerHeight}px`;
+  window.scrollTo(0, Math.max(0, c.getBoundingClientRect().top + scrollY - hautSur() - 10));
+}
+document.addEventListener('focusin', e => { if (e.target.id === 'connGQ') { rechercheEnHaut(); setTimeout(rechercheEnHaut, 400); } });
 /* Ce que touche un renommage : les textes qui contiennent le connecteur, et les villes ou lieux qui portent ce nom */
 function usagesConn(k) {
   let textes = 0, lieux = 0;
@@ -3583,7 +3605,17 @@ async function loadAdmin() {
   if (view === 'admin') render(true);
 }
 /* Un cadre de saisie aussi haut que son texte : jamais de barre de défilement à l'intérieur */
-function ajusterHauteur(t) { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 2}px`; }
+/* Le cadre est d'abord remis à sa hauteur minimale pour mesurer le texte : la page raccourcit un instant et le navigateur la faisait
+   remonter (la page « sautait » à chaque lettre). Les positions de défilement sont donc remises à l'identique, avant tout affichage. */
+function sansSaut(el, fn) {
+  const pile = [];
+  for (let p = el.parentElement; p; p = p.parentElement) if (p.scrollTop) pile.push([p, p.scrollTop]);
+  const y = scrollY;
+  fn();
+  pile.forEach(([p, t]) => { if (p.scrollTop !== t) p.scrollTop = t; });
+  if (scrollY !== y) window.scrollTo(0, y);
+}
+function ajusterHauteur(t) { sansSaut(t, () => { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 2}px`; }); }
 /* Mes notes : le bloc-notes de l'administrateur, en trois catégories, chiffré avec son journal sur cet appareil */
 let admPage = null, admScroll = 0;
 const NOTES_ADMIN = [['maj', 'À travailler pour la prochaine mise à jour', 'Corrections et demandes à traiter…'], ['plusTard', 'Travaux ultérieurs', 'Idées et chantiers pour plus tard…'], ['libres', 'Notes libres', 'Tout le reste…']];
@@ -3592,7 +3624,7 @@ function pageNotesAdmin() {
   return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour au tableau de bord">‹</button><h1>Mes notes</h1></div>
   <p class="small muted" style="margin:0 2px 12px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes. Elles s’enregistrent au fil de la frappe.</p>
   ${NOTES_ADMIN.map(([k, titre, aide]) => `<section class="card">
-    <h2>${titre}</h2>
+    <div class="card-h" style="margin-bottom:0"><h2>${titre}</h2><button type="button" class="icon-btn copier" data-act="copierNoteAdmin" data-k="${k}" aria-label="Copier tout le texte de « ${titre} »">${ico('copie', '')}</button></div>
     <textarea data-notes-admin="${k}" rows="3" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
     <div class="small muted" data-etat="${k}" style="margin-top:6px;text-align:right">${n[k] ? 'Enregistré ✓' : ''}</div>
   </section>`).join('')}`;
@@ -4358,6 +4390,16 @@ const ACT = {
   calFilter: t => { calF = t.dataset.f || null; calW = null; listeAPlacer = true; render(); },
   calWord: t => { calW = t.dataset.w || null; listeAPlacer = true; render(); },
   choisirConn: () => ouvrirConnecteurs(),
+  // Mes notes (administrateur) : copie tout le texte d'une catégorie
+  copierNoteAdmin: async t => {
+    const txt = data.notesAdmin[t.dataset.k] || '';
+    if (!txt.trim()) return toast('Rien à copier : la note est vide.');
+    try { await navigator.clipboard.writeText(txt); }
+    catch {   // sans accès au presse-papiers : la sélection du champ, copiée à l'ancienne
+      const ta = $(`[data-notes-admin="${t.dataset.k}"]`); ta.focus(); ta.select(); document.execCommand('copy'); ta.setSelectionRange(0, 0); ta.blur();
+    }
+    toast('Texte copié');
+  },
   voirConnecteurs: t => { t.closest('dialog')?.close(); if (!setPage) menuScroll = 0; view = 'set'; setPage = 'connecteurs'; connQ = ''; render(); window.scrollTo(0, 0); },
   renommerConn: t => ouvrirRenommer(t.dataset.k),
   // toucher un connecteur dans le Journal : toutes les notes qui le contiennent, en liste
@@ -4375,8 +4417,8 @@ const ACT = {
   xNextWeek: () => setWeek(1),
   // changer de mois garde la page au même niveau : la grille fait toujours six semaines
   // en liste, la page va au mois voulu (listeAPlacer) ; en calendrier, elle reste au même niveau
-  prevMonth: () => { if (view === 'cal' && calMode === 'list') posVoulue = posListe(); if (--calM < 0) { calM = 11; calY--; } listeAPlacer = true; render(true); },
-  nextMonth: () => { if (view === 'cal' && calMode === 'list') posVoulue = posListe(); if (++calM > 11) { calM = 0; calY++; } listeAPlacer = true; render(true); },
+  prevMonth: () => changerMois(-1),
+  nextMonth: () => changerMois(1),
   choisirMois: () => choisirMois(),
   moisEnCours: () => { const t = new Date(); calY = t.getFullYear(); calM = t.getMonth(); listeAPlacer = true; render(true); },
   setColor: t => {
@@ -4569,7 +4611,8 @@ document.addEventListener('touchstart', e => {
   // pour revenir en arrière, le geste peut partir de n'importe où, même d'un champ de saisie (la page des notes en est presque entièrement couverte)
   const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
   const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('.week') : retour;
-  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]')));
+  // … sauf du champ où l'on écrit : là, le doigt sert à placer le curseur et à sélectionner le texte
+  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]') && champ !== document.activeElement));
   glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0} : null;
 }, {passive:true});
 // ce qui bouge : la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
@@ -4577,6 +4620,7 @@ const cibleGlisse = () => view === 'day' ? $('#view .week') : view === 'cal' ? $
 function glissePossible(dx) {
   if (view === 'day') return dx > 0 || mondayOf(cur) < mondayOf(today());   // pas de semaine à venir
   if (view === 'set' || view === 'admin') return dx > 0;                    // retour en arrière : vers la droite
+  if (view === 'cal' && calMode === 'list') return !!moisListe(dx > 0 ? -1 : 1);   // seulement vers un mois affiché
   const now = new Date();
   return dx > 0 || calY !== now.getFullYear() || calM !== now.getMonth();   // pas de mois à venir
 }
@@ -4585,8 +4629,11 @@ function voisineHtml(cote) {
   if (view === 'day') { const c = cur; cur = addDays(cur, cote < 0 ? 7 : -7); if (cur > today()) cur = today(); try { return weekStrip(); } finally { cur = c; } }
   if (view === 'set') { const p = setPage; setPage = null; try { return `<div>${vSet()}</div>`; } finally { setPage = p; } }
   if (view === 'admin') { const p = admPage; admPage = null; try { return `<div>${vAdmin()}</div>`; } finally { admPage = p; } }
+  if (calMode === 'list') {   // la liste contient déjà tous les mois affichés
+    const v = moisListe(cote < 0 ? 1 : -1);
+    return v ? $(`#listeNotes .mois-bloc[data-mois="${v[0]}-${v[1]}"]`)?.outerHTML || '' : '';
+  }
   const [y, m] = cote < 0 ? (calM === 11 ? [calY + 1, 0] : [calY, calM + 1]) : (calM === 0 ? [calY - 1, 11] : [calY, calM - 1]);
-  if (calMode === 'list') return $(`#listeNotes .mois-bloc[data-mois="${y}-${m}"]`)?.outerHTML || '';   // la liste contient déjà tous les mois
   const avant = [calY, calM]; [calY, calM] = [y, m];
   try { const t = document.createElement('template'); t.innerHTML = vCal(); return t.content.querySelector('#carteCal')?.outerHTML || ''; }
   finally { [calY, calM] = avant; }
@@ -4745,8 +4792,10 @@ function confirmerAction({titre, texte = '', bouton = 'Confirmer'}) {
 /* Journal en liste : choisir jusqu'à 3 connecteurs, classés par ordre alphabétique, avec une recherche */
 const CONN_MAX = 3;
 function ouvrirConnecteurs() {
-  const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
   let choix = calC.filter(k => connecteurs().has(k)), et = calCEt;
+  // ceux déjà choisis en haut, pour pouvoir les retirer sans les chercher ; puis tous les autres, par ordre alphabétique
+  const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => choix.includes(b.k) - choix.includes(a.k) || a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
+  const etat = () => JSON.stringify([[...choix].sort(), et]), avant = etat();
   D.innerHTML = `<form method="dialog" id="connForm">
     <div class="dlg-h"><div class="titre-i"><h2 tabindex="-1" autofocus>Connecteurs</h2><button type="button" class="btn-i" id="connI" aria-expanded="false" aria-controls="connAide" aria-label="Qu’est-ce qu’un connecteur ?">i</button></div><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
     <div class="dlg-b">
@@ -4775,13 +4824,16 @@ function ouvrirConnecteurs() {
   const q = $('#connQ');
   if (q) q.oninput = () => {
     const m = cleConn(q.value), t = sansAccent(q.value.trim());
+    // pendant une recherche, ceux qui sont choisis restent visibles, en haut
+    const L = $('#connListe');
+    cases.filter(c => c.checked).reverse().forEach(c => L.prepend(c.closest('.conn-ligne')));
     let n = 0;
-    D.querySelectorAll('.conn-ligne').forEach(l => { l.hidden = !!m && !l.dataset.k.includes(m) && !l.dataset.t.includes(t); if (!l.hidden) n++; });
+    D.querySelectorAll('.conn-ligne').forEach(l => { l.hidden = !!m && !l.querySelector('input').checked && !l.dataset.k.includes(m) && !l.dataset.t.includes(t); if (!l.hidden) n++; });
     $('#connRien').hidden = n > 0;
   };
   const eff = $('#connEff'); if (eff) eff.onclick = () => { cases.forEach(c => c.checked = false); maj(); };
   $('#connI').onclick = () => { const a = $('#connAide'), b = $('#connI'); a.hidden = !a.hidden; b.setAttribute('aria-expanded', !a.hidden); };
-  $('#connForm').onsubmit = e => { e.preventDefault(); D.close(); calC = choix; calCEt = et; listeAPlacer = true; render(true); };
+  $('#connForm').onsubmit = e => { e.preventDefault(); D.close(); };   // le choix s'applique à la fermeture
   maj();
   D.classList.add('conn-dlg');
   D.onclick = e => { if (e.target === D) D.close(); };   // un appui sur le voile, à côté de la fenêtre, la ferme toujours
@@ -4815,9 +4867,11 @@ function ouvrirConnecteurs() {
       D.style.transition = 'transform .18s ease-in'; D.style.transform = `translateY(${D.offsetHeight}px)`; setTimeout(() => D.close(), 180);
     } else { D.style.transition = 'transform .2s ease-out'; D.style.transform = ''; }
   }, o);
+  // quelle que soit la façon de fermer (Afficher, ×, glisser, appui à côté), ce qui est coché s'applique : « Tout retirer » puis fermer retire tout
   D.addEventListener('close', () => {
     ac.abort(); D.classList.remove('conn-dlg'); D.onclick = null;
     Object.assign(D.style, {transform:'', transition:'', marginBottom:'', maxHeight:''});
+    if (etat() !== avant) { calC = choix; calCEt = et; listeAPlacer = true; render(true); }
   }, {once:true});
   D.showModal();
   // sécurité : si la mise en page en colonne écrasait la fenêtre (cas de la v35 sur iPhone), on revient à la fenêtre ordinaire
@@ -5013,11 +5067,41 @@ function posListe(voisine = false) {
   return (h ? parseFloat(getComputedStyle(h).top) + h.offsetHeight : 0) + 4;
 }
 let posVoulue = null;   // place à l'écran du nom du mois, notée avant de changer de mois
+/* Journal en liste : le mois affiché le plus proche, avant (pas -1) ou après (pas 1) le mois en cours de lecture.
+   Avec un filtre, les mois sans rien n'y sont pas : les flèches et le balayage passent directement au suivant qui a des notes. */
+function moisListe(pas) {
+  const cur = calY * 12 + calM;
+  let r = null;
+  for (const b of document.querySelectorAll('#view #listeNotes .mois-bloc')) {   // du plus récent au plus ancien
+    const [y, m] = b.dataset.mois.split('-').map(Number), v = y * 12 + m;
+    if (pas < 0 && v < cur) return [y, m];
+    if (pas > 0 && v > cur) r = [y, m];
+  }
+  return r;
+}
+function changerMois(pas) {
+  if (view === 'cal' && calMode === 'list') {
+    const v = moisListe(pas);
+    if (!v) return;
+    posVoulue = posListe(); [calY, calM] = v;
+  } else { calM += pas; if (calM < 0) { calM = 11; calY--; } else if (calM > 11) { calM = 0; calY++; } }
+  listeAPlacer = true; render(true);
+}
 /* Journal en liste : amène le mois calM à la place voulue ; sinon (ouverture, « Revenir au mois en cours »),
    le mois en cours en haut de la page, ou un autre mois juste sous l'en-tête */
 function allerAuMois() {
-  const s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`), h = $('#view .calhead'), pos = posVoulue;
+  let s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`);
+  const h = $('#view .calhead'), pos = posVoulue;
   posVoulue = null;
+  if (!s && h) {   // filtre : ce mois n'a rien et n'est pas affiché ; on va au plus proche qui a des notes, plus ancien d'abord
+    const v = moisListe(-1) || moisListe(1);
+    if (v) {
+      [calY, calM] = v; s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`);
+      const n = new Date(), tm = h.querySelector('h1 .tm'), nx = h.querySelector('[data-act=nextMonth]');
+      if (tm) tm.textContent = `${MOIS[calM]} ${calY}`;
+      if (nx) nx.disabled = calY === n.getFullYear() && calM === n.getMonth();
+    }
+  }
   if (!s || !h) return;
   if (pos != null) window.scrollTo(0, Math.max(0, s.getBoundingClientRect().top + scrollY - pos));   // la barre garde son état
   else if (s === $('#view .mois-sep')) window.scrollTo(0, 0);
@@ -5104,8 +5188,10 @@ function placerConn(ta, label) {
 const RETRAIT_IOS = IOS ? 3 : 0;   // sur iPhone, le texte d'un champ commence 3 px après sa marge, de chaque côté
 function allonger(ta) {
   const s = getComputedStyle(ta);
-  ta.style.height = 'auto';
-  ta.style.height = `${ta.scrollHeight + parseFloat(s.borderTopWidth) + parseFloat(s.borderBottomWidth)}px`;
+  sansSaut(ta, () => {   // même précaution que pour les notes de l'administrateur : la fenêtre ne saute pas
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight + parseFloat(s.borderTopWidth) + parseFloat(s.borderBottomWidth)}px`;
+  });
 }
 function surlignage(ta) {
   if (!ta || ta.dataset.surligne) return;
