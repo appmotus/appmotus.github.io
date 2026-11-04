@@ -151,9 +151,29 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .etxt{min-width:0;display:block}
 .entry .meta{display:block;font-size:.78rem;color:var(--muted);font-weight:500}
 .entry .txt{display:block;font-size:.95rem;line-height:1.35}
-.entry b,.preview b{color:var(--fc);font-weight:700}
+.entry b{color:var(--fc);font-weight:700}
 .empty{color:var(--muted);margin:4px 0 0}
 .note-txt{white-space:pre-wrap;overflow-wrap:anywhere}
+/* Connecteurs (@travail) : ils ressortent dans le texte ; dans le Journal, les toucher affiche les notes qui les contiennent */
+.conn{color:var(--accent);font-weight:600}
+[data-theme=dark] .conn{color:color-mix(in srgb,var(--accent) 55%,#fff)}
+.conn[data-act]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;text-decoration-thickness:1px}
+.conn-ancre{position:relative;height:0}
+.conn-sugg{position:absolute;left:0;right:0;bottom:6px;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.16);overflow:hidden}
+.conn-sugg button{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:9px 12px;border:0;background:none;font:inherit;text-align:left;color:inherit}
+.conn-sugg button+button{border-top:1px solid var(--border)}
+.conn-sugg small,.conn-ligne small{color:var(--muted);white-space:nowrap}
+.conn-liste{max-height:45vh;overflow-y:auto;margin-top:10px;border:1px solid var(--border);border-radius:12px}
+.conn-ligne{display:flex;align-items:center;gap:10px;padding:11px 12px}
+.conn-ligne:not([hidden])~.conn-ligne:not([hidden]){border-top:1px solid var(--border)}
+.conn-ligne span{flex:1;overflow-wrap:anywhere}
+.conn-ligne:has(input:disabled){opacity:.45}
+/* le bouton des connecteurs, à droite de « Afficher » : un cadre, pas une pastille, pour ne pas se confondre avec les filtres */
+.btn-conn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:none;color:var(--text);border-radius:10px;padding:5px 10px;font:inherit;font-size:.84rem;font-weight:600;cursor:pointer}
+.btn-conn .a{color:var(--accent);font-weight:800}
+.btn-conn.on{border-color:var(--accent)}
+.btn-conn .nb{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-size:.72rem;font-weight:700;display:inline-grid;place-items:center}
+#connMode{margin-top:10px}
 
 /* Couleurs de journée */
 .colors{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
@@ -174,7 +194,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .fam{border:1.5px solid transparent;border-radius:13px;padding:9px 4px;font-weight:600;font-size:.82rem;background:color-mix(in srgb,var(--fc) 13%,transparent);color:color-mix(in srgb,var(--fc) 85%,var(--text))}
 .fam.on{border-color:var(--fc)}
 [data-theme=dark] .fam,[data-theme=dark] .rep h3{color:color-mix(in srgb,var(--fc) 45%,#fff)}
-[data-theme=dark] .entry b,[data-theme=dark] .preview b,[data-theme=dark] .occ b{color:color-mix(in srgb,var(--fc) 45%,#fff)}
+[data-theme=dark] .entry b,[data-theme=dark] .occ b{color:color-mix(in srgb,var(--fc) 45%,#fff)}
 [data-theme=dark] .chip:not(.on):not(.neutre){background:color-mix(in srgb,var(--fc) 28%,transparent);color:color-mix(in srgb,var(--fc) 38%,#fff)}
 [data-theme=dark] .chip.on:not(.neutre){background:color-mix(in srgb,var(--fc) 80%,#fff)}
 .besoin{font-size:.85rem;font-style:italic;color:var(--muted);margin:8px 0}
@@ -182,8 +202,6 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none
 .seg button{border:0;background:none;border-radius:12px;padding:7px 4px;font-size:.87rem;font-weight:500;color:var(--muted)}
 .seg button.on{background:var(--seg-on);color:var(--text)}
 .picked{min-height:38px;padding:8px;border:1px dashed var(--border);border-radius:13px}
-.preview{background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-radius:14px;padding:12px;margin-top:14px;font-size:.95rem}
-.preview .k{font-size:.8rem;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
 
 /* Calendrier */
 .calhead{display:flex;align-items:center;gap:8px}
@@ -518,14 +536,64 @@ function sentence(e) {
   const car = cleanCar(e);
   return 'Je me sens ' + joinFr(e.emos.map(x => lc(x.w))) + (car ? ' car ' + car : '') + '.';
 }
-function sentenceHtml(e) {
+function sentenceHtml(e, actif = false) {
   const car = cleanCar(e);
-  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + esc(car) : '') + '.';
+  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + avecConnecteurs(car, actif) : '') + '.';
 }
 
-const APP_VERSION = 33;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 24;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:618, cache:606, envoyes:9.3, ecrits:2.1};   // en millions, même script, même moment
+/* ───────────── Connecteurs : « @travail », « @un-ami » relient les notes entre elles ─────────────
+   On les écrit dans le texte d'une émotion (… car), d'une note personnelle ou d'une synthèse ; le tiret remplace l'espace
+   et s'affiche comme un espace. Les villes et lieux déjà saisis sont aussi des connecteurs. Rien n'est enregistré à part :
+   tout se déduit des notes. Deux écritures d'un même connecteur se rejoignent, sans tenir compte des majuscules, des accents,
+   ni des espaces, tirets ou signes (clé : « saint-etienne » pour « @Saint-Étienne » comme pour la ville « Saint-Étienne »). */
+const RE_CONN = /(^|[^\p{L}\p{N}_@'’])@([\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*)/gu;
+const cleConn = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/’/g, "'").replace(/[^\p{L}\p{N}']+/gu, '-').replace(/^-+|-+$/g, '');
+const motConn = label => '@' + String(label).trim().replace(/[^\p{L}\p{N}'’]+/gu, '-').replace(/^-+|-+$/g, '');   // ce qu'on écrit
+let connCache = null;   // recalculé à chaque affichage (render)
+function connecteurs() {
+  if (connCache) return connCache;
+  const m = new Map(), fiche = k => { let c = m.get(k); if (!c) m.set(k, c = {k, n:0, formes:{}, lieu:''}); return c; };
+  const compter = (texte, ville, lieu) => {   // n : nombre d'émotions, de notes et de synthèses qui contiennent le connecteur
+    const vus = new Set();
+    for (const x of String(texte ?? '').matchAll(RE_CONN)) { const k = cleConn(x[2]), c = fiche(k); c.formes[x[2]] = (c.formes[x[2]] || 0) + 1; vus.add(k); }
+    for (const l of [ville, lieu]) { const k = cleConn(l); if (k) { fiche(k).lieu ||= l.trim(); vus.add(k); } }
+    vus.forEach(k => m.get(k).n++);
+  };
+  for (const d of Object.values(D()?.days || {})) {
+    for (const e of d.entries || []) compter(e.car, e.ville, e.lieu);
+    for (const n of dayNotes(d)) compter(n.text, n.ville, n.lieu);
+    if (d.synth) compter(d.synth);
+  }
+  // le nom affiché : celui de la ville ou du lieu, sinon l'écriture la plus fréquente, tirets changés en espaces
+  for (const c of m.values()) c.label = c.lieu || Object.entries(c.formes).sort((a, b) => b[1] - a[1])[0][0].replace(/-/g, ' ');
+  return connCache = m;
+}
+const nomConn = mot => connecteurs().get(cleConn(mot))?.lieu || mot.replace(/-/g, ' ');
+/* Texte affiché : chaque connecteur ressort, sans son @ ; dans le Journal (actif), le toucher affiche les notes qui le contiennent */
+function avecConnecteurs(s, actif) {
+  s = String(s ?? '');
+  let html = '', i = 0;
+  for (const x of s.matchAll(RE_CONN)) {   // découpé avant l'échappement : une apostrophe peut faire partie du connecteur
+    const debut = x.index + x[1].length;
+    html += esc(s.slice(i, debut)) + `<span class="conn"${actif ? ` data-act="connecteur" data-c="${esc(cleConn(x[2]))}"` : ''}>${esc(nomConn(x[2]))}</span>`;
+    i = debut + 1 + x[2].length;
+  }
+  return html + esc(s.slice(i));
+}
+/* Exports (Excel, tableau) : le texte lisible, sans @ ni tirets */
+const sansArobase = s => String(s ?? '').replace(RE_CONN, (x, avant, mot) => avant + nomConn(mot));
+/* Les connecteurs d'une émotion, d'une note ou d'une synthèse, pour le filtre du Journal */
+function clesDe(texte, ville, lieu) {
+  const s = new Set();
+  for (const x of String(texte ?? '').matchAll(RE_CONN)) s.add(cleConn(x[2]));
+  for (const l of [ville, lieu]) { const k = cleConn(l); if (k) s.add(k); }
+  return s;
+}
+
+const APP_VERSION = 34;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 25;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:641, cache:629, envoyes:9.6, ecrits:2.2};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
@@ -1828,6 +1896,8 @@ window.addEventListener('pagehide', () => { if (key) saveNow(); });
 /* ───────────── Application ───────────── */
 let view = 'day', cur = today(), calY, calM, xStart, calF = null, calW = null, calMode = 'grid', setPage = null, calQ = '', menuScroll = 0;
 let listeAPlacer = false;      // Journal en liste : amener la page au mois calM au prochain affichage
+let calC = [], calCEt = true;  // Journal en liste : connecteurs choisis (3 au plus) ; true : notes qui les contiennent tous, false : au moins un
+const connOk = cles => !calC.length || (calCEt ? calC.every(k => cles.has(k)) : calC.some(k => cles.has(k)));
 let src = null;               // thérapeute : données d'un client consultées en lecture seule
 let pendingInv = null;        // invitation reçue via un lien (#inv=…), proposée après déverrouillage
 const D = () => src || data;  // source affichée par le calendrier, la journée et l'export Excel
@@ -1837,7 +1907,7 @@ function showApp() {
   $('#lock').hidden = true; $('#lock').innerHTML = '';
   $('#app').hidden = false;
   view = data.role === 'therapeute' ? 'clients' : 'day'; src = null;
-  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calMode = 'grid'; setPage = null; calQ = '';
+  cur = today(); xStart = addDays(cur, -6); calF = calW = null; calC = []; calMode = 'grid'; setPage = null; calQ = '';
   const t = new Date(); calY = t.getFullYear(); calM = t.getMonth();
   renderNav(); render();
   if (data.role === 'therapeute' && !data.keys) ensureKeys().then(render);
@@ -1886,6 +1956,7 @@ function markTabs() {
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === active));
 }
 function render(keepScroll) {
+  connCache = null;   // les connecteurs se recalculent avec les notes du moment
   markTabs();
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
   if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = Infinity; entJ.deploye = false; }
@@ -1947,7 +2018,7 @@ function vDay() {
     <ul class="entries">${ns.map(n => `
       <li><div class="entry" style="--fc:var(--lav)"><span class="edot"></span><span class="etxt">
         <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
-        <span class="txt note-txt">${esc(n.text)}</span></span></div></li>`).join('')}</ul>
+        <span class="txt note-txt">${avecConnecteurs(n.text)}</span></span></div></li>`).join('')}</ul>
   </section>` : ''}
 
   ${ro ? '' : `<section class="card">
@@ -1956,7 +2027,7 @@ function vDay() {
       <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
         <span class="edot"></span><span class="etxt">
         <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
-        <span class="txt note-txt">${esc(n.text)}</span></span>
+        <span class="txt note-txt">${avecConnecteurs(n.text)}</span></span>
       </button></li>`).join('')}</ul>` : ''}
     <button class="btn block" data-act="newNote">+ Ajouter une note</button>
   </section>`}
@@ -2024,7 +2095,8 @@ function vCal() {
 
   const filterCard = `
   <section class="card">
-    <h2>Afficher</h2>
+    <div class="card-h" style="margin-bottom:0"><h2>Afficher</h2>
+      ${calMode === 'list' ? `<button class="btn-conn ${calC.length ? 'on' : ''}" data-act="choisirConn" aria-label="Connecteurs${calC.length ? `, ${calC.length} choisi${calC.length > 1 ? 's' : ''}` : ''}"><span class="a" aria-hidden="true">@</span>Connecteurs${calC.length ? `<span class="nb">${calC.length}</span>` : ''}</button>` : ''}</div>
     <div class="chips" style="margin-top:10px">
       <button class="chip neutre ${!filtre ? 'on' : ''}" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
       <button class="chip neutre ${notesOnly ? 'on' : ''}" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>
@@ -2046,7 +2118,7 @@ function vCal() {
     <p class="small muted" style="margin:6px 0 4px">${occ.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occ.length} note${occ.length > 1 ? 's' : ''}` : 'Aucune note avec cette émotion ce mois-ci.'}</p>
     ${occ.map(({k, e}) => `<button class="occ" data-act="openDay" data-k="${k}">
       <div class="meta">${dayName(k)} · ${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div>
-      <div class="txt">${sentenceHtml(e)}</div>
+      <div class="txt">${sentenceHtml(e, true)}</div>
     </button>`).join('')}
   </section>` : synthOnly ? `
   <section class="card">
@@ -2054,7 +2126,7 @@ function vCal() {
     <p class="small muted" style="margin:6px 0 4px">${occS.length ? `${occS.length} synthèse${occS.length > 1 ? 's' : ''}` : 'Aucune synthèse ce mois-ci.'}</p>
     ${occS.map(k => `<button class="occ" data-act="openDay" data-k="${k}">
       <div class="meta">${dayName(k)}</div>
-      <div class="txt note-txt">${esc(D().days[k].synth.trim())}</div>
+      <div class="txt note-txt">${avecConnecteurs(D().days[k].synth.trim(), true)}</div>
     </button>`).join('')}
   </section>` : `
   <section class="card">
@@ -2062,7 +2134,7 @@ function vCal() {
     <p class="small muted" style="margin:6px 0 4px">${occN.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occN.length} note${occN.length > 1 ? 's' : ''}` : 'Aucune note personnelle ce mois-ci.'}</p>
     ${occN.map(({k, n}) => `<button class="occ" data-act="openDay" data-k="${k}">
       <div class="meta">${dayName(k)} · ${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</div>
-      <div class="txt note-txt">${esc(n.text)}</div>
+      <div class="txt note-txt">${avecConnecteurs(n.text, true)}</div>
     </button>`).join('')}
   </section>`;
   /* Vue liste : une seule liste continue, du mois en cours au plus ancien, chaque mois séparé par son nom.
@@ -2073,7 +2145,7 @@ function vCal() {
     const fin = parse(premier), mois = [];
     for (let y = now.getFullYear(), m = now.getMonth(); y > fin.getFullYear() || (y === fin.getFullYear() && m >= fin.getMonth()); m === 0 ? (m = 11, y--) : m--) mois.push([y, m]);
     return `<div id="listeNotes">${mois.map(([y, m]) => `<div class="mois-bloc" data-mois="${y}-${m}"><div class="mois-sep" data-mois="${y}-${m}"><span>${MOIS[m]} ${y}</span></div>
-      ${listCards(y, m) || `<p class="small muted mois-vide">${filtre ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[m]}.</p>`}</div>`).join('')}</div>`
+      ${listCards(y, m) || `<p class="small muted mois-vide">${filtre || calC.length ? 'Rien pour ce filtre' : 'Rien de noté'} en ${MOIS[m]}.</p>`}</div>`).join('')}</div>`
       + '<div class="fin-liste"></div>';   // de la place en bas : le mois le plus ancien peut lui aussi remonter sous l'en-tête
   }
   function listCards(y, m) {
@@ -2081,17 +2153,17 @@ function vCal() {
     for (let i = new Date(y, m + 1, 0).getDate(); i >= 1; i--) {
       const k = ymd(new Date(y, m, i)), d = D().days[k];
       if (!d || k > t) continue;
-      const ents = (d.entries || []).filter(e => !fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW)));
+      const ents = (d.entries || []).filter(e => (!fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW))) && connOk(clesDe(e.car, e.ville, e.lieu)));
       const lignes = [
-        ...(notesOnly || synthOnly ? [] : ents.map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`}))),
-        ...(fam || synthOnly ? [] : dayNotes(d).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''} · Note personnelle</div><div class="txt note-txt">${esc(n.text)}</div>`}))),
+        ...(notesOnly || synthOnly ? [] : ents.map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e, true)}</div>`}))),
+        ...(fam || synthOnly ? [] : dayNotes(d).filter(n => connOk(clesDe(n.text, n.ville, n.lieu))).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''} · Note personnelle</div><div class="txt note-txt">${avecConnecteurs(n.text, true)}</div>`}))),
       ].sort((a, b) => a.time.localeCompare(b.time));
-      const synth = (!filtre || synthOnly) && d.synth?.trim();
-      if (!lignes.length && !synth && (filtre || !d.color)) continue;
+      const synth = (!filtre || synthOnly) && d.synth?.trim() && connOk(clesDe(d.synth));
+      if (!lignes.length && !synth && (filtre || calC.length || !d.color)) continue;
       out.push(`<section class="card lday">
         <button class="lhead" data-act="openDay" data-k="${k}"><span>${dayName(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
         ${lignes.map(l => `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
-        ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${esc(d.synth)}</div></button>` : ''}
+        ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
       </section>`);
     }
     return out.join('');
@@ -2158,18 +2230,19 @@ function resultatsRecherche(q) {
   const cartes = Object.keys(D().days).filter(k => k <= t).sort().reverse().map(k => {
     const d = D().days[k];
     const lignes = [
-      ...(d.entries || []).filter(e => contient(`${sentence(e)} ${where(e)} ${e.emos.map(x => FAMK[x.f].n).join(' ')}`))
-        .map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e)}</div>`})),
-      ...(src ? [] : dayNotes(d).filter(x => contient(`${x.text} ${where(x)}`))
-        .map(x => ({time:x.time, html:`<div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt">${esc(x.text)}</div>`}))),
+      // le texte tel qu'il est écrit (« @un-ami ») et tel qu'il s'affiche (« un ami ») : les deux se cherchent
+      ...(d.entries || []).filter(e => contient(`${sentence(e)} ${sansArobase(e.car)} ${where(e)} ${e.emos.map(x => FAMK[x.f].n).join(' ')}`))
+        .map(e => ({time:e.time, html:`<div class="meta">${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}</div><div class="txt">${sentenceHtml(e, true)}</div>`})),
+      ...(src ? [] : dayNotes(d).filter(x => contient(`${x.text} ${sansArobase(x.text)} ${where(x)}`))
+        .map(x => ({time:x.time, html:`<div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt">${avecConnecteurs(x.text, true)}</div>`}))),
     ].sort((a, b) => a.time.localeCompare(b.time));
-    const synth = d.synth?.trim() && contient(d.synth);
+    const synth = d.synth?.trim() && contient(`${d.synth} ${sansArobase(d.synth)}`);
     if (!lignes.length && !synth) return '';
     n += lignes.length + (synth ? 1 : 0);
     return `<section class="card lday">
       <button class="lhead" data-act="openDay" data-k="${k}"><span>${JOURS[parse(k).getDay()]} ${fmtLong(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
       ${lignes.map(l => `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
-      ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${esc(d.synth)}</div></button>` : ''}
+      ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
     </section>`;
   }).join('');
   return cartes ? `<p class="small muted" style="margin:0 2px 10px">${n} résultat${n > 1 ? 's' : ''} pour « ${esc(q.trim())} »</p>${cartes}`
@@ -3566,10 +3639,19 @@ function trouverVille() {
     {enableHighAccuracy:false, timeout:15000, maximumAge:300000});
   });
 }
+/* Sur iPhone, l'autorisation de position n'est pas gardée d'une ouverture de Motus à l'autre : chaque recherche refait apparaître
+   la question d'iOS. La recherche automatique n'a donc lieu qu'une fois toutes les 2 heures ; entre-temps, la dernière ville sert.
+   L'épingle, elle, cherche toujours. Seule l'heure de la dernière recherche est gardée sur l'appareil, jamais la position. */
+const GEO_DERNIERE = 'motus.geo.derniere', GEO_PAUSE = 2 * 3600e3;
+let villeGeo = '';   // ville trouvée pendant cette ouverture de l'app
+const geoRecente = () => { try { return Date.now() - Number(localStorage.getItem(GEO_DERNIERE) || 0) < GEO_PAUSE; } catch { return false; } };
 function locate(force) {
   const me = ed, status = msg => { const s = $('#geoSt'); if (s && ed === me) s.textContent = msg; };
+  if (!force && IOS && geoRecente()) { if (villeGeo && !me.villeTouched) $('#eVille').value = villeGeo; return; }
+  try { localStorage.setItem(GEO_DERNIERE, String(Date.now())); } catch {}
   status('Recherche de la ville…');
   trouverVille().then(v => {
+    villeGeo = v;
     if (ed !== me) return;
     if (force || !me.villeTouched) $('#eVille').value = v;
     status('');
@@ -3614,7 +3696,6 @@ function openEntry(id) {
       <div class="picked chips" id="picked"></div>
       <label class="label" for="eCar">… car</label>
       <textarea id="eCar" rows="3" autocapitalize="none" placeholder="ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
-      <div class="preview"><span class="k">Aperçu</span><span id="ePrev"></span></div>
       <div class="err" id="eErr"></div>
     </div>
     <div class="dlg-f">
@@ -3640,7 +3721,7 @@ function openNote(id) {
     <div class="dlg-b">
       ${lieuFields(n?.time || (cur === today() ? nowTime() : '12:00'), n ? n.ville : villeParDefaut(), n?.lieu)}
       <label class="label" for="nText">Ma note</label>
-      <textarea id="nText" rows="6" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier…">${esc(n?.text || '')}</textarea>
+      <textarea id="nText" rows="6" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier… Tapez @ pour relier vos notes : @travail, @un-ami">${esc(n?.text || '')}</textarea>
       <div class="err" id="nErr"></div>
     </div>
     <div class="dlg-f">
@@ -3663,11 +3744,6 @@ function renderPicker() {
   $('#picked').innerHTML = ed.emos.length
     ? ed.emos.map((x, i) => `<button type="button" class="chip on" style="--fc:${FAMK[x.f].c}" data-act="unpick" data-n="${i}" aria-label="Retirer ${esc(x.w)}">${esc(x.w)} ×</button>`).join('')
     : '<span class="small muted">Choisissez une ou plusieurs émotions ci-dessus.</span>';
-  updatePreview();
-}
-function updatePreview() {
-  ed.car = $('#eCar').value;
-  $('#ePrev').innerHTML = ed.emos.length ? sentenceHtml(ed) : '<span class="muted">Je me sens … car …</span>';
 }
 
 /* ───────────── Export Excel (.xlsx généré sur le téléphone, sans bibliothèque externe) ───────────── */
@@ -3812,9 +3888,9 @@ function buildXlsx(from, to) {
       if (k < from || k > to) { cells.push(cE(ref, S.off)); continue; }
       if (!(avecNotes ? dayFilled(d) : dayUsed(d))) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
       let t = fmtFR(k).slice(0, 5) + (d.color ? ' — ' + L[d.color] : '');
-      byTime(d).forEach(e => t += `\n\n${e.time}${where(e) ? ' · ' + where(e) : ''}\n${sentence(e)}`);
-      if (d.synth?.trim()) t += `\n\nSYNTHÈSE : ${d.synth.trim()}`;
-      if (avecNotes) dayNotes(d).forEach(n => t += `\n\nNOTE PERSONNELLE ${n.time}${where(n) ? ' · ' + where(n) : ''} :\n${n.text}`);
+      byTime(d).forEach(e => t += `\n\n${e.time}${where(e) ? ' · ' + where(e) : ''}\n${sansArobase(sentence(e))}`);
+      if (d.synth?.trim()) t += `\n\nSYNTHÈSE : ${sansArobase(d.synth.trim())}`;
+      if (avecNotes) dayNotes(d).forEach(n => t += `\n\nNOTE PERSONNELLE ${n.time}${where(n) ? ' · ' + where(n) : ''} :\n${sansArobase(n.text)}`);
       lines = Math.max(lines, estLines(t, 34));
       cells.push(cS(ref, cellStyle(d.color), t));
     }
@@ -3832,7 +3908,7 @@ function buildXlsx(from, to) {
       const vals = [fmtFR(k), JOURS[parse(k).getDay()], e.time, e.ville || '', e.lieu,
         [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', '),
         [...new Set(e.emos.map(x => INTN[x.i]))].join(', '),
-        joinFr(e.emos.map(x => lc(x.w))), (e.car || '').trim()];
+        joinFr(e.emos.map(x => lc(x.w))), sansArobase((e.car || '').trim())];
       const row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
       row.push(d.color ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
       r2.push(xRow(n2, row, Math.min(409, Math.max(15, Math.max(estLines(e.car || '', 60), estLines(vals[7], 34)) * 12 + 4))));
@@ -3849,7 +3925,7 @@ function buildXlsx(from, to) {
     const d = D().days[k]; if (!dayUsed(d)) continue;
     const st = cellStyle(d.color);
     r3.push(xRow(n3, [cS('A' + n3, st, fmtFR(k)), cS('B' + n3, st, JOURS[parse(k).getDay()]), d.color ? cS('C' + n3, st, L[d.color]) : cE('C' + n3, st),
-      cN('D' + n3, st, d.entries.length), cS('E' + n3, st, (d.synth || '').trim())], Math.min(409, Math.max(15, estLines(d.synth || '', 85) * 12 + 4))));
+      cN('D' + n3, st, d.entries.length), cS('E' + n3, st, sansArobase((d.synth || '').trim()))], Math.min(409, Math.max(15, estLines(d.synth || '', 85) * 12 + 4))));
     n3++;
   }
   const s3 = sheet({cols:[11,10,18,12,80], rows:r3});
@@ -3861,7 +3937,7 @@ function buildXlsx(from, to) {
     const r4 = [xRow(1, h4.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
     let n4 = 2;
     for (const k of keys) for (const n of [...dayNotes(D().days[k])].sort((a, b) => a.time.localeCompare(b.time))) {
-      const vals = [fmtFR(k), JOURS[parse(k).getDay()], n.time, n.ville || '', n.lieu || '', n.text];
+      const vals = [fmtFR(k), JOURS[parse(k).getDay()], n.time, n.ville || '', n.lieu || '', sansArobase(n.text)];
       r4.push(xRow(n4, vals.map((v, i) => cS(colL(i) + n4, S.cell, v)), Math.min(409, Math.max(15, estLines(n.text, 85) * 12 + 4))));
       n4++;
     }
@@ -4104,6 +4180,9 @@ const ACT = {
   openDay: t => { cur = t.dataset.k; view = 'day'; render(); },
   calFilter: t => { calF = t.dataset.f || null; calW = null; listeAPlacer = true; render(); },
   calWord: t => { calW = t.dataset.w || null; listeAPlacer = true; render(); },
+  choisirConn: () => ouvrirConnecteurs(),
+  // toucher un connecteur dans le Journal : toutes les notes qui le contiennent, en liste
+  connecteur: t => { calC = [t.dataset.c]; calF = calW = null; calQ = ''; view = 'cal'; calMode = 'list'; listeAPlacer = true; render(true); },
   calMode: t => { calMode = t.dataset.m; listeAPlacer = true; render(); },
   // une semaine de la liste devient la période à envoyer ; la semaine en cours va du lundi à aujourd'hui
   choisirSemaine: t => {
@@ -4249,7 +4328,7 @@ const ACT = {
     if (!confirm(`Effacer définitivement ${th ? 'toutes les données reçues de vos clients' : 'toutes vos notes'} de ce téléphone ?\n\nVotre compte et vos réglages${th ? ', ainsi que vos fiches clients,' : ''} sont conservés. Les sauvegardes, fichiers Excel et envois déjà créés ne sont pas concernés.`)) return;
     if (!await confirmerEffacement()) return;
     viderJournal(); await saveNow();
-    src = null; setPage = null; view = th ? 'clients' : 'day'; cur = today(); calF = calW = null; calMode = 'grid'; render();
+    src = null; setPage = null; view = th ? 'clients' : 'day'; cur = today(); calF = calW = null; calC = []; calMode = 'grid'; render();
     toast(th ? 'Les données reçues ont été effacées de ce téléphone' : 'Vos notes ont été effacées de ce téléphone');
   },
   addRecovery: async () => {
@@ -4344,7 +4423,7 @@ function poserVoisine(g, cote) {
   if (view === 'set' || view === 'admin') top += scrollY - (view === 'set' ? menuScroll : admScroll);   // le menu revient là où on l'avait laissé
   else if (view === 'cal' && calMode === 'list') {   // le mois voisin prend la place du nom du mois affiché, comme après le changement
     const sep = v.querySelector('.mois-sep'); if (sep) sep.style.marginTop = '0';
-    top = posListe() - p.getBoundingClientRect().top;
+    top = posListe(true) - p.getBoundingClientRect().top;
   }
   Object.assign(v.style, {position:'absolute', top:`${top}px`, left:`${el.offsetLeft - cote * (el.offsetWidth + ECART)}px`, width:`${el.offsetWidth}px`, margin:'0', pointerEvents:'none'});
   p.appendChild(v);
@@ -4445,9 +4524,7 @@ document.addEventListener('touchend', e => {
   avalerClic = Date.now();
   const p = e.changedTouches[0], dx = p.clientX - l.x, dy = p.clientY - l.y, dt = Date.now() - l.t, x = l.base + dx;
   const vif = dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
-  if (x < -entreeDe(l.li).offsetWidth * .55) {   // geste long : la confirmation tout de suite
-    ligneOuverte = l.li; placerLigne(l.li, -LARG_SUPPR, 'transform .18s ease-out'); return proposerSuppression(l.li);
-  }
+  // toujours trois étapes : glisser, toucher « Supprimer », confirmer (même un geste long ne fait qu'ouvrir la ligne)
   const ouvrir = dx < 0 ? vif || x <= -LARG_SUPPR / 2 : !vif && x <= -LARG_SUPPR / 2;
   if (ouvrir) { ligneOuverte = l.li; placerLigne(l.li, -LARG_SUPPR, 'transform .18s ease-out'); }
   else fermerLigne(l.li);
@@ -4486,6 +4563,47 @@ function confirmerAction({titre, texte = '', bouton = 'Confirmer'}) {
     D.showModal();
   });
 }
+/* Journal en liste : choisir jusqu'à 3 connecteurs, classés par ordre alphabétique, avec une recherche */
+const CONN_MAX = 3;
+function ouvrirConnecteurs() {
+  const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
+  let choix = calC.filter(k => connecteurs().has(k)), et = calCEt;
+  D.innerHTML = `<form method="dialog" id="connForm">
+    <div class="dlg-h"><h2>Connecteurs</h2><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
+    <div class="dlg-b">${tous.length ? `
+      ${champRecherche('connQ', '', 'Rechercher un connecteur')}
+      <p class="small muted" id="connInfo" style="margin:8px 2px 0"></p>
+      <div class="seg two" id="connMode" hidden><button type="button" data-et="1">Tous à la fois</button><button type="button" data-et="">Au moins un</button></div>
+      <div class="conn-liste" id="connListe">${tous.map(c => `<label class="conn-ligne" data-k="${esc(c.k)}" data-t="${esc(sansAccent(c.label))}"><input type="checkbox" value="${esc(c.k)}" ${choix.includes(c.k) ? 'checked' : ''}><span>${esc(c.label)}</span><small>${c.n} note${c.n > 1 ? 's' : ''}</small></label>`).join('')}
+        <p class="small muted" id="connRien" hidden style="margin:12px">Aucun connecteur ne correspond.</p></div>`
+    : '<p class="small muted" style="margin:0">Aucun connecteur pour l’instant. Dans une émotion, une note ou une synthèse, écrivez @ suivi d’un mot : par exemple @travail, ou @un-ami (le tiret remplace l’espace). Les villes et lieux déjà saisis sont aussi des connecteurs.</p>'}
+    </div>
+    <div class="dlg-f">${tous.length ? '<button type="button" class="btn" id="connEff">Tout retirer</button>' : ''}<button class="btn primary">${tous.length ? 'Afficher' : 'Fermer'}</button></div>
+  </form>`;
+  const cases = [...D.querySelectorAll('#connListe input')];
+  const maj = () => {
+    choix = cases.filter(c => c.checked).map(c => c.value);
+    cases.forEach(c => c.disabled = !c.checked && choix.length >= CONN_MAX);
+    const i = $('#connInfo');
+    if (i) i.textContent = choix.length >= CONN_MAX ? `${CONN_MAX} connecteurs au plus : retirez-en un pour en choisir un autre.` : `${choix.length ? `${choix.length} choisi${choix.length > 1 ? 's' : ''} · ` : ''}jusqu’à ${CONN_MAX} à la fois`;
+    // à partir de deux : les notes qui les contiennent tous, ou au moins l'un d'eux
+    const m = $('#connMode');
+    if (m) { m.hidden = choix.length < 2; m.querySelectorAll('button').forEach(b => { const on = !!b.dataset.et === et; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
+  };
+  cases.forEach(c => c.onchange = maj);
+  D.querySelectorAll('#connMode button').forEach(b => b.onclick = () => { et = !!b.dataset.et; maj(); });
+  const q = $('#connQ');
+  if (q) q.oninput = () => {
+    const m = cleConn(q.value), t = sansAccent(q.value.trim());
+    let n = 0;
+    D.querySelectorAll('.conn-ligne').forEach(l => { l.hidden = !!m && !l.dataset.k.includes(m) && !l.dataset.t.includes(t); if (!l.hidden) n++; });
+    $('#connRien').hidden = n > 0;
+  };
+  const eff = $('#connEff'); if (eff) eff.onclick = () => { cases.forEach(c => c.checked = false); maj(); };
+  $('#connForm').onsubmit = e => { e.preventDefault(); D.close(); calC = choix; calCEt = et; listeAPlacer = true; render(true); };
+  maj();
+  D.showModal();
+}
 /* Un trait sous la date ou le mois quand ils restent collés en haut pendant le défilement */
 function marquerEntete() {
   const h = $('#view .dayhead, #view .calhead');
@@ -4502,8 +4620,11 @@ function entetesJournal() {
   entJ.y = y;
   bar.style.top = `${haut}px`;
   if (d > 0 && entJ.deploye) replierEntete();
-  const H = inn.offsetHeight;
-  entJ.cache = nat.getBoundingClientRect().bottom > haut ? H : Math.min(H, Math.max(0, entJ.cache + d));
+  const H = inn.offsetHeight, segB = inn.querySelector('.seg');
+  // la barre ne s'efface que lorsque le vrai choix calendrier/liste est entièrement revenu à sa place sous le mois, juste derrière elle :
+  // avant, il est encore en partie caché sous le mois et la barre disparaissait trop tôt
+  const revenu = y <= 0 || nat.getBoundingClientRect().top >= haut + (segB ? segB.offsetTop : 0) - 1;
+  entJ.cache = revenu ? H : Math.min(H, Math.max(0, entJ.cache + d));
   inn.style.transform = `translateY(${-entJ.cache}px)`;
   inn.style.visibility = entJ.cache >= H ? '' : 'visible';
   h.classList.toggle('sans-trait', entJ.cache < H);
@@ -4628,9 +4749,15 @@ function choisirMois(jour = false) {
 }
 /* Journal en liste : où se trouve, à l'écran, le nom du mois affiché. Quand on change de mois (balayage ou flèches),
    le nouveau mois prend exactement cette place : seules les notes changent, l'en-tête ne bouge pas. */
-function posListe() {
-  const s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`);
-  return s ? Math.max(s.getBoundingClientRect().top, basEntete() + 4) : null;
+function posListe(voisine = false) {
+  const s = $(`#view .mois-sep[data-mois="${calY}-${calM}"]`), h = $('#view .calhead'), b = basEntete() + 4;
+  if (!s) return null;
+  const top = s.getBoundingClientRect().top;
+  if (voisine || top <= b + 36) return Math.max(top, b);
+  // tout en haut de la liste, le mois en cours est plus bas, sous la recherche et les filtres : le mois voisin vient alors
+  // directement sous l'en-tête, à la place qu'il aura une fois collé en haut (sinon il arrivait au milieu de la page
+  // et l'en-tête revenait au mois en cours). Pendant le geste, la page voisine reste à la place du mois affiché.
+  return (h ? parseFloat(getComputedStyle(h).top) + h.offsetHeight : 0) + 4;
 }
 let posVoulue = null;   // place à l'écran du nom du mois, notée avant de changer de mois
 /* Journal en liste : amène le mois calM à la place voulue ; sinon (ouverture, « Revenir au mois en cours »),
@@ -4671,9 +4798,45 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
 });
+/* Saisie : dès qu'on tape « @ », une petite liste (5 lignes au plus) propose les connecteurs déjà utilisés qui commencent par
+   ce qui est tapé (puis ceux qui le contiennent), les plus fréquents d'abord. Elle s'ouvre au-dessus du champ, que le clavier ne cache pas. */
+const CHAMPS_CONN = ['eCar', 'nText', 'synth'];
+const ancreConn = ta => ta.previousElementSibling?.classList.contains('conn-ancre') ? ta.previousElementSibling : null;
+function suggererConn(ta) {
+  const avant = ta.value.slice(0, ta.selectionStart);
+  const m = ta.selectionStart === ta.selectionEnd && avant.match(/(?:^|[^\p{L}\p{N}_@'’])@([\p{L}\p{N}'’-]*)$/u);
+  let a = ancreConn(ta);
+  const q = m ? cleConn(m[1]) : null, tous = m ? [...connecteurs().values()] : [];
+  const tri = (x, y) => y.n - x.n || x.label.localeCompare(y.label, 'fr');
+  const liste = [...tous.filter(c => c.k.startsWith(q)).sort(tri), ...(q ? tous.filter(c => !c.k.startsWith(q) && c.k.includes(q)).sort(tri) : [])].slice(0, 5);
+  if (!liste.length) { a?.remove(); return; }
+  if (!a) { a = document.createElement('div'); a.className = 'conn-ancre'; ta.before(a); }
+  a.innerHTML = `<div class="conn-sugg" role="listbox" aria-label="Connecteurs">${liste.map(c => `<button type="button" role="option" data-conn-mot="${esc(c.label)}"><span class="conn">${esc(c.label)}</span><small>${c.n}</small></button>`).join('')}</div>`;
+}
+function placerConn(ta, label) {
+  const pos = ta.selectionStart, debut = ta.value.slice(0, pos).replace(/@[\p{L}\p{N}'’-]*$/u, ''), apres = ta.value.slice(pos).replace(/^[\p{L}\p{N}'’-]*/u, '');
+  const mot = motConn(label) + (/^\s/.test(apres) ? '' : ' ');
+  ta.value = debut + mot + apres;
+  ta.focus();
+  ta.setSelectionRange(debut.length + mot.length, debut.length + mot.length);
+  ta.dispatchEvent(new Event('input', {bubbles:true}));   // enregistrement de la synthèse, et la liste se referme
+}
+// toucher une proposition ne doit pas fermer le clavier
+for (const ev of ['pointerdown', 'mousedown']) document.addEventListener(ev, e => { if (e.target.closest('[data-conn-mot]')) e.preventDefault(); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-conn-mot]');
+  if (b) { e.preventDefault(); const ta = b.closest('.conn-ancre')?.nextElementSibling; if (ta) placerConn(ta, b.dataset.connMot); }
+  else if (CHAMPS_CONN.includes(e.target.id)) suggererConn(e.target);   // le curseur a été déplacé dans le texte
+});
+document.addEventListener('focusout', e => {
+  const ta = e.target;
+  if (CHAMPS_CONN.includes(ta.id)) setTimeout(() => { if (document.activeElement !== ta) ancreConn(ta)?.remove(); }, 200);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CONN.includes(e.target.id) && ancreConn(e.target)) { e.preventDefault(); ancreConn(e.target).remove(); } });
 document.addEventListener('input', e => {
   const t = e.target;
   if (!data) return;
+  if (CHAMPS_CONN.includes(t.id)) suggererConn(t);
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
@@ -4687,8 +4850,7 @@ document.addEventListener('input', e => {
   } else if (t.id === 'invCode') {   // un lien d'invitation complet collé dans le champ s'ouvre aussitôt
     const v = t.value.trim();
     if (/#i=[0-9a-f]{30}$|#inv=[A-Za-z0-9_-]{40,}$/i.test(v) && v !== t.dataset.ouvert) { t.dataset.ouvert = v; offerInvite(v); }
-  } else if (t.id === 'eCar') updatePreview();
-  else if (t.id === 'calQ') {   // seuls les résultats changent : le champ garde le clavier ouvert
+  } else if (t.id === 'calQ') {   // seuls les résultats changent : le champ garde le clavier ouvert
     calQ = t.value;
     $('#listeMois').hidden = $('#filtreJ').hidden = !!calQ.trim();
     $('#resRech').innerHTML = calQ.trim() ? resultatsRecherche(calQ) : '';
