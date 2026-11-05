@@ -8,9 +8,11 @@ Web app (PWA) pour les personnes suivies par un thérapeute : noter ses émotion
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | Toute l'application (interface, chiffrement, export Excel) |
-| `sw.js` | Fonctionnement hors connexion |
-| `confidentialite.html` | Politique de confidentialité, à accepter à l'inscription (version dans `RGPD_VERSION`, dans `index.html`) |
+| `index.html` | Page de l'application : structure, choix de l'apparence, puis chargement du style et du code |
+| `css/motus.css` | Tous les styles |
+| `js/*.js` | Le code de l'application, un fichier par sujet (voir « Organisation du code ») |
+| `sw.js` | Fonctionnement hors connexion (liste de tous les fichiers à garder en cache) |
+| `confidentialite.html` | Politique de confidentialité, à accepter à l'inscription (version dans `RGPD_VERSION`, dans `js/constantes.js`) |
 | `fonts/` | Police Plus Jakarta Sans (licence libre), livrée avec l'app pour qu'elle soit la même partout, sans jamais appeler Google |
 | `communes.txt` | Liste des communes françaises (nom + coordonnées du centre) pour trouver la ville sans connexion |
 | `manifest.webmanifest`, `icon-*.png` | Installation sur l'écran d'accueil |
@@ -18,6 +20,38 @@ Web app (PWA) pour les personnes suivies par un thérapeute : noter ses émotion
 | `outils/serveur-local.ps1` | Serveur de test sur ce PC (http://localhost:8765) |
 | `outils/generer-icones.ps1` | Régénère les icônes |
 | `outils/compter-heures.ps1` | Estime les heures de travail, pour le compteur de la page admin |
+
+## Organisation du code
+
+Depuis la version 39, le code est réparti en fichiers de `js/`, chargés par `index.html` dans cet ordre. Ce sont des scripts ordinaires (pas des modules) : ils partagent leurs fonctions et leurs variables, et chacun peut utiliser au chargement ce que définissent ceux d'avant. Une fonction appelée plus tard (à un appui, à l'affichage) peut se trouver dans n'importe quel fichier.
+
+| Fichier | Contenu |
+|---|---|
+| `repertoires.js` | Répertoires des émotions (`FAM`) et des besoins (`BES`), intensités, couleurs de la journée |
+| `utilitaires.js` | Dates, textes, phrases des émotions et des besoins |
+| `connecteurs.js` | Connecteurs (@travail) : lecture dans les notes, mise en forme |
+| `constantes.js` | `APP_VERSION`, compteurs de travail, `RGPD_VERSION`, engagements de la version d'essai, `toast` |
+| `chiffrement.js` | Chiffrement du journal |
+| `donnees.js` | Ouverture et normalisation du journal, enregistrement, emplacement du stockage |
+| `serveur.js` | Serveur Supabase (`SERVER`) et mode démonstration |
+| `connexion.js` | Écran de connexion et d'inscription, installation sur téléphone |
+| `compte.js` | Ouverture du journal, récupération, politique, engagements, effacement, suppression, sauvegarde |
+| `app.js` | État de l'app, affichage (`render`), onglets, icônes |
+| `vue-quotidien.js`, `vue-journal.js`, `vue-repertoire.js`, `vue-parametres.js` | Les onglets |
+| `import-texte.js`, `page-connecteurs.js` | Pages Importer des notes et Connecteurs |
+| `therapeute-lien.js`, `therapeute-canal.js`, `vue-clients.js` | Lien client-thérapeute, envois, fiches clients |
+| `admin.js` | Administration (`LIMITES`) |
+| `saisie.js` | Ville automatique, fenêtre d'une émotion (volets émotions et besoins), note personnelle |
+| `export-excel.js` | Export Excel |
+| `dialogue-code.js` | Fenêtre de saisie d'un mot de passe ou d'un code |
+| `actions.js` | Actions des boutons (`ACT`), registre des pages des Paramètres (`PAGES_REGLAGES`) |
+| `gestes.js` | Balayages, faces émotion / besoins, appui long, volets de la saisie |
+| `fenetres.js` | Confirmation, choix des connecteurs, fond immobile derrière les fenêtres |
+| `journal-defilement.js` | Journal : en-têtes collés, barre compacte, choix du mois |
+| `saisie-champs.js` | Propositions de connecteurs, hauteur des champs, barre du bas cachée clavier ouvert |
+| `demarrage.js` | Écouteurs généraux, lien d'invitation, service worker, démarrage (`boot`) |
+
+Pour ajouter, renommer ou retirer un fichier : le faire dans `index.html` **et** dans la liste `CODE` de `sw.js`, sinon l'app ne fonctionnerait plus hors connexion.
 
 ## Confidentialité
 
@@ -46,19 +80,19 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 - Le **serveur** (Supabase, hébergé en Europe) ne connaît que les comptes : identifiant, prénom, nom de famille (uniquement l'initiale pour un utilisateur ; le nom complet reste sur son appareil et dans ses envois au thérapeute), code utilisateur (`U-0001` pour un utilisateur, `C-0001` avant novembre 2026 ; `T-0001` pour un thérapeute), type de compte, coordonnées des thérapeutes, date et nombre de connexions, et des **compteurs** (notes saisies, envois au thérapeute). Jamais le contenu des notes.
 - Le **journal** reste chiffré sur l'appareil, avec le mot de passe du compte. Hors connexion, le journal déjà présent sur l'appareil s'ouvre quand même.
 - L'**administrateur** (un seul compte) a un onglet « Admin » : statistiques d'utilisation, liste des utilisateurs, désactivation, suppression et changement de type de compte.
-- Tant que `SERVER.url` est vide dans `index.html`, l'app fonctionne en **mode démonstration** : les comptes sont simulés dans le navigateur, et le premier compte créé est administrateur.
+- Tant que `SERVER.url` est vide dans `js/serveur.js`, l'app fonctionne en **mode démonstration** : les comptes sont simulés dans le navigateur, et le premier compte créé est administrateur.
 
 ### Mise en place du serveur
 
 1. Créer un projet sur https://supabase.com (région Europe).
 2. *SQL Editor* : coller et exécuter `serveur/schema.sql`.
 3. *Authentication › Sign In / Providers › Email* : désactiver « Confirm email » (les identifiants ne sont pas de vraies adresses).
-4. *Project Settings › API Keys* : copier l'adresse du projet et la clé publique (« Publishable key » ou, dans l'ancien écran, « anon public ») dans `SERVER`, dans `index.html`. Cette clé est publique par nature ; ne jamais y mettre une clé secrète (« Secret key » ou « service_role »).
+4. *Project Settings › API Keys* : copier l'adresse du projet et la clé publique (« Publishable key » ou, dans l'ancien écran, « anon public ») dans `SERVER`, dans `js/serveur.js`. Cette clé est publique par nature ; ne jamais y mettre une clé secrète (« Secret key » ou « service_role »).
 5. Créer son compte dans l'app, puis dans *SQL Editor* : `update public.profils set est_admin = true where identifiant = 'votre-identifiant';`
 6. Récupération par e-mail : exécuter `serveur/recuperation.sql`, puis créer dans *Edge Functions* une fonction nommée `recuperation` avec le contenu de `serveur/recuperation-fonction.ts`, vérification JWT désactivée. Définir ses secrets : `RECUPERATION_SECRET`, `BREVO_API_KEY`, `EMAIL_EXPEDITEUR`. À chaque modification de ce fichier, recoller son contenu dans la fonction et cliquer sur *Deploy*. La même fonction change l'identifiant après avoir vérifié le mot de passe (`identite_mdp`) : un nouvel identifiant change aussi l'adresse de connexion du compte. Le nom et le prénom, eux, se confirment par le mot de passe sur l'appareil. Sur l'appareil, le journal change d'emplacement avec lui ; sur un autre appareil, il est retrouvé à la connexion grâce au code utilisateur (`reprendreJournal`).
 7. Lien d'invitation court : exécuter `serveur/invitation-courte.sql`. Le serveur garde la clé publique du thérapeute et un code de 30 caractères (`#i=…`), soit un lien de 60 caractères environ, et un utilisateur connecté lit l'invitation avec ce code. Sans ce fichier, ou sans réponse du serveur, l'app garde le lien long (`#inv=…`), qui reste valable. Le code de sécurité à comparer de vive voix protège contre une clé remplacée sur le serveur.
 8. Lien client-thérapeute : exécuter `serveur/canal.sql`, après `invitation-courte.sql`, puis `serveur/invitation-sans-coordonnees.sql` si `invitation-courte.sql` avait été exécuté avant novembre 2026. Voir « Lien entre un client et son thérapeute » plus bas.
-9. Carte « Services et limites » de la page admin : exécuter `serveur/limites.sql`. Les valeurs maximales sont inscrites dans `LIMITES`, dans `index.html`, à mettre à jour si les offres changent.
+9. Carte « Services et limites » de la page admin : exécuter `serveur/limites.sql`. Les valeurs maximales sont inscrites dans `LIMITES`, dans `js/admin.js`, à mettre à jour si les offres changent.
 10. Trace après suppression d'un compte : exécuter `serveur/comptes-supprimes.sql`. Avant chaque suppression, le code utilisateur, l'identifiant, le prénom, le nom tel que le serveur le connaît, les dates de création et de suppression et l'accord à la politique sont copiés dans `comptes_supprimes`, lisible seulement depuis le tableau de bord Supabase, puis effacés au bout de 5 ans.
 11. Compteurs « Aujourd'hui » de la page admin : exécuter `serveur/compteur-du-jour.sql`.
 
@@ -109,6 +143,6 @@ Rappel : une mise à jour ne protège pas contre la perte du téléphone ou l'ef
 
 ## Mettre à jour
 
-Après une modification, augmenter le numéro de `CACHE` dans `sw.js` et donner le même à `APP_VERSION` dans `index.html`. Les téléphones installent alors la nouvelle version en arrière-plan, puis l'app affiche « Nouvelle version disponible » avec un bouton « Mettre à jour ». Le numéro installé se lit dans Paramètres › À propos.
+Après une modification, augmenter le numéro de `CACHE` dans `sw.js` et donner le même à `APP_VERSION` dans `js/constantes.js`. Les téléphones installent alors la nouvelle version en arrière-plan, puis l'app affiche « Nouvelle version disponible » avec un bouton « Mettre à jour ». Le numéro installé se lit dans Paramètres › À propos.
 
-À chaque nouvelle version, lancer aussi `outils/compter-heures.ps1` et reporter ses résultats dans `HEURES_TRAVAIL` et `JETONS_CONSOMMES`, dans `index.html` : ce sont les compteurs de la page admin. Les jetons relus depuis le cache sont la plus grosse part : à chaque réponse, Claude relit toute la conversation, mise en cache.
+À chaque nouvelle version, lancer aussi `outils/compter-heures.ps1` et reporter ses résultats dans `HEURES_TRAVAIL` et `JETONS_CONSOMMES`, dans `js/constantes.js` : ce sont les compteurs de la page admin. Les jetons relus depuis le cache sont la plus grosse part : à chaque réponse, Claude relit toute la conversation, mise en cache.

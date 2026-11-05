@@ -2,7 +2,7 @@
 # Deux échanges espacés de plus de 30 minutes comptent comme une pause : le temps entre les deux n'est pas compté.
 # 30 minutes laissent le temps de lire, de réfléchir ou d'attendre un long traitement (choix de l'utilisateur, 2 novembre 2026).
 # Compte aussi les jetons consommés par Claude, sous-agents compris : chaque réponse n'est comptée qu'une fois.
-# Les résultats vont dans HEURES_TRAVAIL et JETONS_CONSOMMES (index.html), à chaque nouvelle version.
+# Les résultats vont dans HEURES_TRAVAIL et JETONS_CONSOMMES (js/constantes.js), à chaque nouvelle version.
 param(
   [string]$Dossier = (Join-Path $env:USERPROFILE '.claude\projects\C--Users-User-Documents-10---Bricolages-WebApp'),
   [int]$PauseMinutes = 30

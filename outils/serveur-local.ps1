@@ -1,7 +1,7 @@
 # Petit serveur statique pour tester l'application sur ce PC : http://localhost:8765/
 param([int]$Port = 8765)
 $root = Split-Path $PSScriptRoot -Parent
-$types = @{ '.html'='text/html; charset=utf-8'; '.js'='text/javascript; charset=utf-8'; '.webmanifest'='application/manifest+json'; '.png'='image/png'; '.json'='application/json' }
+$types = @{ '.html'='text/html; charset=utf-8'; '.js'='text/javascript; charset=utf-8'; '.css'='text/css; charset=utf-8'; '.txt'='text/plain; charset=utf-8'; '.webmanifest'='application/manifest+json'; '.png'='image/png'; '.json'='application/json' }
 $l = New-Object System.Net.HttpListener
 $l.Prefixes.Add("http://localhost:$Port/")
 $l.Start()
