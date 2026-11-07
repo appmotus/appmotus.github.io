@@ -84,6 +84,32 @@ document.addEventListener('focusout', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CONN.includes(e.target.id) && ancreConn(e.target)) { e.preventDefault(); ancreConn(e.target).remove(); } });
 
+/* Champs des cartes (… car, Plus précisément…, Je pourrais…) : le premier mot suit la phrase de l'app (« car », « Je pourrais »),
+   donc pas de majuscule (autocapitalize="none") ; mais chaque nouvelle ligne commence par une majuscule (v41), mise ici puisque le
+   clavier ne la met plus. Seule la lettre change, le curseur ne bouge pas. Rien à un collage, ni sur une lettre qu'on n'a pas
+   tapée à l'instant : une minuscule voulue, remise après coup, le reste. */
+const CHAMPS_MAJ = ['eCar', 'eBdet', 'ePiste'];
+// une action de la carte Action (une ligne à elle seule) prend une majuscule dès sa première lettre (sa demande du 2026-11-07)
+const ligneAction = t => !!t.matches?.('#eTaches .tache-t');
+const avecMaj = t => CHAMPS_MAJ.includes(t.id) || ligneAction(t);
+function majLigne(ta, ajout) {   // ajout : ce qui vient d'être tapé, juste avant le curseur
+  const p = ta.selectionStart;
+  if (!ajout || p !== ta.selectionEnd) return;
+  const debut = ta.value.lastIndexOf('\n', p - 1) + 1;
+  if (!debut && !ligneAction(ta)) return;   // première ligne d'un champ de carte : pas de majuscule
+  const i = debut + ta.value.slice(debut, p).search(/\S|$/);   // première lettre de la ligne, après d'éventuels espaces
+  if (i >= p || i < p - ajout.length) return;
+  const c = ta.value[i], C = c.toLocaleUpperCase('fr');
+  if (C === c || C.length !== 1) return;
+  ta.setRangeText(C, i, i + 1);
+  ta.setSelectionRange(p, p);   // sinon la lettre remplacée resterait sélectionnée, et la suivante l'effacerait
+}
+document.addEventListener('input', e => {
+  if (!avecMaj(e.target) || e.isComposing) return;   // un mot en cours de composition (Android) : à la fin du mot
+  if (e.inputType === 'insertText' || e.inputType === 'insertReplacementText') majLigne(e.target, e.data ?? e.dataTransfer?.getData('text/plain') ?? '');
+});
+document.addEventListener('compositionend', e => { if (avecMaj(e.target)) majLigne(e.target, e.data || ''); });
+
 /* Le texte qu'on écrit ne descend jamais sous le clavier (v40). Clavier ouvert, une fenêtre se pose juste au-dessus de lui et
    rétrécit (comme celle des connecteurs, qui a son propre réglage) ; la page gagne en bas la hauteur du clavier, de quoi remonter.
    Puis, à chaque frappe, la ligne du curseur est ramenée au-dessus du clavier, et au-dessus des boutons du bas de la fenêtre. */

@@ -2,22 +2,25 @@
 'use strict';
 
 /* Une émotion dans le Journal (liste, émotion filtrée, recherche). Avec une carte Besoin ou Action, elle a plusieurs cartes comme
-   dans Quotidien : un balayage sur la ligne (ou un appui sur « Besoin › ») passe à la suivante, au lieu de changer de mois.
+   dans Quotidien, choisies par leurs pastilles ; un balayage sur la ligne change de mois, comme ailleurs dans la liste.
+   Toucher une note du Journal ne fait rien, sauf sur un connecteur ; un appui long propose de l'afficher dans Quotidien ou de la
+   supprimer (gestes.js, menuAppui : data-k, le jour ; data-type, emo, note ou synth ; data-id).
    debut : ce qui précède l'heure (le jour, pour une émotion filtrée) ; txt : la phrase de l'émotion. */
+const ficheOcc = (k, type, id = '') => `type="button" data-k="${k}" data-type="${type}"${id ? ` data-id="${id}"` : ''}`;
 function occEmotion(k, e, txt, debut = '') {
-  const quand = `${debut}${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`, ouvrir = `data-act="openDay" data-k="${k}"`, cs = cartesDe(e);
-  if (cs.length < 2) return `<button class="occ" ${ouvrir}><div class="meta">${pastillesCartes(e, 'e')}${quand}</div><div class="txt">${txt}</div></button>`;
-  const t = {e:txt, b:besoinHtml(e), a:actionHtml(e)};
+  const quand = `${debut}${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`, f = ficheOcc(k, 'emo', e.id), cs = cartesDe(e);
+  if (cs.length < 2) return `<button class="occ" ${f}><div class="meta">${pastillesCartes(e, 'e')}${quand}</div><div class="txt">${txt}</div></button>`;
+  const t = {e:txt, b:besoinHtml(e), a:actionHtml(e, k, !src)};
   return `<div class="occ-duo duo">${cs.map((c, i) => `
-    <button class="occ face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--i:${i}" ${ouvrir}><div class="meta">${pastillesCartes(e, c)}${quand}</div><div class="txt">${t[c]}</div></button>`).join('')}
+    <button class="occ face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--i:${i}" ${f}><div class="meta">${pastillesCartes(e, c)}${quand}</div><div class="txt">${t[c]}</div></button>`).join('')}
   </div>`;
 }
 
 /* Une note personnelle et une synthèse dans le Journal ; debut : le jour, quand la liste couvre tout le mois */
-const noteOcc = (k, n, debut = '', mention = false) => `<button class="occ" data-act="openDay" data-k="${k}">
+const noteOcc = (k, n, debut = '', mention = false) => `<button class="occ" ${ficheOcc(k, 'note', n.id)}>
   <div class="meta">${debut}${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}${mention ? ' · Note personnelle' : ''}</div>
   <div class="txt note-txt">${avecConnecteurs(n.text, true)}</div></button>`;
-const synthOcc = (k, meta) => `<button class="occ" data-act="openDay" data-k="${k}">
+const synthOcc = (k, meta) => `<button class="occ" ${ficheOcc(k, 'synth')}>
   <div class="meta">${meta}</div><div class="txt note-txt">${avecConnecteurs(D().days[k].synth.trim(), true)}</div></button>`;
 
 /* — Vue Calendrier — */
@@ -134,14 +137,14 @@ function vCal() {
       const ents = (d.entries || []).filter(e => (!fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW))) && connOk(clesDe(e.car, e.ville, e.lieu)));
       const lignes = [
         ...(notesOnly || synthOnly ? [] : ents.map(e => ({time:e.time, ligne:occEmotion(k, e, sentenceHtml(e, true))}))),
-        ...(fam || synthOnly ? [] : dayNotes(d).filter(n => connOk(clesDe(n.text, n.ville, n.lieu))).map(n => ({time:n.time, html:`<div class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''} · Note personnelle</div><div class="txt note-txt">${avecConnecteurs(n.text, true)}</div>`}))),
+        ...(fam || synthOnly ? [] : dayNotes(d).filter(n => connOk(clesDe(n.text, n.ville, n.lieu))).map(n => ({time:n.time, ligne:noteOcc(k, n, '', true)}))),
       ].sort((a, b) => a.time.localeCompare(b.time));
       const synth = (!filtre || synthOnly) && d.synth?.trim() && connOk(clesDe(d.synth));
       if (!lignes.length && !synth && (filtre || calC.length || !d.color)) continue;
       out.push(`<section class="card lday">
         <button class="lhead" data-act="openDay" data-k="${k}"><span>${dayName(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
-        ${lignes.map(l => l.ligne || `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
-        ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
+        ${lignes.map(l => l.ligne).join('')}
+        ${synth ? synthOcc(k, 'Synthèse') : ''}
       </section>`);
     }
     return out.join('');
@@ -224,15 +227,15 @@ function resultatsRecherche(q) {
       ...(d.entries || []).filter(e => e.emos.some(x => contient(lc(x.w))) || contient(cleanCar(e)) || contient(sansArobase(cleanCar(e))))
         .map(e => ({time:e.time, ligne:occEmotion(k, e, phraseRecherche(e))})),
       ...(src ? [] : dayNotes(d).filter(x => contient(x.text) || contient(sansArobase(x.text)))
-        .map(x => ({time:x.time, html:`<div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt rq">${avecConnecteurs(x.text, true)}</div>`}))),
+        .map(x => ({time:x.time, ligne:`<button class="occ" ${ficheOcc(k, 'note', x.id)}><div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt rq">${avecConnecteurs(x.text, true)}</div></button>`}))),
     ].sort((a, b) => a.time.localeCompare(b.time));
     const synth = d.synth?.trim() && contient(`${d.synth} ${sansArobase(d.synth)}`);
     if (!lignes.length && !synth) return '';
     n += lignes.length + (synth ? 1 : 0);
     return `<section class="card lday">
       <button class="lhead" data-act="openDay" data-k="${k}"><span>${JOURS[parse(k).getDay()]} ${fmtLong(k)}</span><span class="colpill ${d.color || ''}">${d.color ? esc(D().labels[d.color]) : 'Sans couleur'}</span></button>
-      ${lignes.map(l => l.ligne || `<button class="occ" data-act="openDay" data-k="${k}">${l.html}</button>`).join('')}
-      ${synth ? `<button class="occ" data-act="openDay" data-k="${k}"><div class="meta">Synthèse</div><div class="txt note-txt rq">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
+      ${lignes.map(l => l.ligne).join('')}
+      ${synth ? `<button class="occ" ${ficheOcc(k, 'synth')}><div class="meta">Synthèse</div><div class="txt note-txt rq">${avecConnecteurs(d.synth, true)}</div></button>` : ''}
     </section>`;
   }).join('');
   if (!cartes) return `<section class="card"><p class="empty">Aucun résultat pour « ${esc(q.trim())} ».</p></section>`;

@@ -76,6 +76,7 @@ function markTabs() {
 }
 function render(keepScroll) {
   connCache = null;   // les connecteurs se recalculent avec les notes du moment
+  fermerBulle();      // la bulle d'un connecteur ne survit pas à la page qui l'a ouverte
   markTabs();
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
   if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = entR.cache = Infinity; entJ.deploye = false; }

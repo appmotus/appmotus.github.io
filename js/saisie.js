@@ -137,7 +137,9 @@ function openEntry(id, volet = 'e') {
       <div class="volet" data-v="a">
       <div class="volet-h"><p class="label repere">${ico('action', '')}Je pourrais…</p>${pV('a')}</div>
       <p class="small muted" style="margin:2px 0 8px">Une action concrète et saine pour nourrir ce besoin.</p>
-      <textarea id="ePiste" rows="3" autocapitalize="none" aria-label="Je pourrais…" placeholder="appeler un ami, faire une pause, marcher dix minutes…">${esc(ed.piste || '')}</textarea>
+      <div class="taches-s" id="eTaches">${[...tachesDe(ed), {}].map(ligneTache).join('')}</div>
+      <label class="label" for="ePiste">Plus librement…</label>
+      <textarea id="ePiste" rows="3" autocapitalize="none" placeholder="appeler un ami, faire une pause, marcher dix minutes…">${esc(ed.piste || '')}</textarea>
       </div>
       </div></div>
       <div class="err" id="eErr"></div>
@@ -154,6 +156,27 @@ function openEntry(id, volet = 'e') {
   D.scrollTop = 0;
   if (!e && cur === today() && data.settings.geoloc) locate(false);
 }
+/* Carte Action (v41) : chaque action est une ligne, une case à cocher et son texte. Une ligne vide attend toujours en bas ; dès
+   qu'on y écrit, une autre apparaît dessous. Entrée passe à la ligne suivante (sans enregistrer) ; effacer une ligne déjà vide la
+   retire. Les lignes restées vides ne sont pas enregistrées (saveEntry). Le texte libre (#ePiste) reste en dessous. */
+const ligneTache = (x = {}) => `<div class="tache-l"${x.id ? ` data-ti="${x.id}"` : ''}><button type="button" class="coche${x.ok ? ' ok' : ''}" role="checkbox" aria-checked="${!!x.ok}" aria-label="Fait" data-act="cocherLigne"></button><input type="text" class="tache-t" value="${esc(x.t || '')}" placeholder="Ajouter une action…" autocapitalize="sentences" enterkeyhint="next" aria-label="Action"></div>`;
+const tachesSaisies = () => [...document.querySelectorAll('#eTaches .tache-l')]
+  .map(l => ({id:l.dataset.ti || uid(), t:l.querySelector('.tache-t').value.trim(), ok:l.querySelector('.coche').classList.contains('ok')})).filter(x => x.t);
+document.addEventListener('input', e => {
+  const t = e.target, L = $('#eTaches');
+  if (L && t.parentElement === L.lastElementChild && t.matches('.tache-t') && t.value.trim()) L.insertAdjacentHTML('beforeend', ligneTache());
+});
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (!t.matches?.('#eTaches .tache-t')) return;
+  const l = t.parentElement;
+  if (e.key === 'Enter') { e.preventDefault(); l.nextElementSibling?.querySelector('input').focus(); }
+  else if (e.key === 'Backspace' && !t.value && l.nextElementSibling) {
+    e.preventDefault();
+    const p = (l.previousElementSibling || l.nextElementSibling).querySelector('input');
+    l.remove(); p.focus(); p.setSelectionRange(p.value.length, p.value.length);
+  }
+});
 /* Le volet affiché ; les autres attendent à côté, hors d'atteinte. Le cadre prend la hauteur du volet affiché, et la suit ;
    un volet plus court que celui de l'émotion garde la hauteur de celui-ci : la fenêtre ne saute pas d'une carte à l'autre. */
 let voletsObs = null;

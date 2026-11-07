@@ -31,13 +31,14 @@ function connecteurs() {
   return connCache = m;
 }
 const nomConn = mot => connecteurs().get(cleConn(mot))?.lieu || mot.replace(/-/g, ' ');
-/* Texte affiché : chaque connecteur ressort, sans son @ ; dans le Journal (actif), le toucher affiche les notes qui le contiennent */
+/* Texte affiché : chaque connecteur ressort, sans son @ ; dans Quotidien et le Journal (actif), le toucher ouvre une bulle qui
+   propose de voir toutes les notes qui le contiennent (bulleConn, fenetres.js) */
 function avecConnecteurs(s, actif) {
   s = String(s ?? '');
   let html = '', i = 0;
   for (const x of s.matchAll(RE_CONN)) {   // découpé avant l'échappement : une apostrophe peut faire partie du connecteur
     const debut = x.index + x[1].length;
-    html += esc(s.slice(i, debut)) + `<span class="conn"${actif ? ` data-act="connecteur" data-c="${esc(cleConn(x[2]))}"` : ''}>${esc(nomConn(x[2]))}</span>`;
+    html += esc(s.slice(i, debut)) + `<span class="conn"${actif ? ` data-act="voirConn" data-c="${esc(cleConn(x[2]))}"` : ''}>${esc(nomConn(x[2]))}</span>`;
     i = debut + 1 + x[2].length;
   }
   return html + esc(s.slice(i));

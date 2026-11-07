@@ -45,8 +45,8 @@ Depuis la version 39, le code est réparti en fichiers de `js/`, chargés par `i
 | `export-excel.js` | Export Excel |
 | `dialogue-code.js` | Fenêtre de saisie d'un mot de passe ou d'un code |
 | `actions.js` | Actions des boutons (`ACT`), registre des pages des Paramètres (`PAGES_REGLAGES`) |
-| `gestes.js` | Balayages, faces émotion / besoins, appui long, volets de la saisie |
-| `fenetres.js` | Confirmation, choix des connecteurs, fond immobile derrière les fenêtres |
+| `gestes.js` | Balayages (jour, semaine, mois, retour), cartes émotion / besoin / action, appui long (Modifier, Afficher, Supprimer), volets de la saisie |
+| `fenetres.js` | Confirmation, choix d'une action, bulle d'un connecteur, choix des connecteurs, fond immobile derrière les fenêtres |
 | `journal-defilement.js` | Journal : en-têtes collés, barre compacte, choix du mois |
 | `saisie-champs.js` | Propositions de connecteurs, hauteur des champs, barre du bas cachée clavier ouvert |
 | `demarrage.js` | Écouteurs généraux, lien d'invitation, service worker, démarrage (`boot`) |

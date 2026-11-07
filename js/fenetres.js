@@ -14,10 +14,50 @@ function confirmerAction({titre, texte = '', bouton = 'Confirmer'}) {
     const fin = ok => { if (fait) return; fait = true; D.onclose = null; if (D.open) D.close(); resolve(ok); };
     $('#caNon').onclick = () => fin(false);
     $('#caForm').onsubmit = e => { e.preventDefault(); fin(true); };
-    D.onclose = () => fin(false);
+    // la fermeture d'une fenêtre précédente dans ce même cadre (le choix de l'appui long) arrive parfois après sa réouverture : ignorée
+    D.onclose = () => { if (!D.open) fin(false); };
     D.showModal();
   });
 }
+/* Un choix entre quelques actions (appui long sur une note) : les boutons les uns sous les autres, Annuler en dernier.
+   choix : [{k, t (texte du bouton), style ('primary' ou 'danger')}] ; renvoie la clé choisie, ou null. */
+function choisirAction({titre, texte = '', choix}) {
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="chForm">
+      <div class="dlg-h"><h2>${esc(titre)}</h2></div>
+      ${texte ? `<div class="dlg-b"><p class="small muted" style="margin:0">${texte}</p></div>` : ''}
+      <div class="dlg-f choix-f">${choix.map(c => `<button type="button" class="btn${c.style ? ' ' + c.style : ''}" data-choix="${c.k}">${esc(c.t)}</button>`).join('')}
+        <button type="button" class="btn" data-choix="">Annuler</button></div>
+    </form>`;
+    let fait = false;
+    const fin = r => { if (fait) return; fait = true; D.onclose = null; if (D.open) D.close(); resolve(r); };
+    D.querySelectorAll('[data-choix]').forEach(b => b.onclick = () => fin(b.dataset.choix || null));
+    D.onclose = () => { if (!D.open) fin(null); };
+    D.showModal();
+  });
+}
+/* Un connecteur touché dans une note (Quotidien, Journal) : une petite bulle, juste sous lui (au-dessus s'il est trop bas),
+   propose de voir toutes les notes qui le contiennent : le Journal en liste, filtré sur ce connecteur. Un appui ailleurs,
+   un défilement ou un changement de page la referment. */
+const fermerBulle = () => document.querySelector('.bulle-conn')?.remove();
+function bulleConn(t) {
+  fermerBulle();
+  const k = t.dataset.c, nom = connecteurs().get(k)?.label || t.textContent, b = document.createElement('div');
+  b.className = 'bulle-conn';
+  b.innerHTML = `<button type="button" data-act="connecteur" data-c="${esc(k)}">Voir toutes les notes avec <span class="conn">${esc(nom)}</span>${ico('ch', '')}</button>`;
+  document.body.appendChild(b);
+  const r = t.getClientRects()[0] || t.getBoundingClientRect(), w = b.offsetWidth, h = b.offsetHeight;   // un connecteur coupé en fin de ligne : sa première partie
+  const x = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8));
+  const nav = $('nav.tabs')?.getBoundingClientRect().top ?? innerHeight, dessous = r.bottom + 8 + h < nav - 4;
+  b.classList.toggle('dessus', !dessous);
+  b.dataset.y = scrollY;
+  b.style.left = `${x + scrollX}px`;
+  b.style.top = `${(dessous ? r.bottom + 8 : r.top - 8 - h) + scrollY}px`;
+  b.style.setProperty('--fl', `${Math.max(14, Math.min(w - 14, r.left + r.width / 2 - x))}px`);   // la pointe, sous le connecteur
+}
+document.addEventListener('pointerdown', e => { if (!e.target.closest?.('.bulle-conn, .conn[data-act]')) fermerBulle(); }, true);
+addEventListener('scroll', () => { const b = $('.bulle-conn'); if (b && Math.abs(scrollY - (+b.dataset.y || 0)) > 40) fermerBulle(); }, {passive:true});
 /* Journal (calendrier ou liste) : choisir jusqu'à 3 connecteurs, classés par ordre alphabétique ou par nombre de notes, avec une recherche */
 const CONN_MAX = 3;
 function ouvrirConnecteurs() {

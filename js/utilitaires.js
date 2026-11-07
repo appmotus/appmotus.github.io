@@ -39,7 +39,10 @@ const besoinsDe = e => (e?.bes || []).filter(x => BESK[x.b]);
 const pisteDe = e => (e?.piste || '').trim().replace(/[.\s]+$/, '');
 const detailDe = e => (e?.bdet || '').trim();
 const aBesoin = e => besoinsDe(e).length > 0 || !!detailDe(e);   // carte Besoin
-const aAction = e => !!pisteDe(e);                               // carte Action
+/* Carte Action (v41) : des actions à cocher (`taches` : [{id, t, ok}]), puis le texte libre (`piste`). Une action cochée reste là,
+   cochée ; on la coche sur la carte, dans la synthèse du jour ou dans la fenêtre de saisie. */
+const tachesDe = e => (e?.taches || []).filter(x => x?.t?.trim());
+const aAction = e => !!pisteDe(e) || tachesDe(e).length > 0;      // carte Action
 const aBesoins = e => aBesoin(e) || aAction(e);                  // au moins une carte après l'émotion
 const cartesDe = e => ['e', ...(aBesoin(e) ? ['b'] : []), ...(aAction(e) ? ['a'] : [])];
 const deMot = w => /^[aeiouyhàâéèêëîïôûü]/i.test(w) ? 'd’' : 'de ';   // « d’écoute », « d’harmonie », « de repos »
@@ -49,10 +52,17 @@ function besoinHtml(e) {
   return (bs.length ? 'J’ai besoin ' + joinFr(bs.map(x => `${deMot(x.w)}<b style="--fc:${coulB(x.b)}">${esc(lc(x.w))}</b>`)) + '.' : '')
     + (d ? `${bs.length ? ' ' : ''}${esc(finPhrase(d))}` : '');
 }
-const actionHtml = e => `Je pourrais ${esc(pisteDe(e))}.`;
+/* Une action à cocher, affichée (carte Action, synthèse du jour) ; actif : on peut la cocher (ses propres notes), k : le jour.
+   Sans espace entre les balises : le texte des cartes garde ses blancs (pre-wrap). */
+const caseTache = (e, x, k, actif) => `<span class="tache${x.ok ? ' ok' : ''}" role="checkbox" aria-checked="${!!x.ok}"${actif ? ` data-act="cocher" data-k="${k}" data-tache="${e.id}:${x.id}"` : ' aria-disabled="true"'}><span class="coche"></span><span class="tache-txt">${esc(x.t.trim())}</span></span>`;
+function actionHtml(e, k, actif = false) {
+  const ts = tachesDe(e), p = pisteDe(e);
+  return (ts.length ? `<span class="taches-v">${ts.map(x => caseTache(e, x, k, actif)).join('')}</span>` : '') + (p ? `Je pourrais ${esc(p)}.` : '');
+}
+const tachesTexte = e => tachesDe(e).map(x => `${x.ok ? '☑' : '☐'} ${x.t.trim()}`);   // sans mise en forme (export Excel)
 function besoinsTexte(e) {   // les deux cartes, sans mise en forme (export Excel)
   const bs = besoinsDe(e), d = detailDe(e), p = pisteDe(e);
-  return [bs.length ? 'J’ai besoin ' + joinFr(bs.map(x => deMot(x.w) + lc(x.w))) + '.' : '', d ? finPhrase(d) : '', p ? `Je pourrais ${p}.` : ''].filter(Boolean).join(' ');
+  return [bs.length ? 'J’ai besoin ' + joinFr(bs.map(x => deMot(x.w) + lc(x.w))) + '.' : '', d ? finPhrase(d) : '', ...tachesTexte(e), p ? `Je pourrais ${p}.` : ''].filter(Boolean).join(' ');
 }
 /* Les pastilles des cartes, à droite de la ligne (son choix du 2026-11-07, à la place de « Besoin › ») : toujours les trois, dans
    l'ordre émotion, besoin, action. Celle de la carte affichée est pleine ; une autre carte remplie est cerclée de sa couleur, et la

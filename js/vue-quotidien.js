@@ -23,30 +23,9 @@ function weekStrip() {
   }).join('')}</div>`;
 }
 function vDay() {
-  const d = getDay(cur), isT = cur === today(), dj = parse(cur);
-  const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
-  const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
-  const fs = famSummary(ents), fb = besSummary(ents), ro = !!src;
-  /* Une émotion et ses cartes : l'émotion d'abord, puis la carte Besoin et la carte Action quand elles existent. Un balayage vers la
-     gauche (ou un appui sur la pastille d'une carte) passe à la carte suivante, vers la droite revient à la précédente.
-     Toucher une carte ouvre la note sur ce même volet. */
-  const ligneEmo = e => {
-    const cs = cartesDe(e), duo = cs.length > 1, tag = ro ? 'div' : 'button', coul = couleursCartes(e);
-    const attrs = v => ro ? '' : ` data-act="editEntry" data-id="${e.id}"${v !== 'e' ? ` data-v="${v}"` : ''}`;
-    const quand = `${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`;
-    const txt = {e:() => sentenceHtml(e), b:() => besoinHtml(e), a:() => actionHtml(e)};
-    return `
-      <li${duo ? ' class="duo"' : ''}>${cs.map((c, i) => `<${tag} class="entry face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--fc:${coul[c]};--i:${i}"${attrs(c)}>
-        <span class="edot">${ico(ICO_CARTE[c], '')}</span><span class="etxt">
-        <span class="meta">${pastillesCartes(e, c)}${quand}</span>
-        <span class="txt">${txt[c]()}</span></span>
-      </${tag}>`).join('')}</li>`;
-  };
-  // synthèse : deux pastilles, émotions traversées et besoins exprimés (grisée sans besoin)
-  const pS = on => pastilles([['e', 'Émotions traversées'], ['b', 'Besoins exprimés']].map(([k, nom], i) =>
-    ({k, nom, coul:'var(--accent)', etat:k === on ? 'on' : k === 'b' && !fb.length ? 'vide' : 'lien', attrs:`data-act="voirFace" data-k="${i}"`})));
+  const isT = cur === today(), dj = parse(cur);
   return `
-  ${clientBar()}${ro ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
+  ${clientBar()}${src ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
     <div class="dayhead-t">
       <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : dj.getFullYear()}${isT ? '' : ' · <button class="link" data-act="goToday">Revenir à aujourd’hui</button>'}</div>
@@ -56,9 +35,38 @@ function vDay() {
     <button class="icon-btn" data-act="nextDay" aria-label="Jour suivant" ${isT ? 'disabled' : ''}>›</button>
   </div>
   ${weekStrip()}
-
+  ${corpsJour()}`;
+}
+/* Ce qui change d'un jour à l'autre sous la frise : un balayage latéral (gestes.js) le fait glisser, le jour voisin arrivant à côté */
+function corpsJour() {
+  const d = getDay(cur), isT = cur === today();
+  const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
+  const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
+  const fs = famSummary(ents), fb = besSummary(ents), ro = !!src;
+  /* Une émotion et ses cartes : l'émotion d'abord, puis la carte Besoin et la carte Action quand elles existent. On passe d'une
+     carte à l'autre par les pastilles (v41 : plus par balayage, qui change de jour). Toucher une carte ne fait rien, sauf sur un
+     connecteur ; un appui long propose de la modifier (sur la carte affichée) ou de la supprimer. */
+  const ligneEmo = e => {
+    const cs = cartesDe(e), duo = cs.length > 1, tag = ro ? 'div' : 'button', coul = couleursCartes(e);
+    const attrs = v => ro ? '' : ` type="button" data-type="emo" data-id="${e.id}" data-v="${v}"`;
+    const quand = `${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`;
+    const txt = {e:() => sentenceHtml(e, true), b:() => besoinHtml(e), a:() => actionHtml(e, cur, !ro)};
+    return `
+      <li${duo ? ' class="duo"' : ''}>${cs.map((c, i) => `<${tag} class="entry face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--fc:${coul[c]};--i:${i}"${attrs(c)}>
+        <span class="edot">${ico(ICO_CARTE[c], '')}</span><span class="etxt">
+        <span class="meta">${pastillesCartes(e, c)}${quand}</span>
+        <span class="txt">${txt[c]()}</span></span>
+      </${tag}>`).join('')}</li>`;
+  };
+  // synthèse : trois pastilles, émotions traversées, besoins exprimés et actions du jour (v41 : toutes les actions à cocher de la
+  // journée, cochables là aussi) ; grisée quand il n'y en a pas
+  const ta = ents.flatMap(e => tachesDe(e).map(x => ({e, x})));
+  const facesS = ['e', ...(fb.length ? ['b'] : []), ...(ta.length ? ['a'] : [])];
+  const pS = on => pastilles([['e', 'Émotions traversées'], ['b', 'Besoins exprimés'], ['a', 'Actions du jour']].map(([k, nom]) =>
+    ({k, nom, coul:'var(--accent)', etat:k === on ? 'on' : facesS.includes(k) ? 'lien' : 'vide', attrs:`data-act="voirFace" data-k="${facesS.indexOf(k)}"`})));
+  return `<div id="jourCorps">
   <section class="card">
-    <div class="card-h"><h2>${ro ? 'Émotions et besoins' : 'Mes émotions et mes besoins'}</h2><span class="count">${ents.length}</span></div>
+    <div class="card-h"><h2>${ro ? 'Émotions' : 'Mes émotions'}</h2><span class="count">${ents.length}</span></div>
     ${ents.length ? `<ul class="entries${ro ? '' : ' tenir'}">${ents.map(ligneEmo).join('')}</ul>`
     : ro ? '<p class="empty">Aucune émotion notée ce jour-là.</p>'
     : `<p class="empty">Rien de noté ${isT ? 'pour l’instant' : 'ce jour-là'}. Prenez un instant : où êtes-vous, que ressentez-vous ?</p>`}
@@ -70,27 +78,29 @@ function vDay() {
     <ul class="entries">${ns.map(n => `
       <li><div class="entry" style="--fc:var(--lav)"><span class="edot"></span><span class="etxt">
         <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
-        <span class="txt note-txt">${avecConnecteurs(n.text)}</span></span></div></li>`).join('')}</ul>
+        <span class="txt note-txt">${avecConnecteurs(n.text, true)}</span></span></div></li>`).join('')}</ul>
   </section>` : ''}
 
   ${ro ? '' : `<section class="card">
     <div class="card-h"><h2>Mes notes personnelles</h2><span class="count">${ns.length}</span></div>
     ${ns.length ? `<ul class="entries tenir">${ns.map(n => `
-      <li><button class="entry" style="--fc:var(--lav)" data-act="editNote" data-id="${n.id}">
+      <li><button type="button" class="entry" style="--fc:var(--lav)" data-type="note" data-id="${n.id}">
         <span class="edot"></span><span class="etxt">
         <span class="meta">${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</span>
-        <span class="txt note-txt">${avecConnecteurs(n.text)}</span></span>
+        <span class="txt note-txt">${avecConnecteurs(n.text, true)}</span></span>
       </button></li>`).join('')}</ul>` : ''}
     <button class="btn block" data-act="newNote">+ Ajouter une note</button>
   </section>`}
 
   <section class="card">
     <h2>Synthèse de la journée</h2>
-    ${fs.length ? `<div${fb.length ? ' class="duo"' : ''}>
+    ${fs.length ? `<div${facesS.length > 1 ? ' class="duo"' : ''}>
       <div class="face face-e on" style="--i:0"><p class="label">${pS('e')}<span class="repere">${ico('emotion', '')}Émotions traversées</span></p>
         <div class="chips">${fs.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n}${n > 1 ? ' ×' + n : ''}</span>`).join('')}</div></div>
       ${fb.length ? `<div class="face face-b" inert style="--i:1"><p class="label">${pS('b')}<span class="repere">${ico('besoin', '')}Besoins exprimés</span></p>
         <div class="chips">${fb.map(x => `<span class="chip static" style="--fc:${coulB(x.b)}">${esc(x.w)}${x.n > 1 ? ' ×' + x.n : ''}</span>`).join('')}</div></div>` : ''}
+      ${ta.length ? `<div class="face face-a" inert style="--i:${facesS.indexOf('a')}"><p class="label">${pS('a')}<span class="repere">${ico('action', '')}Actions du jour</span></p>
+        <div class="taches-v">${ta.map(({e, x}) => caseTache(e, x, cur, !ro)).join('')}</div></div>` : ''}
     </div>` : ''}
     ${ro ? `
     <p class="label">Couleur de la journée</p>
@@ -105,6 +115,6 @@ function vDay() {
     <label class="label" for="synth">En quelques mots</label>
     <textarea id="synth" rows="5" placeholder="Ce qui a marqué ma journée, ce que j’ai ressenti, ce que j’ai mis en place…">${esc(d.synth)}</textarea>
     <div class="saved" id="saved" aria-live="polite"></div>`}
-  </section>`;
+  </section></div>`;
 }
 

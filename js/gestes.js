@@ -1,8 +1,9 @@
 // Motus — Gestes : balayages des pages, faces émotion / besoins, appui long, volets de la saisie
 'use strict';
 
-/* Glisser le doigt : sur la frise de la semaine, change de semaine ; dans le Journal, sur le calendrier ou sur la liste des notes,
-   change de mois ; dans une page des Paramètres ou dans « Mes notes » de l'admin, vers la droite, revient en arrière.
+/* Glisser le doigt : dans Quotidien, change de jour (v41), sauf sur la frise de la semaine, où il change de semaine ; dans le
+   Journal, sur le calendrier ou sur la liste des notes, change de mois ; dans une page des Paramètres ou dans « Mes notes » de
+   l'admin, vers la droite, revient en arrière. Pas de jour, de semaine ni de mois à venir.
    Le geste part plutôt à l'horizontale (moins de 45°) et fait 60 px en moins d'une seconde et quart, ou 30 px d'un geste vif :
    il ne gêne ni le défilement ni un simple appui, et tolère un doigt qui dévie ensuite.
    Seule la partie balayée bouge, et la page voisine arrive à côté d'elle en suivant le doigt. Le reste de la page se met à jour ensuite. */
@@ -18,24 +19,26 @@ document.addEventListener('touchstart', e => {
   if (texteSelectionne()) { glisse = null; return; }
   // pour revenir en arrière, le geste peut partir de n'importe où, même d'un champ de saisie (la page des notes en est presque entièrement couverte)
   const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
-  // dans le Journal, une émotion reliée à des besoins (.duo) se retourne sous le doigt : là, le mois ne change pas
-  const zone = view === 'cal' ? !calQ.trim() && !e.target.closest('.duo') && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('.week') : retour;
-  // … sauf du champ où l'on écrit : là, le doigt sert à placer le curseur et à sélectionner le texte
-  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]') && champ !== document.activeElement));
-  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0} : null;
+  // les cartes (.duo) ne se balaient plus (v41) : elles changent par leurs pastilles, et le geste change de jour ou de mois
+  const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('#view') : retour;
+  // … même d'un champ (la synthèse du jour), sauf de celui où l'on écrit : là, le doigt place le curseur et sélectionne le texte
+  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || ((retour || view === 'day') && !champ.matches('select, input[type=range]') && champ !== document.activeElement));
+  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0, semaine:view === 'day' && !!e.target.closest('.week')} : null;
 }, {passive:true});
-// ce qui bouge : la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
-const cibleGlisse = () => view === 'day' ? $('#view .week') : view === 'cal' ? $(calMode === 'list' ? '#listeNotes' : '#carteCal') : $('#view');
-function glissePossible(dx) {
-  if (view === 'day') return dx > 0 || mondayOf(cur) < mondayOf(today());   // pas de semaine à venir
+// ce qui bouge : le jour (sous la frise), la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
+const cibleGlisse = g => view === 'day' ? $(g.semaine ? '#view .week' : '#jourCorps') : view === 'cal' ? $(calMode === 'list' ? '#listeNotes' : '#carteCal') : $('#view');
+// Quotidien : le jour d'à côté (cote 1 : la veille ; -1 : le lendemain), ou le même jour de la semaine d'à côté, jamais après aujourd'hui
+const jourVoisin = (g, cote) => { const k = addDays(cur, (cote < 0 ? 1 : -1) * (g.semaine ? 7 : 1)); return k > today() ? today() : k; };
+function glissePossible(g, dx) {
+  if (view === 'day') return dx > 0 || (g.semaine ? mondayOf(cur) < mondayOf(today()) : cur < today());   // rien à venir
   if (view === 'set' || view === 'admin') return dx > 0;                    // retour en arrière : vers la droite
   if (view === 'cal' && calMode === 'list') return !!moisListe(dx > 0 ? -1 : 1);   // seulement vers un mois affiché
   const now = new Date();
   return dx > 0 || calY !== now.getFullYear() || calM !== now.getMonth();   // pas de mois à venir
 }
 /* La page voisine (cote 1 : celle d'avant, à gauche ; -1 : celle d'après, à droite), construite par les fonctions d'affichage habituelles */
-function voisineHtml(cote) {
-  if (view === 'day') { const c = cur; cur = addDays(cur, cote < 0 ? 7 : -7); if (cur > today()) cur = today(); try { return weekStrip(); } finally { cur = c; } }
+function voisineHtml(g, cote) {
+  if (view === 'day') { const c = cur; cur = jourVoisin(g, cote); try { return g.semaine ? weekStrip() : corpsJour(); } finally { cur = c; } }
   if (view === 'set') { const p = setPage; setPage = pageRetour()?.de || null; try { return `<div>${vSet()}</div>`; } finally { setPage = p; } }
   if (view === 'admin') { const p = admPage; admPage = null; try { return `<div>${vAdmin()}</div>`; } finally { admPage = p; } }
   if (calMode === 'list') {   // la liste contient déjà tous les mois affichés
@@ -49,7 +52,7 @@ function voisineHtml(cote) {
 }
 function poserVoisine(g, cote) {
   const el = g.el, p = el.parentNode, t = document.createElement('template');
-  t.innerHTML = voisineHtml(cote).trim();
+  t.innerHTML = voisineHtml(g, cote).trim();
   const v = t.content.firstElementChild; if (!v) return null;
   v.removeAttribute('id'); v.querySelectorAll('[id]').forEach(x => x.removeAttribute('id'));
   v.setAttribute('aria-hidden', 'true');
@@ -84,8 +87,8 @@ document.addEventListener('touchmove', e => {
   }
   if (g.sens !== 'h') return;
   if (e.cancelable) e.preventDefault();
-  if (!(g.el ||= cibleGlisse())) return;
-  const possible = glissePossible(dx), cote = possible ? Math.sign(dx) : 0;
+  if (!(g.el ||= cibleGlisse(g))) return;
+  const possible = glissePossible(g, dx), cote = possible ? Math.sign(dx) : 0;
   if (cote !== g.cote) { g.voisine?.remove(); g.voisine = cote ? poserVoisine(g, cote) : null; g.cote = cote; }   // le doigt peut repartir de l'autre côté
   bouger(g, possible ? dx : dx / 4);   // là où il n'y a rien, la page résiste
 }, {passive:false});
@@ -95,11 +98,11 @@ document.addEventListener('touchend', e => {
   glisse = null;
   const p = e.changedTouches[0], dx = p.clientX - g.x, dy = p.clientY - g.y, dt = Date.now() - g.t;
   // une fois le geste parti à l'horizontale, l'écran ne défile plus : le doigt peut alors dévier sans annuler le balayage
-  const va = g.sens === 'h' && glissePossible(dx) && dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
+  const va = g.sens === 'h' && glissePossible(g, dx) && dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
   if (!va) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); return; }
   const cote = dx < 0 ? -1 : 1;
   const changer = () => {
-    if (view === 'day') { cur = addDays(cur, cote < 0 ? 7 : -7); if (cur > today()) cur = today(); render(true); }   // on reste au même endroit de la page
+    if (view === 'day') { cur = jourVoisin(g, cote); render(true); }   // on reste au même endroit de la page ; la frise suit le jour, et change de semaine avec lui
     else if (view === 'set') ACT.setBack();
     else if (view === 'admin') ACT.admRetour();
     else if (cote < 0) ACT.nextMonth(); else ACT.prevMonth();
@@ -112,12 +115,21 @@ document.addEventListener('touchend', e => {
 }, {passive:true});
 document.addEventListener('touchcancel', () => { const g = glisse; glisse = null; if (g) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); } }, {passive:true});
 /* Quotidien et Journal : une émotion a ses cartes (émotion, puis besoin et action quand ils existent), la synthèse du jour deux
-   faces (émotions traversées / besoins exprimés). Un balayage vers la gauche passe à la carte suivante, vers la droite revient à la
-   précédente ; mêmes règles de geste que ci-dessus. Là où il n'y a plus de carte, la ligne résiste au doigt. Un appui long (sans
-   bouger) sur une émotion ou une note propose de la supprimer, puis demande confirmation : le balayage sert aux cartes. */
+   faces (émotions traversées / besoins exprimés). Depuis la v41, on passe de l'une à l'autre seulement par les pastilles : le
+   balayage sur une ligne change de jour ou de mois, comme sur le reste de la page.
+   Un appui long (sans bouger) sur une note ouvre un choix : dans Quotidien, Modifier ou Supprimer ; dans le Journal, Afficher dans
+   Quotidien ou Supprimer. Supprimer demande ensuite confirmation. À la souris (ordinateur), le clic droit fait de même. */
 let ligne = null, avalerClic = 0;
 const APPUI_LONG = 550;   // durée d'un appui long, en millisecondes
-const entreeDe = li => li.querySelector('.entry');
+/* Ce que vise l'appui long : dans Quotidien, une ligne de ses propres notes ; dans le Journal, une note (liste, filtre, recherche),
+   y compris chez un client (thérapeute), où seul l'affichage dans Quotidien est proposé */
+function cibleAppui(t) {
+  if (view === 'day') return src ? null : t.closest('#view .entries.tenir li');
+  if (view === 'cal') return t.closest('#view .occ-duo') || t.closest('#view .occ');
+  return null;
+}
+// la carte affichée de la ligne, qui porte data-type (emo, note, synth), data-id, data-v (la carte) et, dans le Journal, data-k (le jour)
+const ficheAppui = el => el.querySelector('.face.on') || (el.matches('.occ') ? el : el.querySelector('.entry'));
 const sansAnim = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const facesDe = c => [...c.children].filter(x => x.classList.contains('face'));
 const faceDe = c => +(c.style.getPropertyValue('--k') || 0);   // la carte affichée (0 : l'émotion)
@@ -153,81 +165,81 @@ function poserFace(c, k, anim = !sansAnim()) {
 }
 function lacherAppui(l) {
   clearTimeout(l.minuteur); clearTimeout(l.marque);
-  if (!l.long) l.li?.classList.remove('appuye');
+  if (!l.long) l.el.classList.remove('appuye');
 }
-function revenir(l) {
-  if (l.c.classList.contains('duo')) placerFaces(l.c, 0, 'transform .2s ease-out');
-  else { const f = l.c.firstElementChild; if (f) { f.style.transition = 'transform .2s ease-out'; f.style.transform = ''; } }
-}
+let toucheA = 0;   // dernier appui du doigt : le clic droit simulé qui suit un appui long (Android) ne rouvre pas le choix
 document.addEventListener('touchstart', e => {
+  toucheA = Date.now();
   if (ligne) lacherAppui(ligne);
   ligne = null;
-  if ($('dialog[open]') || (view !== 'day' && view !== 'cal') || e.touches.length !== 1 || texteSelectionne()) return;
-  // Journal : seulement les émotions à deux faces (le reste de la liste change de mois) ; Quotidien : toutes les lignes
-  const c = e.target.closest(view === 'cal' ? '#view .duo' : '#view .duo, #view .entries li');
-  if (!c) return;
-  const li = !src && c.matches('.entries li') && c.querySelector('button.entry') ? c : null;   // appui long : seulement sur ses propres notes
-  const l = ligne = {c, li, x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, long:false};
-  if (li) {
-    l.marque = setTimeout(() => li.classList.add('appuye'), 150);   // la ligne se teinte : l'appui est en cours
-    l.minuteur = setTimeout(() => {
-      if (ligne !== l || l.sens) return;
-      l.long = true; avalerClic = Date.now() + 3000;   // jusqu'au lever du doigt, aucun appui ne passe
-      navigator.vibrate?.(12);
-      proposerSuppression(li).finally(() => li.classList.remove('appuye'));
-    }, APPUI_LONG);
-  }
+  if ($('dialog[open]') || e.touches.length !== 1 || texteSelectionne()) return;
+  const el = cibleAppui(e.target);
+  if (!el) return;
+  const l = ligne = {el, x:e.touches[0].clientX, y:e.touches[0].clientY, long:false};
+  l.marque = setTimeout(() => el.classList.add('appuye'), 150);   // la ligne se teinte : l'appui est en cours
+  l.minuteur = setTimeout(() => {
+    if (ligne !== l) return;
+    l.long = true; avalerClic = Date.now() + 3000;   // jusqu'au lever du doigt, aucun appui ne passe
+    glisse = null;                                    // ni aucun balayage sous la fenêtre
+    navigator.vibrate?.(12);
+    menuAppui(el).finally(() => el.classList.remove('appuye'));
+  }, APPUI_LONG);
 }, {passive:true});
 document.addEventListener('touchmove', e => {
   const l = ligne;
   if (!l || e.touches.length !== 1) return;
   if (l.long) { if (e.cancelable) e.preventDefault(); return; }
-  const dx = e.touches[0].clientX - l.x, dy = e.touches[0].clientY - l.y;
-  if (!l.sens && Math.hypot(dx, dy) > 10) {
-    lacherAppui(l);
-    // sur ses propres notes, rien ne se sélectionne : un doigt resté appuyé puis déplacé reste un geste
-    l.sens = !l.li && Date.now() - l.t > 450 ? 'selection' : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
-  }
-  if (l.sens !== 'h') return;
-  if (texteSelectionne()) { ligne = null; return revenir(l); }
-  if (e.cancelable) e.preventDefault();
-  if (!l.c.classList.contains('duo')) { const f = l.c.firstElementChild; f.style.transition = 'none'; f.style.transform = `translateX(${dx / 4}px)`; return; }
-  placerFaces(l.c, carteVoisine(l.c, dx) ? dx : dx / 4);   // là où il n'y a rien, la ligne résiste
+  // le doigt bouge : c'est un défilement ou un balayage (gérés plus haut), plus un appui long
+  if (Math.hypot(e.touches[0].clientX - l.x, e.touches[0].clientY - l.y) > 10) { lacherAppui(l); ligne = null; }
 }, {passive:false});
 document.addEventListener('touchend', e => {
   const l = ligne;
   if (!l) return;
   ligne = null;
   lacherAppui(l);
-  if (l.long) { if (e.cancelable) e.preventDefault(); avalerClic = Date.now(); return; }   // le doigt levé ne touche pas la fenêtre ouverte
-  if (l.sens !== 'h') return;
-  avalerClic = Date.now();
-  const p = e.changedTouches[0], dx = p.clientX - l.x, dy = p.clientY - l.y, dt = Date.now() - l.t;
-  const va = dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
-  if (!l.c.classList.contains('duo')) return revenir(l);
-  poserFace(l.c, faceDe(l.c) + (va && carteVoisine(l.c, dx) ? (dx < 0 ? 1 : -1) : 0));
+  if (l.long) { if (e.cancelable) e.preventDefault(); avalerClic = Date.now(); }   // le doigt levé ne touche pas la fenêtre ouverte
 }, {passive:false});
-/* Une carte existe-t-elle du côté où va le doigt ? vers la gauche : la suivante ; vers la droite : la précédente */
-const carteVoisine = (c, dx) => dx < 0 ? faceDe(c) < facesDe(c).length - 1 : faceDe(c) > 0;
-document.addEventListener('touchcancel', () => { const l = ligne; ligne = null; if (l) { lacherAppui(l); if (l.long) avalerClic = Date.now(); else revenir(l); } }, {passive:true});
+document.addEventListener('touchcancel', () => { const l = ligne; ligne = null; if (l) { lacherAppui(l); if (l.long) avalerClic = Date.now(); } }, {passive:true});
 // juste après un balayage ou un appui long, le doigt levé ne déclenche rien (ni ouverture de la note, ni bouton de la fenêtre)
 document.addEventListener('click', e => {
   if (Date.now() - avalerClic < 400) { e.stopPropagation(); e.preventDefault(); }
 }, true);
-// Android : l'appui long n'ouvre pas le menu du navigateur sur ses notes
-document.addEventListener('contextmenu', e => { if (view === 'day' && !src && e.target.closest('#view .entries.tenir li')) e.preventDefault(); });
-async function proposerSuppression(li) {
-  const b = li && entreeDe(li);
+// Android : l'appui long n'ouvre pas le menu du navigateur sur les notes ; à la souris, le clic droit ouvre le même choix
+document.addEventListener('contextmenu', e => {
+  const el = !$('dialog[open]') && cibleAppui(e.target);
+  if (!el) return;
+  e.preventDefault();
+  if (Date.now() - toucheA > 1500) menuAppui(el);
+});
+const NOM_FICHE = {emo:'Émotion', note:'Note personnelle', synth:'Synthèse du jour'};
+async function menuAppui(el) {
+  const b = ficheAppui(el);
   if (!b) return;
-  const note = b.dataset.act === 'editNote', id = b.dataset.id, txt = b.querySelector('.txt')?.textContent.trim() || '';
-  const meta = [...(b.querySelector('.meta')?.childNodes || [])].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
-  const autres = note ? [] : cartesDe(getDay(cur).entries.find(x => x.id === id)).slice(1).map(c => NOM_CARTE[c]);   // ses cartes Besoin et Action
-  const ok = await confirmerAction({titre:note ? 'Supprimer cette note personnelle ?' : 'Supprimer cette émotion ?',
-    texte:`${esc(meta)}<br>« ${esc(txt.length > 140 ? txt.slice(0, 140) + '…' : txt)} »${autres.length ? `<br>${autres.length > 1 ? `Ses cartes ${joinFr(autres)} seront supprimées` : `Sa carte ${autres[0]} sera supprimée`} avec elle.` : ''}`, bouton:'Supprimer'});
+  const type = b.dataset.type, id = b.dataset.id, k = b.dataset.k || cur, journal = view === 'cal', d = D().days[k];
+  const e = type === 'emo' ? d?.entries?.find(x => x.id === id) : null, n = type === 'note' ? dayNotes(d).find(x => x.id === id) : null;
+  if (type === 'emo' ? !e : type === 'note' ? !n : !d?.synth?.trim()) return;
+  // ce qui est visé : le jour (dans le Journal), l'heure, le lieu, puis le début du texte, connecteurs sans leur @
+  const jour = journal ? fmtDay(k).replace(/^./, c => c.toUpperCase()) : '', o = e || n;
+  const quand = [jour, o?.time, o && where(o)].filter(Boolean).join(' · ');
+  const txt = sansArobase(e ? sentence(e) : n ? n.text : d.synth).trim();
+  const resume = `${quand ? esc(quand) + '<br>' : ''}« ${esc(txt.length > 140 ? txt.slice(0, 140) + '…' : txt)} »`;
+  const choix = journal ? [{k:'afficher', t:'Afficher dans Quotidien', style:'primary'}] : [{k:'modifier', t:'Modifier', style:'primary'}];
+  if (!src) choix.push({k:'supprimer', t:'Supprimer', style:'danger'});
+  const r = await choisirAction({titre:NOM_FICHE[type], texte:resume, choix});
+  if (r === 'modifier') return e ? openEntry(id, b.dataset.v || 'e') : openNote(id);
+  if (r === 'afficher') {   // le jour s'ouvre, la note visée au milieu de l'écran
+    cur = k; view = 'day'; render();
+    const c = e || n ? $(`#view [data-id="${id}"]`) : $('#synth');
+    return c?.scrollIntoView({block:'center'});
+  }
+  if (r !== 'supprimer') return;
+  const autres = e ? cartesDe(e).slice(1).map(c => NOM_CARTE[c]) : [];   // ses cartes Besoin et Action
+  const ok = await confirmerAction({titre:{emo:'Supprimer cette émotion ?', note:'Supprimer cette note personnelle ?', synth:'Supprimer cette synthèse ?'}[type],
+    texte:`${resume}${autres.length ? `<br>${autres.length > 1 ? `Ses cartes ${joinFr(autres)} seront supprimées` : `Sa carte ${autres[0]} sera supprimée`} avec elle.` : ''}`, bouton:'Supprimer'});
   if (!ok) return;
-  const d = ensureDay(cur);
-  if (note) d.notes = dayNotes(d).filter(x => x.id !== id); else d.entries = d.entries.filter(x => x.id !== id);
-  save(); render(true); toast(note ? 'Note supprimée' : 'Émotion supprimée');
+  const dd = ensureDay(k);
+  if (e) dd.entries = dd.entries.filter(x => x.id !== id); else if (n) dd.notes = dayNotes(dd).filter(x => x.id !== id); else dd.synth = '';
+  save(); render(true); toast(e ? 'Émotion supprimée' : n ? 'Note supprimée' : 'Synthèse supprimée');
 }
 /* Fenêtre d'une émotion : balayer vers la gauche passe à la carte suivante (besoin, puis action), vers la droite revient à la précédente.
    Le geste peut partir de n'importe où dans les volets, même d'un champ, sauf de celui où l'on écrit. */

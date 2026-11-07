@@ -167,7 +167,7 @@ function buildXlsx(from, to) {
         [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', '),
         [...new Set(e.emos.map(x => INTN[x.i]))].join(', '),
         joinFr(e.emos.map(x => lc(x.w))), sansArobase((e.car || '').trim()),
-        ...(avecB ? [[...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '), joinFr(besoinsDe(e).map(x => lc(x.w))), detailDe(e), sansArobase(pisteDe(e))] : [])];
+        ...(avecB ? [[...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '), joinFr(besoinsDe(e).map(x => lc(x.w))), detailDe(e), [...tachesTexte(e), sansArobase(pisteDe(e))].filter(Boolean).join(' · ')] : [])];
       const row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
       row.push(d.color ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
       r2.push(xRow(n2, row, Math.min(409, Math.max(15, Math.max(estLines(e.car || '', 60), estLines(vals[7], 34)) * 12 + 4))));

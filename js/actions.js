@@ -196,8 +196,15 @@ const ACT = {
   voirConnecteurs: t => { t.closest('dialog')?.close(); if (!setPage) menuScroll = 0; view = 'set'; setPage = 'connecteurs'; connQ = ''; connAide = false; render(); window.scrollTo(0, 0); },
   plierAide: t => plierAide(t),
   renommerConn: t => ouvrirRenommer(t.dataset.k),
-  // toucher un connecteur dans le Journal : toutes les notes qui le contiennent, en liste
-  connecteur: t => { calC = [t.dataset.c]; calF = calW = null; calQ = ''; view = 'cal'; calMode = 'list'; listeAPlacer = true; render(true); },
+  // toucher un connecteur dans une note : une bulle propose de voir toutes les notes qui le contiennent (Journal, en liste)
+  voirConn: t => bulleConn(t),
+  // depuis Quotidien, la liste s'ouvre sur le mois du jour affiché
+  connecteur: t => {
+    fermerBulle();
+    const deQuotidien = view === 'day';
+    if (deQuotidien) { const d = parse(cur); calY = d.getFullYear(); calM = d.getMonth(); }
+    calC = [t.dataset.c]; calF = calW = null; calQ = ''; view = 'cal'; calMode = 'list'; listeAPlacer = true; render(!deQuotidien);
+  },
   calMode: t => { calMode = t.dataset.m; listeAPlacer = true; render(); },
   repMode: t => { repMode = t.dataset.m; render(!t.closest('#barreR')); },   // depuis la barre compacte : le nouveau répertoire depuis son début
   // une semaine de la liste devient la période à envoyer ; la semaine en cours va du lundi à aujourd'hui
@@ -282,6 +289,16 @@ const ACT = {
   volet: t => { document.activeElement?.blur?.(); poserVolet(t.dataset.v); },
   // « Besoin › », « Action › », « ‹ Émotion » : la ligne passe à cette carte, sans ouvrir la note
   voirFace: t => { const c = t.closest('.duo'); if (c) poserFace(c, +t.dataset.k); },
+  // carte Action : cocher une action dans la fenêtre de saisie (enregistré avec la note)
+  cocherLigne: t => { const ok = !t.classList.contains('ok'); t.classList.toggle('ok', ok); t.setAttribute('aria-checked', ok); },
+  // … ou sur la carte affichée et dans la synthèse du jour : enregistré aussitôt ; l'action reste là, cochée, partout où elle s'affiche
+  cocher: t => {
+    if (src) return;
+    const [id, ti] = t.dataset.tache.split(':'), x = data.days[t.dataset.k]?.entries?.find(y => y.id === id)?.taches?.find(y => y.id === ti);
+    if (!x) return;
+    x.ok = !x.ok; save();
+    document.querySelectorAll(`[data-tache="${t.dataset.tache}"]`).forEach(c => { c.classList.toggle('ok', x.ok); c.setAttribute('aria-checked', x.ok); });
+  },
   locate: () => locate(true),
   saveEntry: () => {
     ed.time = $('#eTime').value || nowTime();
@@ -290,12 +307,14 @@ const ACT = {
     ed.car = $('#eCar').value.trim();
     ed.bdet = $('#eBdet').value.trim();
     ed.piste = $('#ePiste').value.trim();
+    ed.taches = tachesSaisies();
     if (!ed.emos.length) { if (ed.volet !== 'e') poserVolet('e'); return $('#eErr').textContent = 'Choisissez au moins une émotion.'; }
     // les trois cartes sont enregistrées ensemble ; sans besoin ni action, la note garde sa forme d'avant
     const d = ensureDay(cur), {fam, int, villeTouched, bfam, bgr, volet, ...entry} = ed;
     if (!entry.bes.length) delete entry.bes;
     if (!entry.bdet) delete entry.bdet;
     if (!entry.piste) delete entry.piste;
+    if (!entry.taches.length) delete entry.taches;
     if (entry.id) d.entries[d.entries.findIndex(x => x.id === entry.id)] = entry;
     else { entry.id = uid(); d.entries.push(entry); countStat('notes'); }
     save(); $('#entryDlg').close(); render(); toast('Émotion enregistrée');

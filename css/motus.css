@@ -298,12 +298,41 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appeara
 .engagements{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .engagements li{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;background:var(--surface);border-radius:13px;padding:10px 12px}
 .engagements svg{flex:none;width:20px;height:20px;margin-top:1px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-/* Quotidien : un appui long sur une émotion ou une note propose de la supprimer ; la ligne se teinte pendant l'appui.
-   Rien ne s'y sélectionne, et l'iPhone n'ouvre pas son menu. */
-.entries.tenir .entry{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.entries.tenir li{border-radius:12px;transition:background .4s}
-.entries.tenir li.appuye{background:color-mix(in srgb,var(--rouge-txt) 13%,transparent)}
-/* Les cartes d'une émotion côte à côte : l'émotion, puis son besoin et son action (balayage vers la gauche) ; de même pour la
+/* Un appui long sur une note ouvre un choix (Quotidien : Modifier ou Supprimer ; Journal : Afficher dans Quotidien ou Supprimer) ;
+   la ligne se teinte pendant l'appui. Rien ne s'y sélectionne, et l'iPhone n'ouvre pas son menu. Un simple appui ne fait rien
+   (v41) : pas de main au survol, sauf sur un connecteur et sur les pastilles. */
+.entries.tenir .entry,.occ{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.entries .entry,.occ{cursor:default}
+.entries.tenir li{border-radius:12px}
+.entries.tenir li,.occ,.occ-duo{transition:background .4s}
+.entries.tenir li.appuye,.occ.appuye,.occ-duo.appuye{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* Le texte des cartes garde ses retours à la ligne (v41), comme les notes personnelles */
+.entry .txt,.occ .txt{white-space:pre-wrap;overflow-wrap:break-word}
+/* Carte Action (v41) : les actions à cocher ; une action cochée reste, barrée. Dans la saisie, une ligne = case + champ. */
+.taches-v{display:flex;flex-direction:column;gap:7px;margin:3px 0 5px}
+.tache{display:flex;align-items:flex-start;gap:9px}
+.tache[data-act]{cursor:pointer}
+.coche{flex:none;width:20px;height:20px;border:1.8px solid var(--muted);border-radius:6px;display:grid;place-items:center;background:none;padding:0}
+.tache .coche{margin-top:-1px}
+.coche.ok,.tache.ok .coche{background:var(--accent);border-color:var(--accent)}
+.coche.ok::after,.tache.ok .coche::after{content:"";width:5px;height:10px;margin-top:-3px;border:solid var(--on-accent);border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
+.tache.ok .tache-txt{color:var(--muted);text-decoration:line-through}
+.taches-s{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.tache-l{display:flex;align-items:center;gap:10px}
+.tache-l .coche{width:24px;height:24px;cursor:pointer}
+.tache-l input{flex:1 1 auto;min-width:0}
+/* Choix ouvert par l'appui long : les boutons les uns sous les autres (sans flex:1, que Safari écrase à zéro en colonne) */
+.dlg-f.choix-f{flex-direction:column}
+.dlg-f.choix-f .btn{flex:none}
+/* Bulle d'un connecteur touché : « Voir toutes les notes avec … », avec sa pointe vers le connecteur (--fl) */
+.bulle-conn{--bord:color-mix(in srgb,var(--accent) 55%,var(--border));position:absolute;z-index:8;max-width:calc(100vw - 16px);background:var(--surface2);border:1px solid var(--bord);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.18);animation:bulle .15s ease-out}
+.bulle-conn::before{content:"";position:absolute;left:var(--fl,50%);top:-6px;width:10px;height:10px;margin-left:-6px;background:inherit;border:1px solid var(--bord);border-width:1px 0 0 1px;transform:rotate(45deg)}
+.bulle-conn.dessus::before{top:auto;bottom:-6px;border-width:0 1px 1px 0}
+.bulle-conn button{position:relative;display:flex;align-items:center;gap:6px;padding:10px 12px;border:0;background:none;font:inherit;font-size:.9rem;font-weight:600;color:var(--text);text-align:left}
+.bulle-conn .conn{font-weight:500}
+.bulle-conn svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@keyframes bulle{from{opacity:0;transform:translateY(-3px)}}
+/* Les cartes d'une émotion côte à côte : l'émotion, puis son besoin et son action (choisies par les pastilles) ; de même pour la
    synthèse de la journée. --i : rang de la carte ; --k (sur .duo) : carte affichée, la seule qui compte dans la hauteur. */
 .duo{position:relative;overflow:hidden}
 .duo>.face{transform:translateX(calc((var(--i,0) - var(--k,0)) * (100% + 16px)))}
