@@ -2,8 +2,8 @@
 'use strict';
 
 const APP_VERSION = 40;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 29;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:778, cache:765, envoyes:10.5, ecrits:2.7};   // en millions, même script, même moment
+const HEURES_TRAVAIL = 30;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:853, cache:839, envoyes:10.9, ecrits:2.9};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
