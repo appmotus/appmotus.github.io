@@ -157,7 +157,7 @@ function buildXlsx(from, to) {
   const s1 = sheet({cols:[16,30,30,30,30,30,30,30], rows:r1, merges:['A1:H1','A2:H2','B4:C4','E4:F4','A6:H6','A8:H8','A9:H9','A10:H10'], landscape:true});
 
   /* Feuille 2 : détail de chaque émotion notée */
-  const h2 = ['Date','Jour','Heure','Ville','Lieu','Émotion','Intensité','Je me sens…','… car', ...(avecB ? ['Besoin','J’ai besoin de…','Je pourrais…'] : []), 'Couleur du jour'];
+  const h2 = ['Date','Jour','Heure','Ville','Lieu','Émotion','Intensité','Je me sens…','… car', ...(avecB ? ['Besoin','J’ai besoin de…','Plus précisément','Je pourrais…'] : []), 'Couleur du jour'];
   const r2 = [xRow(1, h2.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
   let n2 = 2;
   for (const k of keys) {
@@ -167,14 +167,14 @@ function buildXlsx(from, to) {
         [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', '),
         [...new Set(e.emos.map(x => INTN[x.i]))].join(', '),
         joinFr(e.emos.map(x => lc(x.w))), sansArobase((e.car || '').trim()),
-        ...(avecB ? [[...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '), joinFr(besoinsDe(e).map(x => lc(x.w))), sansArobase(pisteDe(e))] : [])];
+        ...(avecB ? [[...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '), joinFr(besoinsDe(e).map(x => lc(x.w))), detailDe(e), sansArobase(pisteDe(e))] : [])];
       const row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
       row.push(d.color ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
       r2.push(xRow(n2, row, Math.min(409, Math.max(15, Math.max(estLines(e.car || '', 60), estLines(vals[7], 34)) * 12 + 4))));
       n2++;
     }
   }
-  const s2 = sheet({cols:[11,10,7,16,16,14,11,30,55, ...(avecB ? [18,30,40] : []), 18], rows:r2, landscape:true});
+  const s2 = sheet({cols:[11,10,7,16,16,14,11,30,55, ...(avecB ? [18,30,40,40] : []), 18], rows:r2, landscape:true});
 
   /* Feuille 3 : synthèses quotidiennes */
   const h3 = ['Date','Jour','Couleur','Nb d’émotions notées','Synthèse de la journée'];

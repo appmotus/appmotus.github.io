@@ -3,11 +3,13 @@
 
 /* ───────────── Paramètres › Connecteurs : explication, exemple, et renommage dans toutes les notes ───────────── */
 let connQ = '';   // recherche dans la liste des connecteurs
+let connAide = false;   // explication dépliée : repliée à l'ouverture, pour voir le début de la liste des connecteurs
 function pageConnecteurs() {
-  const tous = [...connecteurs().values()].sort((a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
+  const tous = [...connecteurs().values()].sort(triConn);
   const q = sansAccent(connQ.trim()), k = cleConn(connQ);
   return `<section class="card">
     <h2>Relier ses notes</h2>
+    <div class="pliable ${connAide ? 'ouvert' : ''}" id="connAideP">
     <p class="small muted" style="margin:6px 0 0">Un connecteur relie les notes qui parlent d’une même personne, d’un même lieu ou d’un même sujet. Écrivez @ suivi d’un mot, sans espace, dans une émotion (… car), une note personnelle ou une synthèse.</p>
     <div class="ex-conn">
       <div class="eyebrow">Ce que vous écrivez</div>
@@ -20,11 +22,13 @@ function pageConnecteurs() {
       <li>Dès la première lettre après le @, Motus propose les connecteurs déjà utilisés.</li>
       <li>Majuscules et accents ne comptent pas : @Écriture et @ecriture sont un seul connecteur.</li>
       <li>Les villes et les lieux saisis avec vos notes sont aussi des connecteurs.</li>
-      <li>Journal, en liste : le bouton « @ Connecteurs » affiche les notes qui contiennent un, deux ou trois connecteurs ; toucher un connecteur dans une note affiche toutes celles qui le contiennent.</li>
+      <li>Journal, en calendrier comme en liste : le bouton « @ Connecteurs » affiche les notes qui contiennent un, deux ou trois connecteurs ; toucher un connecteur dans une note affiche toutes celles qui le contiennent.</li>
     </ul>
+    </div>
+    <button type="button" class="plier" data-act="plierAide" aria-expanded="${connAide}" aria-controls="connAideP" aria-label="${connAide ? 'Réduire l’explication' : 'Lire toute l’explication'}">${ico('ch', '')}</button>
   </section>
   <section class="card">
-    <h2>Mes connecteurs</h2>
+    <div class="card-h" style="margin:0"><h2>Mes connecteurs</h2>${tous.length > 1 ? boutonsTri() : ''}</div>
     ${tous.length ? `<p class="small muted" style="margin:6px 0 10px">Touchez un connecteur pour le renommer : il change dans toutes les notes qui le contiennent.</p>
     ${tous.length > 8 ? champRecherche('connGQ', connQ, 'Rechercher un connecteur') : ''}
     <div class="conn-liste conn-gestion" id="connGestion">${tous.map(c => `<button type="button" class="conn-ligne" data-act="renommerConn" data-k="${esc(c.k)}" data-t="${esc(sansAccent(c.label))}" ${q && !c.k.includes(k) && !sansAccent(c.label).includes(q) ? 'hidden' : ''}><span>${esc(c.label)}</span><small>${c.n} note${c.n > 1 ? 's' : ''}${c.lieu ? ' · lieu' : ''}</small>${ico('ch', 'rc')}</button>`).join('')}</div>`
@@ -42,6 +46,16 @@ function rechercheEnHaut() {
   window.scrollTo(0, Math.max(0, c.getBoundingClientRect().top + scrollY - hautSur() - 10));
 }
 document.addEventListener('focusin', e => { if (e.target.id === 'connGQ') { rechercheEnHaut(); setTimeout(rechercheEnHaut, 400); } });
+// ordre de la liste (A→Z ou nombre) ; dans la fenêtre du Journal, les boutons ont leur propre réglage
+document.addEventListener('click', e => { const b = e.target.closest('#view .tri-conn button'); if (b) { choisirTri(b.dataset.tri); render(true); } });
+/* L'explication, repliée sous sa flèche, se déplie et se replie sans changer de page */
+function plierAide(t) {
+  const p = $('#connAideP'); if (!p) return;
+  connAide = !p.classList.contains('ouvert');
+  p.classList.toggle('ouvert', connAide);
+  t.setAttribute('aria-expanded', connAide);
+  t.setAttribute('aria-label', connAide ? 'Réduire l’explication' : 'Lire toute l’explication');
+}
 /* Ce que touche un renommage : les textes qui contiennent le connecteur, et les villes ou lieux qui portent ce nom */
 function usagesConn(k) {
   let textes = 0, lieux = 0;

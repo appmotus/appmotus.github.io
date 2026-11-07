@@ -1,18 +1,24 @@
 // Motus — Journal : calendrier, liste continue, filtres, bilans du mois, recherche
 'use strict';
 
-/* Une émotion dans le Journal (liste, émotion filtrée, recherche). Reliée à des besoins, elle a deux faces comme dans
-   Quotidien : un balayage sur la ligne (ou un appui sur « Besoin › ») montre ses besoins, au lieu de changer de mois.
+/* Une émotion dans le Journal (liste, émotion filtrée, recherche). Avec une carte Besoin ou Action, elle a plusieurs cartes comme
+   dans Quotidien : un balayage sur la ligne (ou un appui sur « Besoin › ») passe à la suivante, au lieu de changer de mois.
    debut : ce qui précède l'heure (le jour, pour une émotion filtrée) ; txt : la phrase de l'émotion. */
 function occEmotion(k, e, txt, debut = '') {
-  const quand = `${debut}${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`, ouvrir = `data-act="openDay" data-k="${k}"`;
-  if (!aBesoins(e)) return `<button class="occ" ${ouvrir}><div class="meta">${quand}</div><div class="txt">${txt}</div></button>`;
-  const n = besoinsDe(e).length;
-  return `<div class="occ-duo duo">
-    <button class="occ face-e" ${ouvrir}><div class="meta"><span class="lien-b" data-act="voirFace">${n > 1 ? 'Besoins' : 'Besoin'} ›</span>${quand}</div><div class="txt">${txt}</div></button>
-    <button class="occ face-b" inert ${ouvrir}><div class="meta"><span class="lien-b" data-act="voirFace">‹ Émotion</span>${quand}</div><div class="txt">${besoinsHtml(e)}</div></button>
+  const quand = `${debut}${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`, ouvrir = `data-act="openDay" data-k="${k}"`, cs = cartesDe(e);
+  if (cs.length < 2) return `<button class="occ" ${ouvrir}><div class="meta">${pastillesCartes(e, 'e')}${quand}</div><div class="txt">${txt}</div></button>`;
+  const t = {e:txt, b:besoinHtml(e), a:actionHtml(e)};
+  return `<div class="occ-duo duo">${cs.map((c, i) => `
+    <button class="occ face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--i:${i}" ${ouvrir}><div class="meta">${pastillesCartes(e, c)}${quand}</div><div class="txt">${t[c]}</div></button>`).join('')}
   </div>`;
 }
+
+/* Une note personnelle et une synthèse dans le Journal ; debut : le jour, quand la liste couvre tout le mois */
+const noteOcc = (k, n, debut = '', mention = false) => `<button class="occ" data-act="openDay" data-k="${k}">
+  <div class="meta">${debut}${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}${mention ? ' · Note personnelle' : ''}</div>
+  <div class="txt note-txt">${avecConnecteurs(n.text, true)}</div></button>`;
+const synthOcc = (k, meta) => `<button class="occ" data-act="openDay" data-k="${k}">
+  <div class="meta">${meta}</div><div class="txt note-txt">${avecConnecteurs(D().days[k].synth.trim(), true)}</div></button>`;
 
 /* — Vue Calendrier — */
 function vCal() {
@@ -21,35 +27,41 @@ function vCal() {
   const now = new Date(), atCurrent = calY === now.getFullYear() && calM === now.getMonth();
   let cells = ['L','M','M','J','V','S','D'].map(w => `<div class="wd">${w}</div>`).join('');
   cells += '<div class="cvide"></div>'.repeat(off);
-  const cnt = {vert:0, jaune:0, rouge:0}, words = {}, fams = {}, bWords = {}, bFams = {};
+  const cnt = {vert:0, jaune:0, rouge:0}, words = {}, fams = {}, wFam = {}, bWords = {}, bFams = {};   // wFam : la famille de chaque émotion, pour sa pastille
   let nEntries = 0, pastDays = 0;
-  const fam = calF && FAMK[calF], notesOnly = calF === 'notes', synthOnly = calF === 'synth', filtre = fam || notesOnly || synthOnly, occ = [], occN = [], occS = [], fWords = {};
+  const fam = calF && FAMK[calF], notesOnly = calF === 'notes', synthOnly = calF === 'synth', filtre = fam || notesOnly || synthOnly, occ = [], occN = [], occS = [], occT = [], fWords = {};
+  // connecteurs choisis : en calendrier aussi, seuls les jours qui en contiennent sont encadrés, avec leurs notes sous le calendrier
+  const connF = calC.length > 0, marque = filtre || connF, cOk = (s, v, l) => !connF || connOk(clesDe(s, v, l));
   const cadre = fam ? fam.c : 'var(--accent)';
   let fDays = 0, nNotes = 0;
   for (let i = 1; i <= nDays; i++) {
     const k = ymd(new Date(calY, calM, i)), d = D().days[k], fut = k > t, ns = dayNotes(d);
+    const nsOk = ns.filter(n => cOk(n.text, n.ville, n.lieu)), synthOk = !!d?.synth?.trim() && cOk(d.synth), tout = !filtre && connF, nT = occT.length;
     if (!fut) pastDays++;
     nNotes += ns.length;
-    if (notesOnly) ns.forEach(n => occN.push({k, n}));
-    if (synthOnly && d?.synth?.trim()) occS.push(k);
+    if (notesOnly) nsOk.forEach(n => occN.push({k, n}));
+    if (synthOnly && synthOk) occS.push(k);
     if (d?.color) cnt[d.color]++;
     let maxI = -1; // intensité la plus forte de l'émotion filtrée ce jour-là
     (d?.entries || []).forEach(e => {
       nEntries++;
-      e.emos.forEach(x => { words[x.w] = (words[x.w]||0) + 1; fams[x.f] = (fams[x.f]||0) + 1; if (x.f === calF) fWords[x.w] = (fWords[x.w]||0) + 1; });
+      e.emos.forEach(x => { words[x.w] = (words[x.w]||0) + 1; fams[x.f] = (fams[x.f]||0) + 1; wFam[x.w] ||= x.f; if (x.f === calF) fWords[x.w] = (fWords[x.w]||0) + 1; });
       besoinsDe(e).forEach(x => { const k = `${x.b}|${x.w}`; bWords[k] = (bWords[k]||0) + 1; bFams[x.b] = (bFams[x.b]||0) + 1; });
-      const hit = fam ? e.emos.filter(x => x.f === calF && (!calW || x.w === calW)) : [];
+      const ok = cOk(e.car, e.ville, e.lieu), hit = fam && ok ? e.emos.filter(x => x.f === calF && (!calW || x.w === calW)) : [];
       if (hit.length) { occ.push({k, e}); maxI = Math.max(maxI, ...hit.map(x => INT.findIndex(([c]) => c === x.i))); }
+      if (tout && ok) occT.push({k, time:e.time, e});
     });
-    const hit = fam ? maxI >= 0 : notesOnly ? ns.length > 0 : synthOnly && !!d?.synth?.trim();
+    if (tout) { nsOk.forEach(n => occT.push({k, time:n.time, n})); if (synthOk) occT.push({k, time:'99', s:true}); }
+    const hit = fam ? maxI >= 0 : notesOnly ? nsOk.length > 0 : synthOnly ? synthOk : connF && occT.length > nT;
     if (hit) fDays++;
     const lab = (d?.color ? ', ' + esc(D().labels[d.color]) : '') + (maxI >= 0 ? `, ${fam.n} ${INT[maxI][1].toLowerCase()}` : '') + (ns.length ? ', note personnelle' : '');
     cells += `<button class="cday ${d?.color || ''} ${hit ? 'hit' : ''} ${k === t ? 'today' : ''} ${fut ? 'future' : ''}"${hit ? ` style="--fc:${cadre}"` : ''} data-act="openDay" data-k="${k}" ${fut ? 'disabled' : ''}
-      aria-label="${fmtLong(k)}${lab}">${i}${!filtre && d?.entries?.length ? '<span class="has"></span>' : ''}${!filtre && ns.length ? '<span class="nt"></span>' : ''}</button>`;
+      aria-label="${fmtLong(k)}${lab}">${i}${!marque && d?.entries?.length ? '<span class="has"></span>' : ''}${!marque && ns.length ? '<span class="nt"></span>' : ''}</button>`;
   }
   cells += '<div class="cvide"></div>'.repeat(42 - off - nDays);   // toujours six semaines : la page ne bouge pas d'un mois à l'autre
   occ.sort((a, b) => (a.k + a.e.time).localeCompare(b.k + b.e.time));
   occN.sort((a, b) => (a.k + a.n.time).localeCompare(b.k + b.n.time));
+  occT.sort((a, b) => (a.k + a.time).localeCompare(b.k + b.time));   // la synthèse (« 99 ») après les notes du jour
   const dayName = k => `${JOURS[parse(k).getDay()]} ${parse(k).getDate()} ${MOIS[parse(k).getMonth()]}`;
   // liste continue : les émotions précises proposées par le filtre viennent de tous les mois
   if (calMode === 'list' && fam) {
@@ -60,7 +72,7 @@ function vCal() {
   const filterCard = `
   <section class="card">
     <div class="card-h" style="margin-bottom:0"><h2>Afficher</h2>
-      ${calMode === 'list' ? `<button class="btn-conn ${calC.length ? 'on' : ''}" data-act="choisirConn" aria-label="Connecteurs${calC.length ? `, ${calC.length} choisi${calC.length > 1 ? 's' : ''}` : ''}"><span class="a" aria-hidden="true">@</span>Connecteurs${calC.length ? `<span class="nb">${calC.length}</span>` : ''}</button>` : ''}</div>
+      <button class="btn-conn ${calC.length ? 'on' : ''}" data-act="choisirConn" aria-label="Connecteurs${calC.length ? `, ${calC.length} choisi${calC.length > 1 ? 's' : ''}` : ''}"><span class="a" aria-hidden="true">@</span>Connecteurs${calC.length ? `<span class="nb">${calC.length}</span>` : ''}</button></div>
     <div class="chips" style="margin-top:10px">
       <button class="chip neutre ${!filtre ? 'on' : ''}" data-act="calFilter" data-f="" aria-pressed="${!filtre}">Tout</button>
       <button class="chip neutre ${notesOnly ? 'on' : ''}" data-act="calFilter" data-f="notes" aria-pressed="${notesOnly}">Notes personnelles</button>
@@ -72,31 +84,33 @@ function vCal() {
       ${[...new Set([...Object.keys(fWords), ...(calW ? [calW] : [])])].map(w => `<button class="chip ${calW === w ? 'on' : ''}" style="--fc:${fam.c}" data-act="calWord" data-w="${esc(w)}" aria-pressed="${calW === w}">${esc(w)}${fWords[w] ? ' · ' + fWords[w] : ''}</button>`).join('')}
     </div>` : ''}
   </section>`;
+  // les connecteurs choisis, comme ils s'affichent : « Paul et projet Atlas », ou « Paul ou projet Atlas » (au moins un)
+  const nomsC = (n => calCEt || n.length < 2 ? joinFr(n) : n.slice(0, -1).join(', ') + ' ou ' + n[n.length - 1])(calC.map(k => connecteurs().get(k)?.label || k));
+  const avecC = connF ? ` · avec ${esc(nomsC)}` : '';
   const legend = COL.map(c => `<span><i style="background:var(--${c})"></i>${esc(D().labels[c])}</span>`).join('')
-    + (filtre ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : notesOnly ? 'Note personnelle' : 'Synthèse')}</span>`
+    + (marque ? `<span><i style="border:3px solid ${cadre}"></i>${esc(fam ? calW || fam.n : notesOnly ? 'Note personnelle' : synthOnly ? 'Synthèse' : nomsC)}${filtre ? avecC : ''}</span>`
       : '<span><i style="background:currentColor;width:4px;height:4px"></i>émotions notées</span>'
         + '<span><i style="width:0;height:0;border-radius:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--accent) transparent transparent"></i>note personnelle</span>');
   const occCard = fam ? `
   <section class="card">
     <h2>${esc(calW || fam.n)} · ${MOIS[calM]}</h2>
-    <p class="small muted" style="margin:6px 0 4px">${occ.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occ.length} note${occ.length > 1 ? 's' : ''}` : 'Aucune note avec cette émotion ce mois-ci.'}</p>
+    <p class="small muted" style="margin:6px 0 4px">${occ.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occ.length} note${occ.length > 1 ? 's' : ''}${avecC}` : `Aucune note avec cette émotion ce mois-ci${avecC}.`}</p>
     ${occ.map(({k, e}) => occEmotion(k, e, sentenceHtml(e, true), `${dayName(k)} · `)).join('')}
   </section>` : synthOnly ? `
   <section class="card">
     <h2>Synthèses · ${MOIS[calM]}</h2>
-    <p class="small muted" style="margin:6px 0 4px">${occS.length ? `${occS.length} synthèse${occS.length > 1 ? 's' : ''}` : 'Aucune synthèse ce mois-ci.'}</p>
-    ${occS.map(k => `<button class="occ" data-act="openDay" data-k="${k}">
-      <div class="meta">${dayName(k)}</div>
-      <div class="txt note-txt">${avecConnecteurs(D().days[k].synth.trim(), true)}</div>
-    </button>`).join('')}
-  </section>` : `
+    <p class="small muted" style="margin:6px 0 4px">${occS.length ? `${occS.length} synthèse${occS.length > 1 ? 's' : ''}${avecC}` : `Aucune synthèse ce mois-ci${avecC}.`}</p>
+    ${occS.map(k => synthOcc(k, dayName(k))).join('')}
+  </section>` : notesOnly ? `
   <section class="card">
     <h2>Notes personnelles · ${MOIS[calM]}</h2>
-    <p class="small muted" style="margin:6px 0 4px">${occN.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occN.length} note${occN.length > 1 ? 's' : ''}` : 'Aucune note personnelle ce mois-ci.'}</p>
-    ${occN.map(({k, n}) => `<button class="occ" data-act="openDay" data-k="${k}">
-      <div class="meta">${dayName(k)} · ${esc(n.time)}${where(n) ? ' · ' + esc(where(n)) : ''}</div>
-      <div class="txt note-txt">${avecConnecteurs(n.text, true)}</div>
-    </button>`).join('')}
+    <p class="small muted" style="margin:6px 0 4px">${occN.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occN.length} note${occN.length > 1 ? 's' : ''}${avecC}` : `Aucune note personnelle ce mois-ci${avecC}.`}</p>
+    ${occN.map(({k, n}) => noteOcc(k, n, `${dayName(k)} · `)).join('')}
+  </section>` : `
+  <section class="card">
+    <h2>${esc(nomsC)} · ${MOIS[calM]}</h2>
+    <p class="small muted" style="margin:6px 0 4px">${occT.length ? `${fDays} jour${fDays > 1 ? 's' : ''} concerné${fDays > 1 ? 's' : ''} · ${occT.length} note${occT.length > 1 ? 's' : ''}` : `Aucune note avec ${calC.length > 1 ? (calCEt ? 'ces connecteurs' : 'l’un de ces connecteurs') : 'ce connecteur'} ce mois-ci.`}</p>
+    ${occT.map(o => o.e ? occEmotion(o.k, o.e, sentenceHtml(o.e, true), `${dayName(o.k)} · `) : o.n ? noteOcc(o.k, o.n, `${dayName(o.k)} · `, true) : synthOcc(o.k, `${dayName(o.k)} · Synthèse`)).join('')}
   </section>`;
   /* Vue liste : une seule liste continue, du mois en cours au plus ancien, chaque mois séparé par son nom.
      L'en-tête suit le mois affiché pendant le défilement (majEnteteListe) ; flèches et balayage mènent au mois voulu (allerAuMois). */
@@ -168,10 +182,10 @@ function vCal() {
   </div>
   <div id="listeMois" ${calMode === 'list' && calQ.trim() ? 'hidden' : ''}>
   ${calMode === 'list' ? listeContinue() : `<section class="card" id="carteCal">
-    <div class="cal ${filtre ? 'filtre' : ''}">${cells}</div>
+    <div class="cal ${marque ? 'filtre' : ''}">${cells}</div>
     <div class="legend">${legend}</div>
   </section>
-  ${filtre ? occCard : `<section class="card">
+  ${marque ? occCard : `<section class="card">
     <h2>Bilan du mois</h2>
     ${noted ? `<div class="bar">${COL.map(c => cnt[c] ? `<div style="width:${cnt[c]/noted*100}%;background:var(--${c})"></div>` : '').join('')}</div>` : ''}
     ${COL.map(c => `<div class="stat"><span>${esc(D().labels[c])}</span><b>${cnt[c]}</b></div>`).join('')}
@@ -184,14 +198,14 @@ function vCal() {
     <div class="bar">${famS.map(([f,n]) => `<div title="${FAMK[f].n}" style="width:${n/famTot*100}%;background:${FAMK[f].c}"></div>`).join('')}</div>
     <div class="chips">${famS.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n} · ${Math.round(n/famTot*100)} %</span>`).join('')}</div>
     <p class="label">Les plus fréquentes</p>
-    ${topW.map(([w,n]) => `<div class="stat"><span>${esc(w)}</span><b>${n}</b></div>`).join('')}
+    ${topW.map(([w,n]) => `<div class="stat"><span class="avec-pt"><i class="pt" style="--fc:${FAMK[wFam[w]]?.c}" title="${esc(FAMK[wFam[w]]?.n)}"></i>${esc(w)}</span><b>${n}</b></div>`).join('')}
   </section>` : ''}
   ${bFamS.length ? `<section class="card">
     <h2>Besoins du mois</h2>
     <div class="bar">${bFamS.map(([b,n]) => `<div title="${esc(BESK[b].n)}" style="width:${n/bTot*100}%;background:${coulB(b)}"></div>`).join('')}</div>
     <div class="chips">${bFamS.map(([b,n]) => `<span class="chip static" style="--fc:${coulB(b)}">${esc(BESK[b].n)} · ${Math.round(n/bTot*100)} %</span>`).join('')}</div>
     <p class="label">Les plus fréquents</p>
-    ${topB.map(([b,w,n]) => `<div class="stat"><span>${esc(w)}</span><b>${n}</b></div>`).join('')}
+    ${topB.map(([b,w,n]) => `<div class="stat"><span class="avec-pt"><i class="pt" style="--fc:${coulB(b)}" title="${esc(BESK[b].n)}"></i>${esc(w)}</span><b>${n}</b></div>`).join('')}
   </section>` : ''}`}`}</div>
   ${calMode === 'list' ? `<div id="resRech">${calQ.trim() ? resultatsRecherche(calQ) : ''}</div>` : ''}
   ${srcCard()}`;

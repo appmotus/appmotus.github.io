@@ -93,8 +93,9 @@ function lieuFields(time, ville, lieu) {
       <datalist id="lieuxList">${recent('lieu').map(l => `<option value="${esc(l)}">`).join('')}</datalist>`;
 }
 
-/* Noter une émotion : l'heure, la ville et le lieu en haut ; dessous, deux volets côte à côte, les émotions puis les besoins.
-   Un balayage vers la gauche passe aux besoins, vers la droite revient aux émotions ; « Enregistrer » valide les deux. */
+/* Noter une émotion : l'heure, la ville et le lieu en haut ; dessous, trois volets côte à côte, les cartes Émotion, Besoin et Action.
+   Un balayage vers la gauche passe à la carte suivante, vers la droite revient à la précédente ; « Enregistrer » valide les trois. */
+const VOLETS = 'eba';   // ordre des cartes : émotion, besoin, action
 function openEntry(id, volet = 'e') {
   const e = id ? getDay(cur).entries.find(x => x.id === id) : null;
   ed = e ? structuredClone(e) : {id:null, time: cur === today() ? nowTime() : '12:00', ville: villeParDefaut(), lieu:'', emos:[], car:''};
@@ -106,6 +107,8 @@ function openEntry(id, volet = 'e') {
   ed.bfam = b0?.b || BES.find(b => b.f === ed.fam)?.k || BES[0].k;
   ed.bgr = b0 ? Math.max(0, BESK[b0.b].g.findIndex(([, ws]) => ws.includes(b0.w))) : 0;
   ed.volet = volet;
+  // en haut de chaque volet, les pastilles des trois cartes : celle du volet pleine, les autres y mènent
+  const pV = on => pastilles(CARTES.map(k => ({k, nom:`carte ${NOM_CARTE[k]}`, coul:'var(--accent)', etat:k === on ? 'on' : 'lien', attrs:`data-act="volet" data-v="${k}"`})));
   const D = $('#entryDlg');
   D.innerHTML = `
   <form method="dialog" id="entryForm">
@@ -114,7 +117,7 @@ function openEntry(id, volet = 'e') {
       ${lieuFields(ed.time, ed.ville, ed.lieu)}
       <div class="volets" id="volets"><div class="volets-in">
       <div class="volet" data-v="e">
-      <div class="volet-h"><p class="label repere">${ico('emotion', '')}Je me sens…</p><button type="button" class="vers-volet" data-act="volet" data-v="b" id="versB">Besoins ›</button></div>
+      <div class="volet-h"><p class="label repere">${ico('emotion', '')}Je me sens…</p>${pV('e')}</div>
       <div class="famgrid">${FAM.map(f => `<button type="button" class="fam" style="--fc:${f.c}" data-act="pickFam" data-f="${f.k}">${f.n}</button>`).join('')}</div>
       <div id="picker"></div>
       <p class="label">Mes émotions</p>
@@ -123,13 +126,18 @@ function openEntry(id, volet = 'e') {
       <textarea id="eCar" rows="3" autocapitalize="none" placeholder="ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
       </div>
       <div class="volet" data-v="b">
-      <div class="volet-h"><p class="label repere">${ico('besoin', '')}J’ai besoin de…</p><button type="button" class="vers-volet" data-act="volet" data-v="e">‹ Émotions</button></div>
+      <div class="volet-h"><p class="label repere">${ico('besoin', '')}J’ai besoin de…</p>${pV('b')}</div>
       <div class="famgrid">${BES.map(b => `<button type="button" class="fam bfam" style="--fc:${FAMK[b.f].c}" data-act="pickBFam" data-b="${b.k}" aria-label="${esc(b.n)}">${b.c}</button>`).join('')}</div>
       <div id="bPicker"></div>
       <p class="label">Mes besoins</p>
       <div class="picked chips" id="bPicked"></div>
-      <label class="label" for="ePiste">Je pourrais…</label>
-      <textarea id="ePiste" rows="3" autocapitalize="none" placeholder="une action concrète et saine pour nourrir ce besoin">${esc(ed.piste || '')}</textarea>
+      <label class="label" for="eBdet">Plus précisément…</label>
+      <textarea id="eBdet" rows="3" autocapitalize="none" placeholder="ce dont j’ai besoin, dit avec mes mots">${esc(ed.bdet || '')}</textarea>
+      </div>
+      <div class="volet" data-v="a">
+      <div class="volet-h"><p class="label repere">${ico('action', '')}Je pourrais…</p>${pV('a')}</div>
+      <p class="small muted" style="margin:2px 0 8px">Une action concrète et saine pour nourrir ce besoin.</p>
+      <textarea id="ePiste" rows="3" autocapitalize="none" aria-label="Je pourrais…" placeholder="appeler un ami, faire une pause, marcher dix minutes…">${esc(ed.piste || '')}</textarea>
       </div>
       </div></div>
       <div class="err" id="eErr"></div>
@@ -146,8 +154,10 @@ function openEntry(id, volet = 'e') {
   D.scrollTop = 0;
   if (!e && cur === today() && data.settings.geoloc) locate(false);
 }
-/* Le volet affiché ; l'autre attend à côté, hors d'atteinte. Le cadre prend la hauteur du volet affiché, et la suit. */
+/* Le volet affiché ; les autres attendent à côté, hors d'atteinte. Le cadre prend la hauteur du volet affiché, et la suit ;
+   un volet plus court que celui de l'émotion garde la hauteur de celui-ci : la fenêtre ne saute pas d'une carte à l'autre. */
 let voletsObs = null;
+const decalVolet = i => i ? `calc(${-i * 100}% - ${i * ECART}px)` : '0px';
 function poserVolet(v, anim = true) {
   const V = $('#volets'); if (!V) return;
   // aucun besoin encore choisi : le volet s'ouvre sur la famille qui répond à la première émotion
@@ -156,10 +166,10 @@ function poserVolet(v, anim = true) {
     if (k && k !== ed.bfam) { ed.bfam = k; ed.bgr = 0; renderBPicker(); }
   }
   ed.volet = v;
-  const inn = V.firstElementChild, vs = [...inn.children], i = v === 'b' ? 1 : 0;
+  const inn = V.firstElementChild, vs = [...inn.children], i = Math.max(0, VOLETS.indexOf(v));
   inn.style.transition = anim && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'transform .2s ease-out' : 'none';
-  inn.style.transform = i ? `translateX(calc(-100% - ${ECART}px))` : '';
-  if (vs[1 - i].contains(document.activeElement)) document.activeElement.blur();   // le clavier ne reste pas sur un volet caché
+  inn.style.transform = i ? `translateX(${decalVolet(i)})` : '';
+  vs.forEach((x, n) => { if (n !== i && x.contains(document.activeElement)) document.activeElement.blur(); });   // le clavier ne reste pas sur un volet caché
   vs.forEach((x, n) => { x.inert = n !== i; x.setAttribute('aria-hidden', n !== i); });
   hauteurVolets();
   voletsObs?.disconnect();
@@ -168,8 +178,8 @@ function poserVolet(v, anim = true) {
 }
 function hauteurVolets() {
   const V = $('#volets'); if (!V) return voletsObs?.disconnect();
-  const actif = V.querySelector(`.volet[data-v="${ed.volet}"]`);
-  V.style.height = `${actif.offsetHeight}px`;
+  const actif = V.querySelector(`.volet[data-v="${ed.volet}"]`), emo = V.querySelector('.volet[data-v="e"]');
+  V.style.height = `${Math.max(actif.offsetHeight, emo.offsetHeight)}px`;
 }
 /* Note personnelle : texte libre, sur le même dialogue que la saisie d'une émotion */
 let noteId = null;
@@ -220,7 +230,5 @@ function renderBPicker() {
   $('#bPicked').innerHTML = ed.bes.length
     ? ed.bes.map((x, i) => `<button type="button" class="chip on" style="--fc:${coulB(x.b)}" data-act="unpickB" data-n="${i}" aria-label="Retirer ${esc(x.w)}">${esc(x.w)} ×</button>`).join('')
     : '<span class="small muted">Choisissez un ou plusieurs besoins ci-dessus (facultatif).</span>';
-  // le lien vers les besoins dit combien sont choisis
-  $('#versB').textContent = `Besoins${ed.bes.length ? ` (${ed.bes.length})` : ''} ›`;
 }
 

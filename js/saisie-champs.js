@@ -63,7 +63,7 @@ function champAllonge(ta) {
   ta.classList.add('auto-h');
   allonger(ta);
 }
-function surlignerChamps() { document.querySelectorAll('#eCar, #nText, #synth, #ePiste').forEach(champAllonge); }   // les champs de CHAMPS_CONN, et « Je pourrais… »
+function surlignerChamps() { document.querySelectorAll('#eCar, #nText, #synth, #eBdet, #ePiste').forEach(champAllonge); }   // les champs de CHAMPS_CONN, le besoin en détail et « Je pourrais… »
 /* Clavier ouvert sur un téléphone : la barre du bas se retire. Sur iPhone, une barre fixée en bas de l'écran peut remonter
    au-dessus du clavier pendant le défilement (par exemple en écrivant la synthèse du jour). */
 const champTexte = el => !!el?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=submit]), textarea');
@@ -83,3 +83,36 @@ document.addEventListener('focusout', e => {
   if (CHAMPS_CONN.includes(ta.id)) setTimeout(() => { if (document.activeElement !== ta) ancreConn(ta)?.remove(); }, 200);
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CONN.includes(e.target.id) && ancreConn(e.target)) { e.preventDefault(); ancreConn(e.target).remove(); } });
+
+/* Le texte qu'on écrit ne descend jamais sous le clavier (v40). Clavier ouvert, une fenêtre se pose juste au-dessus de lui et
+   rétrécit (comme celle des connecteurs, qui a son propre réglage) ; la page gagne en bas la hauteur du clavier, de quoi remonter.
+   Puis, à chaque frappe, la ligne du curseur est ramenée au-dessus du clavier, et au-dessus des boutons du bas de la fenêtre. */
+const basClavier = () => { const vv = window.visualViewport; return vv && clavierOuvert() ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0; };
+const FENETRE_A_PART = 'conn-dlg, .pleine, .en-haut';   // fenêtres qui ne bougent pas ainsi (connecteurs : leur propre réglage)
+function calerFenetres() {
+  const vv = window.visualViewport, bas = basClavier();
+  document.documentElement.style.setProperty('--clavier', `${bas}px`);
+  for (const d of document.querySelectorAll('dialog[open]')) {
+    if (d.matches(`.${FENETRE_A_PART}`)) continue;
+    d.style.marginBottom = bas > 0 ? `${bas}px` : '';
+    d.style.maxHeight = bas > 0 ? `${vv.height - 8}px` : '';
+  }
+}
+function curseurVisible(ta = document.activeElement) {
+  const vv = window.visualViewport;
+  if (!vv || ta?.tagName !== 'TEXTAREA' || !clavierOuvert()) return;
+  const p = positionDans(ta, ta.selectionEnd), r = ta.getBoundingClientRect();
+  const bas = r.top + Math.min(Math.max(p.y, 0) + p.h, ta.clientHeight) + 12;   // bas de la ligne du curseur, et un peu d'air
+  const d = ta.closest('dialog'), pied = d?.querySelector('.dlg-f');
+  let limite = vv.offsetTop + vv.height;
+  if (pied) limite = Math.min(limite, pied.getBoundingClientRect().top);
+  const ecart = Math.round(bas - limite);
+  if (ecart <= 0) return;
+  if (d) d.scrollTop += ecart; else window.scrollBy(0, ecart);
+}
+window.visualViewport?.addEventListener('resize', () => { calerFenetres(); requestAnimationFrame(() => curseurVisible()); });
+document.addEventListener('focusin', e => { if (champTexte(e.target)) setTimeout(() => { calerFenetres(); curseurVisible(); }, 350); });
+document.addEventListener('focusout', () => setTimeout(calerFenetres, 80));
+document.addEventListener('input', e => { if (e.target.tagName === 'TEXTAREA') requestAnimationFrame(() => curseurVisible(e.target)); });
+// une fenêtre refermée clavier ouvert reprend sa place pour la prochaine fois
+document.addEventListener('close', e => { const d = e.target; if (d?.tagName === 'DIALOG' && !d.matches(`.${FENETRE_A_PART}`)) { d.style.marginBottom = ''; d.style.maxHeight = ''; } }, true);

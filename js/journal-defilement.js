@@ -26,6 +26,20 @@ function entetesJournal() {
   inn.style.visibility = entJ.cache >= H ? '' : 'visible';
   h.classList.toggle('sans-trait', entJ.cache < H);
 }
+/* Répertoire : la même barre compacte, en haut de l'écran (il n'y a pas d'en-tête collé au-dessus). Elle descend avec le doigt
+   qui fait remonter la page, remonte quand on redescend, et s'efface dès que le vrai choix Émotions / Besoins est revenu à sa place. */
+const entR = {y:0, cache:Infinity};
+function barreRepertoire() {
+  const bar = $('#view #barreR'), nat = $('#view #repSeg');
+  if (!bar || !nat) return;
+  const inn = bar.firstElementChild, y = Math.max(0, scrollY), d = y - entR.y, haut = parseFloat(getComputedStyle(bar).top) || 0;
+  entR.y = y;
+  const H = inn.offsetHeight, segB = inn.querySelector('.seg');
+  const revenu = y <= 0 || nat.getBoundingClientRect().top >= haut + (segB ? segB.offsetTop : 0) - 1;
+  entR.cache = revenu ? H : Math.min(H, Math.max(0, entR.cache + d));
+  inn.style.transform = `translateY(${-entR.cache}px)`;
+  inn.style.visibility = entR.cache >= H ? '' : 'visible';
+}
 function replierEntete() {
   entJ.deploye = false;
   const p = $('#view .barreJ-plus'); if (p) p.hidden = true;
@@ -220,7 +234,7 @@ function majEnteteListe() {
     e.innerHTML = enHaut ? 'Ce mois-ci' : '<button class="link" data-act="moisEnCours">Revenir à aujourd’hui</button>';
   }
 }
-addEventListener('scroll', () => { marquerEntete(); entetesJournal(); majEnteteListe(); }, {passive:true});
+addEventListener('scroll', () => { marquerEntete(); entetesJournal(); majEnteteListe(); barreRepertoire(); }, {passive:true});
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }

@@ -42,6 +42,15 @@ function avecConnecteurs(s, actif) {
   }
   return html + esc(s.slice(i));
 }
+/* Ordre des listes de connecteurs (Journal › Connecteurs, Paramètres › Connecteurs) : alphabétique ou du plus fréquent au moins
+   fréquent. Le choix est gardé sur l'appareil, pour les deux listes à la fois. */
+const CONN_TRI = 'motus.connTri';
+let connTri = (() => { try { return localStorage.getItem(CONN_TRI) === 'nb' ? 'nb' : 'az'; } catch { return 'az'; } })();
+const alphaConn = (a, b) => a.label.localeCompare(b.label, 'fr', {sensitivity:'base'});
+const triConn = (a, b) => connTri === 'nb' ? b.n - a.n || alphaConn(a, b) : alphaConn(a, b);
+function choisirTri(t) { connTri = t === 'nb' ? 'nb' : 'az'; try { localStorage.setItem(CONN_TRI, connTri); } catch {} }
+const boutonsTri = () => `<div class="tri-conn" role="group" aria-label="Ordre de la liste">${[['az', 'A→Z', 'Ordre alphabétique'], ['nb', 'Nombre', 'Les plus utilisés d’abord']]
+  .map(([k, t, a]) => `<button type="button" data-tri="${k}" class="${connTri === k ? 'on' : ''}" aria-pressed="${connTri === k}" aria-label="${a}">${t}</button>`).join('')}</div>`;
 /* Exports (Excel, tableau) : le texte lisible, sans @ ni tirets */
 const sansArobase = s => String(s ?? '').replace(RE_CONN, (x, avant, mot) => avant + nomConn(mot));
 /* Les connecteurs d'une émotion, d'une note ou d'une synthèse, pour le filtre du Journal */

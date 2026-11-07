@@ -167,14 +167,14 @@ function demoApi() {
         c.email = c.attente; delete c.attente;
       } else if (b.action === 'demande') {
         if (l?.email && l.email === e) l.code = '123456';
-      } else if (b.action === 'effacer_demande') {
+      } else if (b.action === 'effacer_demande' || b.action === 'mdp_demande') {
         const c = x.recup[session.id];
         if (!c?.email || c.email !== e) throw apiErr('adresse');
-        c.effacer = '123456';
-      } else if (b.action === 'effacer_confirme') {
-        const c = x.recup[session.id];
-        if (!c?.effacer || c.effacer !== b.code) throw apiErr('code');
-        delete c.effacer;
+        c[b.action === 'mdp_demande' ? 'mdp' : 'effacer'] = '123456';
+      } else if (b.action === 'effacer_confirme' || b.action === 'mdp_confirme') {
+        const c = x.recup[session.id], u = b.action === 'mdp_confirme' ? 'mdp' : 'effacer';
+        if (!c?.[u] || c[u] !== b.code) throw apiErr('code');
+        delete c[u];
       } else if (b.action === 'identite_mdp') {
         if (!ID_RE.test(id)) throw apiErr('identifiant');
         if (x.comptes[id] && id !== session.id) throw apiErr('pris');

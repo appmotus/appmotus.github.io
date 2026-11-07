@@ -416,6 +416,50 @@ async function confirmerEffacement() {
   catch { toast('Mot de passe incorrect : rien n’a été effacé.'); return false; }
 }
 
+/* Changer de mot de passe : d'abord prouver que c'est bien soi. Par défaut, le mot de passe actuel, vérifié en ouvrant le journal
+   de l'appareil (il est chiffré avec lui) ; sinon, un code reçu sur l'adresse de récupération confirmée (mot de passe oublié).
+   Renvoie true quand l'un ou l'autre est confirmé. */
+const CODE_MDP = {titre:'Confirmer par e-mail', demande:'mdp_demande', confirme:'mdp_confirme', avertissement:'Vous choisirez ensuite votre nouveau mot de passe.', bouton:'Continuer', classe:'primary'};
+function verifierAvantMdp() {
+  return new Promise(resolve => {
+    const D = $('#codeDlg');
+    D.innerHTML = `<form method="dialog" id="vmForm">
+      <div class="dlg-h"><h2>Changer mon mot de passe</h2></div>
+      <div class="dlg-b">
+        <p class="small muted" style="margin:0">Pour commencer, confirmez que c’est bien vous.</p>
+        <label class="label" for="vmMdp">Mot de passe actuel</label>
+        <input type="password" id="vmMdp" autocomplete="current-password">
+        <div class="err" id="vmErr"></div>
+        <p class="small muted" style="margin:6px 0 0">Mot de passe oublié ? <button type="button" class="link small" id="vmMail">Confirmer plutôt par e-mail</button></p>
+      </div>
+      <div class="dlg-f"><button type="button" class="btn" id="vmNon">Annuler</button><button class="btn primary" id="vmOk">Continuer</button></div>
+    </form>`;
+    let fait = false;
+    const fin = ok => { if (fait) return; fait = true; D.onclose = D.oncancel = null; if (D.open) D.close(); resolve(ok); };
+    const err = m => $('#vmErr').textContent = m;
+    D.oncancel = null; D.onclose = () => fin(false);   // touche Échap, ou fenêtre fermée autrement
+    $('#vmNon').onclick = () => fin(false);
+    $('#vmMail').onclick = async () => {
+      err('');
+      let confirmee = !!data.account?.recup && data.account.recup !== 'attente';
+      try { confirmee = !!(await API.rpc('ma_recuperation_etat'))?.confirmee; } catch {}
+      if (!confirmee) return err('Aucune adresse de récupération confirmée : un code ne peut pas vous être envoyé. Utilisez votre mot de passe actuel (l’adresse s’ajoute dans Paramètres › Informations personnelles).');
+      fait = true; D.onclose = D.oncancel = null; D.close();
+      resolve(await effacerParCode(CODE_MDP));
+    };
+    $('#vmForm').onsubmit = async e => {
+      e.preventDefault();
+      const pw = $('#vmMdp').value, ok = $('#vmOk');
+      if (!pw) return err('Tapez votre mot de passe actuel.');
+      ok.disabled = true; ok.textContent = 'Vérification…'; err('');
+      try { await saveNow(); await openVault(JSON.parse(localStorage.getItem(VKEY)), pw); }
+      catch { ok.disabled = false; ok.textContent = 'Continuer'; return err('Ce n’est pas votre mot de passe actuel.'); }
+      fin(true);
+    };
+    D.showModal();
+  });
+}
+
 /* Nom, prénom ou identifiant : le mot de passe confirme la modification (ACT.modifierIdentite) */
 function formIdentite() {
   return new Promise(resolve => {

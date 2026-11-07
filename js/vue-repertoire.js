@@ -5,12 +5,15 @@
 let repQ = '', repMode = 'emo';   // émotions ou besoins, choisis comme Calendrier / Liste dans le Journal
 function vRep() {
   const bes = repMode === 'bes';
-  return `
-  <div style="margin:4px 0 16px"><div class="eyebrow">${bes ? 'Identifier le moteur de mon équilibre' : 'Identifier et nommer mon état intérieur'}</div><h1>${bes ? 'Le répertoire des besoins' : 'Le répertoire des émotions'}</h1></div>
-  <div class="seg two">
+  const seg = id => `<div class="seg two"${id ? ` id="${id}"` : ''}>
     <button class="${bes ? '' : 'on'}" data-act="repMode" data-m="emo" aria-pressed="${!bes}">Émotions</button>
     <button class="${bes ? 'on' : ''}" data-act="repMode" data-m="bes" aria-pressed="${bes}">Besoins</button>
-  </div>
+  </div>`;
+  // la barre compacte (comme dans le Journal) : le choix Émotions / Besoins redescend en haut de l'écran quand on remonte
+  return `
+  <div style="margin:4px 0 16px"><div class="eyebrow">${bes ? 'Identifier le moteur de mon équilibre' : 'Identifier et nommer mon état intérieur'}</div><h1>${bes ? 'Le répertoire des besoins' : 'Le répertoire des émotions'}</h1></div>
+  <div id="barreR"><div class="barreJ-in"><div class="barreJ-ligne">${seg('')}</div></div></div>
+  ${seg('repSeg')}
   <section class="card key">${bes ? `
     <h2>Clef d’articulation émotion & besoin</h2>
     <p style="margin:8px 0 0">« Quand je me sens <i>[émotion / adjectif]</i>, c’est parce que j’ai besoin de <i>[besoin fondamental sous-jacent]</i>. Nourrir ce besoin de manière saine est ma priorité. Je pourrais <i>[action concrète saine]</i>. »</p>` : `

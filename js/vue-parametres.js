@@ -87,6 +87,7 @@ function pageSecu() {
   return `<section class="card">
     <h2>Mot de passe</h2>
     <p class="small muted" style="margin:6px 0 0">Vos notes sont chiffrées avec votre mot de passe et enregistrées uniquement sur cet appareil. Rien n’en sort sans une action de votre part.</p>
+    <p class="small muted" style="margin:6px 0 0">Pour le changer, votre mot de passe actuel vous sera demandé ; s’il est oublié, un code envoyé à votre mail de récupération le remplace.</p>
     <button class="btn block" data-act="changeCode">Changer mon mot de passe</button>
   </section>
   <section class="card">

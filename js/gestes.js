@@ -111,32 +111,37 @@ document.addEventListener('touchend', e => {
   setTimeout(() => { changer(); nettoyer(g); }, 180);
 }, {passive:true});
 document.addEventListener('touchcancel', () => { const g = glisse; glisse = null; if (g) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); } }, {passive:true});
-/* Quotidien : une émotion reliée à des besoins, et la synthèse (émotions traversées / besoins exprimés), ont deux faces.
-   Un balayage vers la gauche montre les besoins, vers la droite revient à l'émotion ; mêmes règles de geste que ci-dessus.
-   Ce qui n'a qu'une face résiste au doigt. Un appui long (sans bouger) sur une émotion ou une note propose de la supprimer,
-   puis demande confirmation : le balayage sert désormais aux besoins. */
+/* Quotidien et Journal : une émotion a ses cartes (émotion, puis besoin et action quand ils existent), la synthèse du jour deux
+   faces (émotions traversées / besoins exprimés). Un balayage vers la gauche passe à la carte suivante, vers la droite revient à la
+   précédente ; mêmes règles de geste que ci-dessus. Là où il n'y a plus de carte, la ligne résiste au doigt. Un appui long (sans
+   bouger) sur une émotion ou une note propose de la supprimer, puis demande confirmation : le balayage sert aux cartes. */
 let ligne = null, avalerClic = 0;
 const APPUI_LONG = 550;   // durée d'un appui long, en millisecondes
 const entreeDe = li => li.querySelector('.entry');
 const sansAnim = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-/* Les deux faces suivent le doigt (dx) ; la face cachée attend à côté, à ECART de distance */
+const facesDe = c => [...c.children].filter(x => x.classList.contains('face'));
+const faceDe = c => +(c.style.getPropertyValue('--k') || 0);   // la carte affichée (0 : l'émotion)
+/* Les cartes suivent le doigt (dx) ; les autres attendent à côté, à ECART de distance (leur place est donnée par --i et --k) */
 function placerFaces(c, dx, transition = 'none') {
-  const b = c.classList.contains('cote-b');
-  for (const [el, base] of [[c.querySelector('.face-e'), b ? -1 : 0], [c.querySelector('.face-b'), b ? 0 : 1]]) {
-    if (!el) continue;
+  const k = faceDe(c);
+  facesDe(c).forEach((el, i) => {
     el.style.transition = transition;
-    el.style.transform = base || dx ? `translateX(calc(${base * 100}% + ${base * ECART + dx}px))` : '';
-  }
+    el.style.transform = dx ? `translateX(calc(${(i - k) * 100}% + ${(i - k) * ECART + dx}px))` : '';
+  });
 }
-/* Montre la face des besoins (b vrai) ou celle de l'émotion ; la hauteur passe en douceur de l'une à l'autre */
-function poserFace(c, b, anim = !sansAnim()) {
-  if (!c.querySelector('.face-b')) return;
-  if (c.classList.contains('cote-b') === b) return placerFaces(c, 0, anim ? 'transform .2s ease-out' : 'none');
-  placerFaces(c, (b ? -1 : 1) * (c.offsetWidth + ECART), anim ? 'transform .18s ease-out' : 'none');
+/* Montre la carte k ; la hauteur passe en douceur de l'une à l'autre. Une carte plus courte que celle de l'émotion garde la
+   hauteur de celle-ci : la liste ne bouge pas en dessous. */
+function poserFace(c, k, anim = !sansAnim()) {
+  const fs = facesDe(c), k0 = faceDe(c);
+  if (fs.length < 2) return;
+  k = Math.max(0, Math.min(fs.length - 1, k));
+  if (k === k0) return placerFaces(c, 0, anim ? 'transform .2s ease-out' : 'none');
+  placerFaces(c, (k0 - k) * (c.offsetWidth + ECART), anim ? 'transform .18s ease-out' : 'none');
   const fin = () => {
     const h0 = c.offsetHeight;
-    c.classList.toggle('cote-b', b);
-    c.querySelectorAll('.face-e, .face-b').forEach(x => { x.style.transition = 'none'; x.style.transform = ''; x.inert = x.classList.contains('face-b') !== b; });
+    c.style.setProperty('--k', k);
+    fs.forEach((x, i) => { x.style.transition = 'none'; x.style.transform = ''; x.inert = i !== k; x.classList.toggle('on', i === k); });
+    c.style.minHeight = k ? `${fs[0].offsetHeight}px` : '';
     const h1 = c.offsetHeight;
     if (anim && Math.abs(h1 - h0) > 1) {
       c.style.height = `${h0}px`; c.offsetHeight;
@@ -187,8 +192,7 @@ document.addEventListener('touchmove', e => {
   if (texteSelectionne()) { ligne = null; return revenir(l); }
   if (e.cancelable) e.preventDefault();
   if (!l.c.classList.contains('duo')) { const f = l.c.firstElementChild; f.style.transition = 'none'; f.style.transform = `translateX(${dx / 4}px)`; return; }
-  const possible = l.c.classList.contains('cote-b') ? dx > 0 : dx < 0;
-  placerFaces(l.c, possible ? dx : dx / 4);   // là où il n'y a rien, la ligne résiste
+  placerFaces(l.c, carteVoisine(l.c, dx) ? dx : dx / 4);   // là où il n'y a rien, la ligne résiste
 }, {passive:false});
 document.addEventListener('touchend', e => {
   const l = ligne;
@@ -201,9 +205,10 @@ document.addEventListener('touchend', e => {
   const p = e.changedTouches[0], dx = p.clientX - l.x, dy = p.clientY - l.y, dt = Date.now() - l.t;
   const va = dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
   if (!l.c.classList.contains('duo')) return revenir(l);
-  const b = l.c.classList.contains('cote-b'), possible = b ? dx > 0 : dx < 0;
-  poserFace(l.c, possible && va ? !b : b);
+  poserFace(l.c, faceDe(l.c) + (va && carteVoisine(l.c, dx) ? (dx < 0 ? 1 : -1) : 0));
 }, {passive:false});
+/* Une carte existe-t-elle du côté où va le doigt ? vers la gauche : la suivante ; vers la droite : la précédente */
+const carteVoisine = (c, dx) => dx < 0 ? faceDe(c) < facesDe(c).length - 1 : faceDe(c) > 0;
 document.addEventListener('touchcancel', () => { const l = ligne; ligne = null; if (l) { lacherAppui(l); if (l.long) avalerClic = Date.now(); else revenir(l); } }, {passive:true});
 // juste après un balayage ou un appui long, le doigt levé ne déclenche rien (ni ouverture de la note, ni bouton de la fenêtre)
 document.addEventListener('click', e => {
@@ -216,15 +221,15 @@ async function proposerSuppression(li) {
   if (!b) return;
   const note = b.dataset.act === 'editNote', id = b.dataset.id, txt = b.querySelector('.txt')?.textContent.trim() || '';
   const meta = [...(b.querySelector('.meta')?.childNodes || [])].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
-  const avecB = !note && aBesoins(getDay(cur).entries.find(x => x.id === id));
+  const autres = note ? [] : cartesDe(getDay(cur).entries.find(x => x.id === id)).slice(1).map(c => NOM_CARTE[c]);   // ses cartes Besoin et Action
   const ok = await confirmerAction({titre:note ? 'Supprimer cette note personnelle ?' : 'Supprimer cette émotion ?',
-    texte:`${esc(meta)}<br>« ${esc(txt.length > 140 ? txt.slice(0, 140) + '…' : txt)} »${avecB ? '<br>Ses besoins seront supprimés avec elle.' : ''}`, bouton:'Supprimer'});
+    texte:`${esc(meta)}<br>« ${esc(txt.length > 140 ? txt.slice(0, 140) + '…' : txt)} »${autres.length ? `<br>${autres.length > 1 ? `Ses cartes ${joinFr(autres)} seront supprimées` : `Sa carte ${autres[0]} sera supprimée`} avec elle.` : ''}`, bouton:'Supprimer'});
   if (!ok) return;
   const d = ensureDay(cur);
   if (note) d.notes = dayNotes(d).filter(x => x.id !== id); else d.entries = d.entries.filter(x => x.id !== id);
   save(); render(true); toast(note ? 'Note supprimée' : 'Émotion supprimée');
 }
-/* Fenêtre d'une émotion : balayer vers la gauche passe aux besoins, vers la droite revient aux émotions.
+/* Fenêtre d'une émotion : balayer vers la gauche passe à la carte suivante (besoin, puis action), vers la droite revient à la précédente.
    Le geste peut partir de n'importe où dans les volets, même d'un champ, sauf de celui où l'on écrit. */
 let gv = null;
 document.addEventListener('touchstart', e => {
@@ -241,9 +246,9 @@ document.addEventListener('touchmove', e => {
   if (g.sens !== 'h') return;
   if (texteSelectionne()) { gv = null; return poserVolet(ed.volet); }
   if (e.cancelable) e.preventDefault();
-  const b = ed.volet === 'b', possible = b ? dx > 0 : dx < 0, inn = g.V.firstElementChild;
+  const i = VOLETS.indexOf(ed.volet), possible = dx < 0 ? i < VOLETS.length - 1 : i > 0, inn = g.V.firstElementChild;
   inn.style.transition = 'none';
-  inn.style.transform = `translateX(calc(${b ? `-100% - ${ECART}px` : '0px'} + ${possible ? dx : dx / 4}px))`;
+  inn.style.transform = `translateX(calc(${decalVolet(i)} + ${possible ? dx : dx / 4}px))`;
 }, {passive:false});
 document.addEventListener('touchend', e => {
   const g = gv;
@@ -253,7 +258,7 @@ document.addEventListener('touchend', e => {
   avalerClic = Date.now();
   const p = e.changedTouches[0], dx = p.clientX - g.x, dy = p.clientY - g.y, dt = Date.now() - g.t;
   const va = dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
-  const b = ed.volet === 'b', possible = b ? dx > 0 : dx < 0;
-  poserVolet(possible && va ? (b ? 'e' : 'b') : ed.volet);
+  const i = VOLETS.indexOf(ed.volet), j = i + (dx < 0 ? 1 : -1);
+  poserVolet(va && j >= 0 && j < VOLETS.length ? VOLETS[j] : ed.volet);
 }, {passive:true});
 document.addEventListener('touchcancel', () => { if (gv) { gv = null; poserVolet(ed.volet); } }, {passive:true});

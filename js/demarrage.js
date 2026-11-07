@@ -5,7 +5,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (!data) return;
   if (CHAMPS_CONN.includes(t.id)) { if (t.dataset.surligne) allonger(t); suggererConn(t); }
-  if (t.id === 'ePiste' && t.dataset.surligne) allonger(t);
+  if ((t.id === 'ePiste' || t.id === 'eBdet') && t.dataset.surligne) allonger(t);
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);

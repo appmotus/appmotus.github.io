@@ -1,7 +1,7 @@
 // Motus — Version de l'app, compteurs de travail, engagements de la version d'essai, messages, toast
 'use strict';
 
-const APP_VERSION = 39;   // même numéro que CACHE dans sw.js
+const APP_VERSION = 40;   // même numéro que CACHE dans sw.js
 const HEURES_TRAVAIL = 29;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
 const JETONS_CONSOMMES = {total:778, cache:765, envoyes:10.5, ecrits:2.7};   // en millions, même script, même moment
 const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes

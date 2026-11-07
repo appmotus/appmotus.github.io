@@ -130,7 +130,7 @@ const ACT = {
   },
   // le retour au menu reprend la position où l'on était avant d'ouvrir la page
   // une page ouverte depuis une autre (Données transmises depuis Partage et export) y ramène au retour
-  setPage: t => { if (!setPage) menuScroll = scrollY; else pagePrec = {de:setPage, vers:t.dataset.p, y:scrollY}; setPage = t.dataset.p; render(); if (setPage === 'thera') synchroCanaux(true); },
+  setPage: t => { if (!setPage) menuScroll = scrollY; else pagePrec = {de:setPage, vers:t.dataset.p, y:scrollY}; setPage = t.dataset.p; if (setPage === 'connecteurs') connAide = false; render(); if (setPage === 'thera') synchroCanaux(true); },
   setBack: () => {
     const prec = pageRetour(); pagePrec = null;
     if (prec) { setPage = prec.de; render(true); return window.scrollTo(0, prec.y); }
@@ -193,12 +193,13 @@ const ACT = {
     }
     toast('Texte copié');
   },
-  voirConnecteurs: t => { t.closest('dialog')?.close(); if (!setPage) menuScroll = 0; view = 'set'; setPage = 'connecteurs'; connQ = ''; render(); window.scrollTo(0, 0); },
+  voirConnecteurs: t => { t.closest('dialog')?.close(); if (!setPage) menuScroll = 0; view = 'set'; setPage = 'connecteurs'; connQ = ''; connAide = false; render(); window.scrollTo(0, 0); },
+  plierAide: t => plierAide(t),
   renommerConn: t => ouvrirRenommer(t.dataset.k),
   // toucher un connecteur dans le Journal : toutes les notes qui le contiennent, en liste
   connecteur: t => { calC = [t.dataset.c]; calF = calW = null; calQ = ''; view = 'cal'; calMode = 'list'; listeAPlacer = true; render(true); },
   calMode: t => { calMode = t.dataset.m; listeAPlacer = true; render(); },
-  repMode: t => { repMode = t.dataset.m; render(true); },
+  repMode: t => { repMode = t.dataset.m; render(!t.closest('#barreR')); },   // depuis la barre compacte : le nouveau répertoire depuis son début
   // une semaine de la liste devient la période à envoyer ; la semaine en cours va du lundi à aujourd'hui
   choisirSemaine: t => {
     const lun = t.dataset.k, fin = addDays(lun, 6) > today() ? today() : addDays(lun, 6), d = $('#xCustom');
@@ -279,19 +280,21 @@ const ACT = {
   },
   unpickB: t => { ed.bes.splice(+t.dataset.n, 1); renderBPicker(); },
   volet: t => { document.activeElement?.blur?.(); poserVolet(t.dataset.v); },
-  // Quotidien : « Besoin › » et « ‹ Émotion » retournent la ligne, sans ouvrir la note
-  voirFace: t => { const c = t.closest('.duo'); if (c) poserFace(c, !c.classList.contains('cote-b')); },
+  // « Besoin › », « Action › », « ‹ Émotion » : la ligne passe à cette carte, sans ouvrir la note
+  voirFace: t => { const c = t.closest('.duo'); if (c) poserFace(c, +t.dataset.k); },
   locate: () => locate(true),
   saveEntry: () => {
     ed.time = $('#eTime').value || nowTime();
     ed.ville = $('#eVille').value.trim();
     ed.lieu = $('#eLieu').value.trim();
     ed.car = $('#eCar').value.trim();
+    ed.bdet = $('#eBdet').value.trim();
     ed.piste = $('#ePiste').value.trim();
     if (!ed.emos.length) { if (ed.volet !== 'e') poserVolet('e'); return $('#eErr').textContent = 'Choisissez au moins une émotion.'; }
-    // émotions et besoins sont enregistrés ensemble ; sans besoin ni piste, la note garde sa forme d'avant
+    // les trois cartes sont enregistrées ensemble ; sans besoin ni action, la note garde sa forme d'avant
     const d = ensureDay(cur), {fam, int, villeTouched, bfam, bgr, volet, ...entry} = ed;
     if (!entry.bes.length) delete entry.bes;
+    if (!entry.bdet) delete entry.bdet;
     if (!entry.piste) delete entry.piste;
     if (entry.id) d.entries[d.entries.findIndex(x => x.id === entry.id)] = entry;
     else { entry.id = uid(); d.entries.push(entry); countStat('notes'); }
@@ -313,7 +316,8 @@ const ACT = {
   },
   changeCode: async () => {
     if (!session) return toast('Connexion internet nécessaire pour changer de mot de passe.');
-    const c = await askCode('Changer mon mot de passe', {confirm:true});
+    if (!await verifierAvantMdp()) return;   // mot de passe actuel, ou code reçu par e-mail
+    const c = await askCode('Nouveau mot de passe', {confirm:true});
     if (!c) return;
     try { await API.setPassword(c); }
     catch (x) { return toast(x.code === 'faible' ? 'Mot de passe trop simple.' : x.code === 'reseau' ? 'Pas de connexion internet.' : 'Changement impossible pour le moment.'); }

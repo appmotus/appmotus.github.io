@@ -76,6 +76,11 @@ textarea[data-notes-admin]{overflow:hidden;resize:none}   /* le cadre suit la lo
    Plus bas, une barre compacte (#barreJ) redescend sous le mois dès qu'on remonte : le seul choix calendrier/liste,
    et en liste un bouton qui déploie la recherche et les filtres. Elle se retire dès qu'on redescend. */
 #barreJ{position:sticky;z-index:3;height:0;margin:0 -20px}
+/* Répertoire : la même barre, tout en haut de l'écran, avec le fond sous la barre d'état du téléphone */
+#barreR{position:sticky;top:env(safe-area-inset-top);z-index:3;height:0;margin:0 -20px}
+#barreR .barreJ-in{position:relative}
+#barreR .barreJ-in::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:env(safe-area-inset-top);background:var(--bg)}
+#barreR .seg{margin:0}
 .barreJ-in{background:var(--bg);padding:6px 20px 8px;box-shadow:0 1px 0 var(--border);visibility:hidden}
 .barreJ-ligne{display:flex;gap:10px;align-items:center}
 .barreJ-ligne .seg{flex:1;margin:0}
@@ -145,7 +150,15 @@ textarea.auto-h{resize:none;overflow:hidden}
 dialog.conn-dlg[open]{display:flex;flex-direction:column;overflow:hidden}
 .conn-dlg form{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 .conn-dlg .dlg-b{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
-.conn-dlg .dlg-h,.conn-dlg .dlg-f,.conn-dlg .champ-recherche,.conn-dlg #connInfo,.conn-dlg #connAide{flex:none}
+.conn-dlg .dlg-h,.conn-dlg .dlg-f,.conn-dlg .champ-recherche,.conn-dlg .conn-outils,.conn-dlg #connAide{flex:none}
+/* nombre choisi à gauche, ordre de la liste (A→Z ou nombre) à droite */
+.conn-outils{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 2px 0}
+.conn-outils p{margin:0}
+.tri-conn{display:inline-flex;flex:none;background:var(--surface);border-radius:10px;padding:2px}
+.card .tri-conn{background:var(--bg)}
+.tri-conn button{border:0;background:none;border-radius:8px;padding:4px 10px;font:inherit;font-size:.78rem;font-weight:600;color:var(--muted)}
+.tri-conn button.on{background:var(--seg-on);color:var(--text)}
+.card .tri-conn button.on{background:var(--surface2)}
 .conn-dlg .conn-liste{flex:0 1 auto;min-height:90px}
 .conn-dlg h2:focus{outline:none}
 .dlg-h .titre-i{display:flex;align-items:center;gap:8px}
@@ -169,6 +182,14 @@ dialog.conn-dlg[open]{display:flex;flex-direction:column;overflow:hidden}
 .liste-aide{margin:10px 0 0;padding-left:18px;color:var(--muted)}
 .liste-aide li+li{margin-top:5px}
 .conn-gestion{max-height:none;margin-top:10px;background:var(--bg)}
+/* l'explication repliée : ses premières lignes, qui s'effacent, et une flèche pour la lire en entier puis la replier */
+.pliable{position:relative;max-height:5.6em;overflow:hidden}
+.pliable::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2.6em;background:linear-gradient(color-mix(in srgb,var(--surface) 0%,transparent),var(--surface));pointer-events:none}
+.pliable.ouvert{max-height:none}
+.pliable.ouvert::after{display:none}
+.plier{display:grid;place-items:center;width:100%;height:30px;margin:2px 0 -8px;border:0;background:none;color:var(--accent);padding:0}
+.plier svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg);transition:transform .2s}
+.plier[aria-expanded=true] svg{transform:rotate(-90deg)}
 button.conn-ligne{width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left}
 button.conn-ligne .rc{width:16px;height:16px;flex:none}
 
@@ -282,19 +303,27 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appeara
 .entries.tenir .entry{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .entries.tenir li{border-radius:12px;transition:background .4s}
 .entries.tenir li.appuye{background:color-mix(in srgb,var(--rouge-txt) 13%,transparent)}
-/* Deux faces : l'émotion, puis ses besoins (balayage vers la gauche) ; de même pour la synthèse de la journée */
+/* Les cartes d'une émotion côte à côte : l'émotion, puis son besoin et son action (balayage vers la gauche) ; de même pour la
+   synthèse de la journée. --i : rang de la carte ; --k (sur .duo) : carte affichée, la seule qui compte dans la hauteur. */
 .duo{position:relative;overflow:hidden}
-.duo>.face-b{position:absolute;top:0;left:0;width:100%;transform:translateX(calc(100% + 16px))}
-.duo.cote-b>.face-e{position:absolute;top:0;left:0;width:100%;transform:translateX(calc(-100% - 16px))}
-.duo.cote-b>.face-b{position:relative;transform:none}
-.lien-b{float:right;margin:-4px 0 -4px 10px;padding:4px 0 4px 8px;color:var(--accent);font-weight:600;font-size:.76rem;font-style:normal;cursor:pointer}
+.duo>.face{transform:translateX(calc((var(--i,0) - var(--k,0)) * (100% + 16px)))}
+.duo>.face:not(.on){position:absolute;top:0;left:0;width:100%}
+/* Pastilles des cartes, à droite : la carte affichée pleine ; une autre carte remplie cerclée de sa couleur (un appui y mène) ;
+   une carte vide grisée. La zone d'appui déborde un peu de la pastille. */
+.pastilles{float:right;display:flex;gap:6px;margin:-4px 0 -4px 10px}
+.pc{position:relative;flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--pc);color:var(--pc);cursor:pointer}
+.pc::after{content:'';position:absolute;inset:-5px -3px}
+.pc svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pc.on{background:var(--pc);color:var(--bg);cursor:default}
+.pc.vide{border-color:var(--border);color:var(--muted);opacity:.5;cursor:default}
+.pc.on::after,.pc.vide::after{display:none}
 .face-b .edot::after{border-radius:3px}
-/* Fenêtre d'une émotion : les volets émotions et besoins côte à côte ; seul le volet affiché compte dans la hauteur */
+/* Fenêtre d'une émotion : les volets des cartes émotion, besoin et action côte à côte */
 .volets{overflow:hidden;margin:0 -16px;padding:0 16px}
 .volets-in{display:flex;gap:16px;align-items:flex-start}
 .volet{flex:0 0 100%;width:100%;min-width:0;padding-bottom:4px}
 .volet-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.vers-volet{flex:none;background:none;border:0;padding:8px 0 4px 12px;color:var(--accent);font-weight:600;font-size:.84rem}
+.volet-h .pastilles{float:none;margin:0;align-self:center}
 /* Repère émotion / besoin (ICO.emotion et ICO.besoin, dans app.js), dans la couleur de la famille */
 .edot svg{width:17px;height:17px;fill:none;stroke:var(--fc,var(--accent));stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .edot:has(svg)::after{display:none}
@@ -329,6 +358,9 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appeara
 .stat{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.92rem}
 .stat b{font-weight:600}
 .stat:last-child{border-bottom:0}
+/* Émotions et besoins du mois : une pastille de la couleur de leur famille devant chaque mot */
+.avec-pt{display:inline-flex;align-items:center;gap:9px}
+.pt{flex:none;width:10px;height:10px;border-radius:50%;background:var(--fc)}
 button.stat{width:100%;background:none;border-width:0 0 1px;color:inherit;font:inherit;font-size:.92rem;text-align:left;padding:9px 0;align-items:baseline}
 button.stat b{text-align:right}
 .stat .masque{font-weight:500;font-style:italic}
@@ -342,6 +374,7 @@ button.stat b{text-align:right}
 /* Barre de navigation : l'onglet actif est marqué par un trait fin et un texte plus foncé */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);display:flex;justify-content:center;padding:7px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
 @media (pointer:coarse){body.clavier nav.tabs{display:none}}   /* clavier ouvert : la barre ne remonte pas au-dessus (iPhone) */
+.wrap{padding-bottom:calc(env(safe-area-inset-bottom) + 96px + var(--clavier,0px))}   /* clavier ouvert (--clavier : sa hauteur), de quoi remonter le texte au-dessus */
 nav.tabs .in{display:flex;max-width:560px;width:100%}
 nav.tabs button{position:relative;flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:500;color:var(--muted);padding:4px 2px}
 nav.tabs button svg{width:23px;height:23px;stroke-width:1.4}

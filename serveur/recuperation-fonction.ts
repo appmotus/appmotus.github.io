@@ -224,6 +224,11 @@ const supprimerDemande = (req: Request, email: string) =>
   envoyerCode(req, email, "supprimer", "Votre code pour supprimer votre compte", (code) =>
     `Votre code pour supprimer votre compte Motus : ${code}\n\nIl est valable 15 minutes. Le saisir supprime définitivement votre compte et les données de votre téléphone. Si vous n'avez rien demandé, ne le communiquez à personne et changez votre mot de passe.`);
 
+// Changer de mot de passe sans connaître l'actuel (v40) : le code prouve l'accès à la boîte mail ; l'app demande ensuite le nouveau
+const mdpDemande = (req: Request, email: string) =>
+  envoyerCode(req, email, "mdp", "Votre code pour changer de mot de passe", (code) =>
+    `Votre code pour changer le mot de passe de votre compte Motus : ${code}\n\nIl est valable 15 minutes. Si vous n'avez rien demandé, ne le communiquez à personne.`);
+
 // Vérifie le code reçu ; renvoie l'identifiant de l'utilisateur, ou la réponse d'erreur
 async function verifierCode(req: Request, code: string, usage: string): Promise<{ id: string; ligne: Record<string, unknown> } | Response> {
   const id = await utilisateur(req);
@@ -252,6 +257,11 @@ async function effacerConfirme(req: Request, code: string, email: string) {
       `Vos notes Motus ont bien été effacées de votre téléphone. Votre compte et vos réglages sont conservés.\n\nLes sauvegardes, fichiers Excel et envois au thérapeute déjà créés ne sont pas concernés : pensez à supprimer vous-même ceux que vous ne souhaitez pas garder.\n\nSi vous n'êtes pas à l'origine de cette demande, changez votre mot de passe sans attendre.`).catch(console.error);
   }
   return rep(200, { ok: true });
+}
+
+async function mdpConfirme(req: Request, code: string) {
+  const v = await verifierCode(req, code, "mdp");
+  return v instanceof Response ? v : rep(200, { ok: true });
 }
 
 const estAdmin = async (id: string) => !!(await db(`profils?id=eq.${id}&select=est_admin`))[0]?.est_admin;
@@ -347,6 +357,8 @@ Deno.serve(async (req) => {
     if (b.action === "effacer_confirme") return await effacerConfirme(req, String(b.code ?? "").trim(), norm(b.email));
     if (b.action === "supprimer_demande") return await supprimerDemande(req, norm(b.email));
     if (b.action === "supprimer_confirme") return await supprimerConfirme(req, String(b.code ?? "").trim(), norm(b.email));
+    if (b.action === "mdp_demande") return await mdpDemande(req, norm(b.email));
+    if (b.action === "mdp_confirme") return await mdpConfirme(req, String(b.code ?? "").trim());
     if (b.action === "supprimer_mdp") return await supprimerMotDePasse(req, String(b.mot_de_passe ?? ""));
     if (b.action === "identite_mdp") return await identiteMotDePasse(req, String(b.mot_de_passe ?? ""), norm(b.identifiant));
     if (b.action === "demande") return await demande(norm(b.identifiant), norm(b.email));

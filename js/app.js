@@ -38,6 +38,8 @@ const ICO = {
   // Son choix du 2026-11-05 : le pouls pour ce que je ressens, la boussole pour le besoin qui oriente
   emotion:'<path d="M2.5 12h4l2.2-5.5 4.6 11 2.2-5.5h6"/>',
   besoin:'<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
+  // carte Action (v40) : son idée, un bonhomme qui court
+  action:'<circle cx="13.5" cy="4.5" r="1.8"/><path d="M7 12V9l5-1.5 3 3 3 1"/><path d="M15 21v-4.5l-3.5-3 1-5.5"/><path d="M4.5 17.5l4.5.8 1-2"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>', mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7.5 8.5 6 8.5-6"/>',
   lock:'<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>', out:'<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="m15 8 4 4-4 4"/><path d="M19 12H9"/>',
   send:'<path d="M21 3 10 14"/><path d="m21 3-6.5 18-4.5-7-7-4.5L21 3Z"/>',
@@ -76,8 +78,8 @@ function render(keepScroll) {
   connCache = null;   // les connecteurs se recalculent avec les notes du moment
   markTabs();
   $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
-  if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = Infinity; entJ.deploye = false; }
-  entJ.y = Math.max(0, scrollY); entetesJournal();
+  if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = entR.cache = Infinity; entJ.deploye = false; }
+  entJ.y = entR.y = Math.max(0, scrollY); entetesJournal(); barreRepertoire();
   if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();
   listeAPlacer = false;
   document.querySelectorAll('#view textarea[data-notes-admin]').forEach(ajusterHauteur);

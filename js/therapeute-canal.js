@@ -273,7 +273,7 @@ function choisirPartage() {
 }
 function aTransmettre(d) {
   const p = data.settings.partage || {}, lieu = x => p.lieu ? x : {...x, ville:'', lieu:''};
-  const besoins = e => { if (p.besoins) return e; const {bes, piste, ...reste} = e; return reste; };   // sans les besoins, si on ne les transmet pas
+  const besoins = e => { if (p.besoins) return e; const {bes, bdet, piste, ...reste} = e; return reste; };   // sans les cartes Besoin et Action, si on ne les transmet pas
   const o = {color:d.color || null, entries:p.emotions ? (d.entries || []).map(lieu).map(besoins) : [], synth:p.synthese ? d.synth || '' : ''};
   if (p.notes && dayNotes(d).length) o.notes = dayNotes(d).map(lieu);
   return o;

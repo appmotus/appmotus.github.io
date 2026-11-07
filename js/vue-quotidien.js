@@ -27,23 +27,24 @@ function vDay() {
   const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
   const fs = famSummary(ents), fb = besSummary(ents), ro = !!src;
-  /* Une émotion reliée à des besoins a deux faces : l'émotion d'abord, avec « Besoin › » ; un balayage vers la gauche (ou un appui
-     sur « Besoin › ») montre ses besoins. Toucher une face ouvre la note sur le volet correspondant. */
+  /* Une émotion et ses cartes : l'émotion d'abord, puis la carte Besoin et la carte Action quand elles existent. Un balayage vers la
+     gauche (ou un appui sur la pastille d'une carte) passe à la carte suivante, vers la droite revient à la précédente.
+     Toucher une carte ouvre la note sur ce même volet. */
   const ligneEmo = e => {
-    const duo = aBesoins(e), bs = besoinsDe(e), tag = ro ? 'div' : 'button';
-    const attrs = v => ro ? '' : ` data-act="editEntry" data-id="${e.id}"${v ? ` data-v="${v}"` : ''}`;
+    const cs = cartesDe(e), duo = cs.length > 1, tag = ro ? 'div' : 'button', coul = couleursCartes(e);
+    const attrs = v => ro ? '' : ` data-act="editEntry" data-id="${e.id}"${v !== 'e' ? ` data-v="${v}"` : ''}`;
     const quand = `${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`;
+    const txt = {e:() => sentenceHtml(e), b:() => besoinHtml(e), a:() => actionHtml(e)};
     return `
-      <li${duo ? ' class="duo"' : ''}><${tag} class="entry face-e" style="--fc:${FAMK[e.emos[0].f].c}"${attrs()}>
-        <span class="edot">${ico('emotion', '')}</span><span class="etxt">
-        <span class="meta">${duo ? `<span class="lien-b" data-act="voirFace">${bs.length > 1 ? 'Besoins' : 'Besoin'} ›</span>` : ''}${quand}</span>
-        <span class="txt">${sentenceHtml(e)}</span></span>
-      </${tag}>${duo ? `<${tag} class="entry face-b" inert style="--fc:${bs[0] ? coulB(bs[0].b) : FAMK[e.emos[0].f].c}"${attrs('b')}>
-        <span class="edot">${ico('besoin', '')}</span><span class="etxt">
-        <span class="meta"><span class="lien-b" data-act="voirFace">‹ Émotion</span>${quand}</span>
-        <span class="txt">${besoinsHtml(e)}</span></span>
-      </${tag}>` : ''}</li>`;
+      <li${duo ? ' class="duo"' : ''}>${cs.map((c, i) => `<${tag} class="entry face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--fc:${coul[c]};--i:${i}"${attrs(c)}>
+        <span class="edot">${ico(ICO_CARTE[c], '')}</span><span class="etxt">
+        <span class="meta">${pastillesCartes(e, c)}${quand}</span>
+        <span class="txt">${txt[c]()}</span></span>
+      </${tag}>`).join('')}</li>`;
   };
+  // synthèse : deux pastilles, émotions traversées et besoins exprimés (grisée sans besoin)
+  const pS = on => pastilles([['e', 'Émotions traversées'], ['b', 'Besoins exprimés']].map(([k, nom], i) =>
+    ({k, nom, coul:'var(--accent)', etat:k === on ? 'on' : k === 'b' && !fb.length ? 'vide' : 'lien', attrs:`data-act="voirFace" data-k="${i}"`})));
   return `
   ${clientBar()}${ro ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
@@ -86,9 +87,9 @@ function vDay() {
   <section class="card">
     <h2>Synthèse de la journée</h2>
     ${fs.length ? `<div${fb.length ? ' class="duo"' : ''}>
-      <div class="face-e"><p class="label">${fb.length ? '<span class="lien-b" data-act="voirFace">Besoins ›</span>' : ''}<span class="repere">${ico('emotion', '')}Émotions traversées</span></p>
+      <div class="face face-e on" style="--i:0"><p class="label">${pS('e')}<span class="repere">${ico('emotion', '')}Émotions traversées</span></p>
         <div class="chips">${fs.map(([f,n]) => `<span class="chip static" style="--fc:${FAMK[f].c}">${FAMK[f].n}${n > 1 ? ' ×' + n : ''}</span>`).join('')}</div></div>
-      ${fb.length ? `<div class="face-b" inert><p class="label"><span class="lien-b" data-act="voirFace">‹ Émotions</span><span class="repere">${ico('besoin', '')}Besoins exprimés</span></p>
+      ${fb.length ? `<div class="face face-b" inert style="--i:1"><p class="label">${pS('b')}<span class="repere">${ico('besoin', '')}Besoins exprimés</span></p>
         <div class="chips">${fb.map(x => `<span class="chip static" style="--fc:${coulB(x.b)}">${esc(x.w)}${x.n > 1 ? ' ×' + x.n : ''}</span>`).join('')}</div></div>` : ''}
     </div>` : ''}
     ${ro ? `

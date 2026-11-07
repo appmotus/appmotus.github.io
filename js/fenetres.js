@@ -18,21 +18,21 @@ function confirmerAction({titre, texte = '', bouton = 'Confirmer'}) {
     D.showModal();
   });
 }
-/* Journal en liste : choisir jusqu'à 3 connecteurs, classés par ordre alphabétique, avec une recherche */
+/* Journal (calendrier ou liste) : choisir jusqu'à 3 connecteurs, classés par ordre alphabétique ou par nombre de notes, avec une recherche */
 const CONN_MAX = 3;
 function ouvrirConnecteurs() {
   let choix = calC.filter(k => connecteurs().has(k)), et = calCEt;
-  // ceux déjà choisis en haut, pour pouvoir les retirer sans les chercher ; puis tous les autres, par ordre alphabétique
-  const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => choix.includes(b.k) - choix.includes(a.k) || a.label.localeCompare(b.label, 'fr', {sensitivity:'base'}));
+  // ceux déjà choisis en haut, pour pouvoir les retirer sans les chercher ; puis tous les autres, dans l'ordre choisi (A→Z ou nombre)
+  const D = $('#codeDlg'), tous = [...connecteurs().values()].sort((a, b) => choix.includes(b.k) - choix.includes(a.k) || triConn(a, b));
   const etat = () => JSON.stringify([[...choix].sort(), et]), avant = etat();
   D.innerHTML = `<form method="dialog" id="connForm">
     <div class="dlg-h"><div class="titre-i"><h2 tabindex="-1" autofocus>Connecteurs</h2><button type="button" class="btn-i" id="connI" aria-expanded="false" aria-controls="connAide" aria-label="Qu’est-ce qu’un connecteur ?">i</button></div><button type="button" class="icon-btn" data-act="closeDlg" aria-label="Fermer">×</button></div>
     <div class="dlg-b">
       <p class="small muted" id="connAide" hidden style="margin:10px 2px 0">Un connecteur relie des notes entre elles : écrivez @ suivi d’un mot dans une émotion, une note ou une synthèse (@travail, @un-ami). Exemples, explications et modification d’un connecteur : <button type="button" class="link" data-act="voirConnecteurs">Paramètres › Connecteurs</button>.</p>${tous.length ? `
       ${champRecherche('connQ', '', 'Rechercher un connecteur')}
-      <p class="small muted" id="connInfo" style="margin:8px 2px 0"></p>
+      <div class="conn-outils"><p class="small muted" id="connInfo"></p>${boutonsTri()}</div>
       <div class="seg two" id="connMode" hidden><button type="button" data-et="1">Tous à la fois</button><button type="button" data-et="">Au moins un</button></div>
-      <div class="conn-liste" id="connListe">${tous.map(c => `<label class="conn-ligne" data-k="${esc(c.k)}" data-t="${esc(sansAccent(c.label))}"><input type="checkbox" value="${esc(c.k)}" ${choix.includes(c.k) ? 'checked' : ''}><span>${esc(c.label)}</span><small>${c.n} note${c.n > 1 ? 's' : ''}</small></label>`).join('')}
+      <div class="conn-liste" id="connListe">${tous.map(c => `<label class="conn-ligne" data-k="${esc(c.k)}" data-t="${esc(sansAccent(c.label))}" data-l="${esc(c.label)}" data-n="${c.n}"><input type="checkbox" value="${esc(c.k)}" ${choix.includes(c.k) ? 'checked' : ''}><span>${esc(c.label)}</span><small>${c.n} note${c.n > 1 ? 's' : ''}</small></label>`).join('')}
         <p class="small muted" id="connRien" hidden style="margin:12px">Aucun connecteur ne correspond.</p></div>`
     : '<p class="small muted" style="margin:0">Aucun connecteur pour l’instant. Dans une émotion, une note ou une synthèse, écrivez @ suivi d’un mot : par exemple @travail, ou @un-ami (le tiret remplace l’espace). Les villes et lieux déjà saisis sont aussi des connecteurs.</p>'}
     </div>
@@ -48,18 +48,31 @@ function ouvrirConnecteurs() {
     const m = $('#connMode');
     if (m) { m.hidden = choix.length < 2; m.querySelectorAll('button').forEach(b => { const on = !!b.dataset.et === et; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); }
   };
-  cases.forEach(c => c.onchange = maj);
-  D.querySelectorAll('#connMode button').forEach(b => b.onclick = () => { et = !!b.dataset.et; maj(); });
-  const q = $('#connQ');
-  if (q) q.oninput = () => {
+  const q = $('#connQ'), L = $('#connListe');
+  // ceux qui sont cochés en haut, puis tous les autres dans l'ordre choisi ; la liste repart de son début
+  const ranger = () => {
+    if (!L) return;
+    const fiche = l => ({n:+l.dataset.n, label:l.dataset.l}), coche = l => l.querySelector('input').checked;
+    [...L.querySelectorAll('.conn-ligne')].sort((a, b) => coche(b) - coche(a) || triConn(fiche(a), fiche(b))).forEach(l => L.insertBefore(l, $('#connRien')));
+    L.scrollTop = 0;
+  };
+  const filtrer = () => {
     const m = cleConn(q.value), t = sansAccent(q.value.trim());
     // pendant une recherche, ceux qui sont choisis restent visibles, en haut
-    const L = $('#connListe');
     cases.filter(c => c.checked).reverse().forEach(c => L.prepend(c.closest('.conn-ligne')));
     let n = 0;
     D.querySelectorAll('.conn-ligne').forEach(l => { l.hidden = !!m && !l.querySelector('input').checked && !l.dataset.k.includes(m) && !l.dataset.t.includes(t); if (!l.hidden) n++; });
     $('#connRien').hidden = n > 0;
   };
+  // un connecteur choisi pendant une recherche : la recherche s'efface et toute la liste revient, le choix en haut
+  cases.forEach(c => c.onchange = () => { maj(); if (q?.value.trim()) { q.value = ''; filtrer(); ranger(); } });
+  D.querySelectorAll('#connMode button').forEach(b => b.onclick = () => { et = !!b.dataset.et; maj(); });
+  D.querySelectorAll('.tri-conn button').forEach(b => b.onclick = () => {
+    choisirTri(b.dataset.tri);
+    D.querySelectorAll('.tri-conn button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+    ranger();
+  });
+  if (q) q.oninput = filtrer;
   const eff = $('#connEff'); if (eff) eff.onclick = () => { cases.forEach(c => c.checked = false); maj(); };
   $('#connI').onclick = () => { const a = $('#connAide'), b = $('#connI'); a.hidden = !a.hidden; b.setAttribute('aria-expanded', !a.hidden); };
   $('#connForm').onsubmit = e => { e.preventDefault(); D.close(); };   // le choix s'applique à la fermeture
