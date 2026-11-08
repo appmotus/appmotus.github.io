@@ -40,6 +40,69 @@ function barreRepertoire() {
   inn.style.transform = `translateY(${-entR.cache}px)`;
   inn.style.visibility = entR.cache >= H ? '' : 'visible';
 }
+/* Quotidien : le mini-calendrier, avec la même règle que la barre Calendrier/Liste du Journal (sa demande, v42). Sous la date
+   collée en haut, il descend au rythme du doigt quand on remonte la page, et remonte quand on redescend ; tout en haut de la
+   page, tirer vers le bas le fait descendre de même. Lâché à moitié, il finit de s'ouvrir ou de se refermer. Toucher un jour
+   y mène ; ‹ › changent de mois. */
+const entQ = {y:0, cache:Infinity, ref:null, an:0, mo:0, fin:null};
+function contenuQ() {
+  if (entQ.ref !== cur) { entQ.ref = cur; entQ.an = +cur.slice(0, 4); entQ.mo = +cur.slice(5, 7) - 1; }
+  const n = new Date(), dernier = entQ.an === n.getFullYear() && entQ.mo >= n.getMonth();
+  return `<div class="annee-nav"><button type="button" class="icon-btn" data-act="moisQ" data-pas="-1" aria-label="Mois précédent">‹</button><b>${MOIS[entQ.mo]} ${entQ.an}</b><button type="button" class="icon-btn" data-act="moisQ" data-pas="1" aria-label="Mois suivant" ${dernier ? 'disabled' : ''}>›</button></div>
+    <div class="cal jours-grille">${grilleJours(entQ.an, entQ.mo, 'jourQ')}</div>`;
+}
+const barreQ = () => `<div id="barreQ"><div class="barreJ-in barreQ-in" aria-label="Mini-calendrier">${contenuQ()}</div></div>`;
+function poserQ(anim = false) {
+  const inn = $('#view #barreQ .barreQ-in'); if (!inn) return;
+  const H = inn.offsetHeight, c = Math.min(entQ.cache, H);
+  inn.style.transition = anim ? 'transform .2s ease-out' : 'none';
+  inn.style.transform = `translateY(${-c}px)`;
+  if (c < H) inn.style.visibility = 'visible';
+  else if (anim) setTimeout(() => { if (entQ.cache >= inn.offsetHeight) inn.style.visibility = ''; }, 210);
+  else inn.style.visibility = '';
+  $('#view .dayhead')?.classList.toggle('sans-trait', c < H);
+}
+function barreQuotidien() {
+  const bar = $('#view #barreQ'), h = $('#view .dayhead');
+  if (!bar || !h) return;
+  const y = Math.max(0, scrollY), d = y - entQ.y, H = bar.firstElementChild.offsetHeight;
+  entQ.y = y;
+  bar.style.top = `${parseFloat(getComputedStyle(h).top) + h.offsetHeight}px`;
+  entQ.cache = Math.min(H, Math.max(0, entQ.cache + d));
+  poserQ();
+  // le défilement fini, un mini-calendrier à moitié sorti s'ouvre ou se referme
+  clearTimeout(entQ.fin);
+  entQ.fin = setTimeout(() => { const H2 = bar.firstElementChild?.offsetHeight || 0; if (entQ.cache > 0 && entQ.cache < H2 && !gq) { entQ.cache = entQ.cache < H2 / 2 ? 0 : H2; poserQ(true); } }, 180);
+}
+// tout en haut de la page, rien ne défile : le doigt qui tire vers le bas fait descendre le mini-calendrier lui-même
+let gq = null;
+document.addEventListener('touchstart', e => {
+  gq = null;
+  if (view !== 'day' || $('#app').hidden || $('dialog[open]') || e.touches.length !== 1 || scrollY > 1 || texteSelectionne() || clavierOuvert()) return;
+  if (e.target.closest('input, textarea, select') || !$('#view #barreQ')) return;
+  gq = {y:e.touches[0].clientY, x:e.touches[0].clientX, sens:null, c0:Math.min(entQ.cache, $('#view #barreQ .barreQ-in').offsetHeight)};
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  const g = gq;
+  if (!g || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+  if (!g.sens && Math.hypot(dx, dy) > 10) g.sens = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
+  if (g.sens !== 'v') return;
+  const H = $('#view #barreQ .barreQ-in').offsetHeight, court = document.documentElement.scrollHeight <= innerHeight + 1;
+  if (dy < 0 && !court) { gq = null; return; }   // vers le haut : la page défile, et le défilement replie le mini-calendrier
+  if (e.cancelable) e.preventDefault();
+  entQ.cache = Math.min(H, Math.max(0, g.c0 - dy));
+  g.bouge = true;
+  poserQ();
+}, {passive:false});
+document.addEventListener('touchend', () => {
+  const g = gq; gq = null;
+  if (!g?.bouge) return;
+  avalerClic = Date.now();   // le doigt levé ne touche pas un jour
+  const H = $('#view #barreQ .barreQ-in')?.offsetHeight || 0;
+  entQ.cache = entQ.cache < H / 2 ? 0 : H;
+  poserQ(true);
+}, {passive:true});
 function replierEntete() {
   entJ.deploye = false;
   const p = $('#view .barreJ-plus'); if (p) p.hidden = true;
@@ -56,6 +119,17 @@ function basEntete() {
    Quotidien (jour) : la même fenêtre s'ouvre sous la date, sur les jours du mois affiché avec leur couleur ; ‹ › ou un balayage
    changent de mois, et toucher le nom du mois montre les douze mois de l'année, comme dans le Journal. */
 const MOIS_COURTS = ['Janv.', 'Févr.', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+/* Les jours d'un mois, sur six semaines comme le calendrier : la grille garde sa hauteur d'un mois à l'autre.
+   act : l'action d'un jour touché (le mini-calendrier du Quotidien) ; sans elle, la fenêtre du choix du mois s'en occupe. */
+function grilleJours(y, m, act = '') {
+  const t = today(), off = (new Date(y, m, 1).getDay() + 6) % 7, nj = new Date(y, m + 1, 0).getDate();
+  let h = ['L','M','M','J','V','S','D'].map(w => `<div class="wd">${w}</div>`).join('') + '<div class="cvide"></div>'.repeat(off);
+  for (let i = 1; i <= nj; i++) {
+    const k = ymd(new Date(y, m, i)), d = D().days[k];
+    h += `<button type="button" class="cday ${d?.color || ''} ${k === t ? 'today' : ''} ${k === cur ? 'on' : ''} ${k > t ? 'future' : ''}" data-k="${k}"${act ? ` data-act="${act}"` : ''} ${k > t ? 'disabled' : ''} aria-label="${fmtLong(k)}">${i}${d?.entries?.length ? '<span class="has"></span>' : ''}${dayNotes(d).length ? '<span class="nt"></span>' : ''}</button>`;
+  }
+  return h + '<div class="cvide"></div>'.repeat(42 - off - nj);
+}
 function choisirMois(jour = false) {
   const now = new Date(), ny = now.getFullYear(), nm = now.getMonth(), t = today(), compte = {};
   for (const [k, d] of Object.entries(D().days)) {
@@ -70,16 +144,7 @@ function choisirMois(jour = false) {
     const c = compte[`${y}-${m}`];
     return `<button type="button" data-m="${m}" class="${y === selY && m === selM ? 'on' : ''}" ${y === ny && m > nm ? 'disabled' : ''} aria-label="${MOIS[m]} ${y}${c ? `, ${c} note${c > 1 ? 's' : ''}` : ''}">${n}<small>${c || ''}</small></button>`;
   }).join('');
-  // les jours du mois, sur six semaines comme le calendrier : la fenêtre garde sa hauteur d'un mois à l'autre
-  const jours = (y, m) => {
-    const off = (new Date(y, m, 1).getDay() + 6) % 7, nj = new Date(y, m + 1, 0).getDate();
-    let h = ['L','M','M','J','V','S','D'].map(w => `<div class="wd">${w}</div>`).join('') + '<div class="cvide"></div>'.repeat(off);
-    for (let i = 1; i <= nj; i++) {
-      const k = ymd(new Date(y, m, i)), d = D().days[k];
-      h += `<button type="button" class="cday ${d?.color || ''} ${k === t ? 'today' : ''} ${k === cur ? 'on' : ''} ${k > t ? 'future' : ''}" data-k="${k}" ${k > t ? 'disabled' : ''} aria-label="${fmtLong(k)}">${i}${d?.entries?.length ? '<span class="has"></span>' : ''}${dayNotes(d).length ? '<span class="nt"></span>' : ''}</button>`;
-    }
-    return h + '<div class="cvide"></div>'.repeat(42 - off - nj);
-  };
+  const jours = (y, m) => grilleJours(y, m);
   const contenu = (y, m) => niveau === 'jours' ? jours(y, m) : boutons(y);
   const decaler = pas => { if (niveau === 'mois') return [an + pas, mo]; const m = mo + pas; return m < 0 ? [an - 1, 11] : m > 11 ? [an + 1, 0] : [an, m]; };
   const grille = () => {
@@ -248,7 +313,7 @@ function majEnteteListe() {
     e.innerHTML = enHaut ? 'Ce mois-ci' : '<button class="link" data-act="moisEnCours">Revenir à aujourd’hui</button>';
   }
 }
-addEventListener('scroll', () => { marquerEntete(); entetesJournal(); majEnteteListe(); barreRepertoire(); }, {passive:true});
+addEventListener('scroll', () => { marquerEntete(); entetesJournal(); majEnteteListe(); barreRepertoire(); barreQuotidien(); }, {passive:true});
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
   if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }

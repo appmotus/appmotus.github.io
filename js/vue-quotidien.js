@@ -34,6 +34,7 @@ function vDay() {
     <button class="icon-btn" data-act="prevDay" aria-label="Jour précédent">‹</button>
     <button class="icon-btn" data-act="nextDay" aria-label="Jour suivant" ${isT ? 'disabled' : ''}>›</button>
   </div>
+  ${barreQ()}
   ${weekStrip()}
   ${corpsJour()}`;
 }

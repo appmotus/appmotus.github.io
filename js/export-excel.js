@@ -153,9 +153,11 @@ function buildXlsx(from, to) {
       if (k < from || k > to) { cells.push(cE(ref, S.off)); continue; }
       if (!rempli(d)) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
       let t = fmtFR(k).slice(0, 5) + (couleur(d) ? ' — ' + L[d.color] : '');
-      if (ch.emotions) byTime(d).forEach(e => t += `\n\n${e.time}${ou(e) ? ' · ' + ou(e) : ''}\n${sansArobase(sentence(e))}${cartesE(e) ? '\n' + cartesE(e) : ''}`);
+      // dans l'ordre de la journée (sa demande, v42) : émotions et notes personnelles mêlées selon leur heure, puis la synthèse du soir
+      const notes = [...(ch.emotions ? d.entries.map(e => [e.time, `${e.time}${ou(e) ? ' · ' + ou(e) : ''}\n${sansArobase(sentence(e))}${cartesE(e) ? '\n' + cartesE(e) : ''}`]) : []),
+        ...(ch.notes ? dayNotes(d).map(n => [n.time, `NOTE PERSONNELLE ${n.time}${ou(n) ? ' · ' + ou(n) : ''} :\n${sansArobase(n.text)}`]) : [])];
+      notes.sort((a, b) => a[0].localeCompare(b[0])).forEach(([, x]) => t += `\n\n${x}`);
       if (ch.synthese && d.synth?.trim()) t += `\n\nSYNTHÈSE : ${sansArobase(d.synth.trim())}`;
-      if (ch.notes) dayNotes(d).forEach(n => t += `\n\nNOTE PERSONNELLE ${n.time}${ou(n) ? ' · ' + ou(n) : ''} :\n${sansArobase(n.text)}`);
       lines = Math.max(lines, estLines(t, 34));
       cells.push(cS(ref, cellStyle(couleur(d)), t));
     }

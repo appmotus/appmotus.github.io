@@ -78,6 +78,8 @@ textarea[data-notes-admin]{overflow:hidden;resize:none}   /* le cadre suit la lo
    et en liste un bouton qui déploie la recherche et les filtres. Elle se retire dès qu'on redescend. */
 #barreJ{position:sticky;z-index:3;height:0;margin:0 -20px}
 /* Répertoire : la même barre, tout en haut de l'écran, avec le fond sous la barre d'état du téléphone */
+#barreQ{position:sticky;z-index:3;height:0;margin:0 -20px}   /* Quotidien : le mini-calendrier, sous la date, même règle que #barreJ */
+.barreQ-in .annee-nav{margin-bottom:6px}
 #barreR{position:sticky;top:env(safe-area-inset-top);z-index:3;height:0;margin:0 -20px}
 #barreR .barreJ-in{position:relative}
 #barreR .barreJ-in::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:env(safe-area-inset-top);background:var(--bg)}
@@ -410,6 +412,13 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:
 body.clavier nav.tabs{display:none}
 .wrap{padding-bottom:calc(env(safe-area-inset-bottom) + 96px)}
 body.clavier .wrap{padding-bottom:calc(var(--clavier,0px) + 24px)}
+/* … et une fenêtre ne perd aucune place : pas de marge pour la barre d'accueil de l'iPhone (le clavier la recouvre), pas de
+   ligne réservée à un message d'erreur absent, et sous la fenêtre, derrière la barre ^ v ✓ transparente de l'iPhone, la
+   couleur de la fenêtre plutôt que la page (ombre pleine, invisible ailleurs : la fenêtre a toute la largeur sur téléphone) */
+body.clavier .dlg-f{padding-bottom:10px}
+body.clavier .dlg-b{padding-bottom:8px}
+body.clavier .dlg-b .err:empty{min-height:0;margin-top:0}
+@media (max-width:600px){body.clavier dialog[open]:not(.en-haut):not(.pleine){box-shadow:0 200px 0 200px var(--bg)}}
 nav.tabs .in{display:flex;max-width:560px;width:100%}
 nav.tabs button{position:relative;flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:500;color:var(--muted);padding:4px 2px}
 nav.tabs button svg{width:23px;height:23px;stroke-width:1.4}

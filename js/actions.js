@@ -192,6 +192,13 @@ const ACT = {
   nextDay: () => { if (cur < today()) { cur = addDays(cur, 1); render(); } },
   goToday: () => { cur = today(); render(); },
   openDay: t => { cur = t.dataset.k; view = 'day'; render(); },
+  // mini-calendrier du Quotidien : un jour touché y mène (le mini-calendrier se replie), ‹ › changent de mois
+  jourQ: t => { cur = t.dataset.k; render(); },
+  moisQ: t => {
+    entQ.mo += +t.dataset.pas;
+    if (entQ.mo < 0) { entQ.mo = 11; entQ.an--; } else if (entQ.mo > 11) { entQ.mo = 0; entQ.an++; }
+    const inn = $('#view #barreQ .barreQ-in'); if (inn) inn.innerHTML = contenuQ();
+  },
   calFilter: t => { calF = t.dataset.f || null; calW = null; listeAPlacer = true; render(); },
   calWord: t => { calW = t.dataset.w || null; listeAPlacer = true; render(); },
   choisirConn: () => ouvrirConnecteurs(),

@@ -78,7 +78,7 @@ Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pou
 1. **Majuscules automatiques**
    - Tout champ de texte libre : `autocapitalize="sentences"`.
    - Champ qui continue une phrase de l'app (« … car », « Plus précisément… », « Je pourrais… ») : pas de majuscule au premier
-     mot, mais une au début de chaque nouvelle ligne (`majLigne`, `CHAMPS_MAJ`). Chaque action à cocher en prend une dès sa première lettre.
+     mot, mais une au début de chaque nouvelle ligne et de chaque nouvelle phrase, après . ! ? ou … (`majLigne`, `CHAMPS_MAJ`). Chaque action à cocher en prend une dès sa première lettre.
    - Jamais dans les identifiants, mails, mots de passe, codes et recherches (`autocapitalize="none"`).
 2. **Le clavier ne recouvre jamais la zone de texte** (le texte, son cadre et ses boutons)
    - La barre d'onglets du bas se cache tant que le clavier est là (`body.clavier`), et revient dès qu'il se range, même sans
@@ -93,8 +93,10 @@ Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pou
 3. **Un geste vers le bas range le clavier**, partout : le doigt qui descend jusqu'au clavier, ou qui glisse vers le bas sur ce
    qui ne défile pas (`fenetres.js`).
 4. **Une fenêtre ouverte immobilise la page derrière elle** : seul ce qui défile dans la fenêtre défile, sans entraîner le fond.
-   - La fenêtre des connecteurs se ferme d'un geste vers le bas depuis son haut ou d'un appui à côté ; le mini-calendrier, qui
-     descend de la date, d'un geste vers le haut.
+   - La fenêtre des connecteurs se ferme d'un geste vers le bas depuis son haut ou d'un appui à côté ; la fenêtre du choix du
+     jour, qui descend de la date, d'un geste vers le haut.
+   - Quotidien : le mini-calendrier descend sous la date avec la même règle que la barre Calendrier/Liste du Journal (au rythme
+     du doigt quand on remonte la page, ou en tirant vers le bas tout en haut).
 5. **Connecteurs** (`@mot` dans le texte)
    - Propositions dès la première lettre après le @ : 4 au plus, en petite liste sous la ligne en cours (au-dessus seulement si
      le clavier la cacherait), retirées quand on touche le texte.

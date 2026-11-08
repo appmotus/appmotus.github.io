@@ -80,9 +80,10 @@ document.addEventListener('focusout', e => {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CONN.includes(e.target.id) && ancreConn(e.target)) { e.preventDefault(); ancreConn(e.target).remove(); } });
 
 /* Champs des cartes (… car, Plus précisément…, Je pourrais…) : le premier mot suit la phrase de l'app (« car », « Je pourrais »),
-   donc pas de majuscule (autocapitalize="none") ; mais chaque nouvelle ligne commence par une majuscule (v41), mise ici puisque le
-   clavier ne la met plus. Seule la lettre change, le curseur ne bouge pas. Rien à un collage, ni sur une lettre qu'on n'a pas
-   tapée à l'instant : une minuscule voulue, remise après coup, le reste. */
+   donc pas de majuscule (autocapitalize="none") ; mais chaque nouvelle ligne (v41) et chaque nouvelle phrase, après . ! ? ou …
+   suivis d'un espace (v42), commencent par une majuscule, mise ici puisque le clavier ne la met plus. Seule la lettre change, le
+   curseur ne bouge pas. Rien à un collage, ni sur une lettre qu'on n'a pas tapée à l'instant : une minuscule voulue, remise après
+   coup, le reste. */
 const CHAMPS_MAJ = ['eCar', 'eBdet', 'ePiste'];
 // une action de la carte Action (une ligne à elle seule) prend une majuscule dès sa première lettre (sa demande du 2026-11-07)
 const ligneAction = t => !!t.matches?.('#eTaches .tache-t');
@@ -90,10 +91,12 @@ const avecMaj = t => CHAMPS_MAJ.includes(t.id) || ligneAction(t);
 function majLigne(ta, ajout) {   // ajout : ce qui vient d'être tapé, juste avant le curseur
   const p = ta.selectionStart;
   if (!ajout || p !== ta.selectionEnd) return;
-  const debut = ta.value.lastIndexOf('\n', p - 1) + 1;
-  if (!debut && !ligneAction(ta)) return;   // première ligne d'un champ de carte : pas de majuscule
-  const i = debut + ta.value.slice(debut, p).search(/\S|$/);   // première lettre de la ligne, après d'éventuels espaces
-  if (i >= p || i < p - ajout.length) return;
+  const j = ajout.search(/\p{L}/u);   // la première lettre de ce qui vient d'être tapé
+  if (j < 0) return;
+  const i = p - ajout.length + j, avant = ta.value.slice(0, i);
+  const debutLigne = /(^|\n)[ \t]*$/.test(avant), apresPhrase = /[.!?…]["»”’)]*\s+$/.test(avant);
+  if (!debutLigne && !apresPhrase) return;
+  if (debutLigne && !avant.includes('\n') && !ligneAction(ta)) return;   // tout début d'un champ de carte : il continue la phrase de l'app
   const c = ta.value[i], C = c.toLocaleUpperCase('fr');
   if (C === c || C.length !== 1) return;
   ta.setRangeText(C, i, i + 1);
@@ -133,10 +136,12 @@ function majClavier() {
   Object.assign(clavier, {ouvert, hauteur, bas});
   document.querySelectorAll('dialog[open]').forEach(placerFenetre);
 }
+/* Clavier ouvert, la fenêtre occupe toute la partie visible de l'écran, de la barre d'état au clavier : aucune page visible
+   au-dessus ni au-dessous (sous elle, derrière la barre ^ v ✓ de l'iPhone, sa couleur se prolonge : motus.css, body.clavier) */
 function placerFenetre(d) {
   if (d.matches('.pleine, .en-haut')) return;
   d.style.marginBottom = clavier.bas ? `${clavier.bas}px` : '';
-  d.style.maxHeight = clavier.bas ? `${window.visualViewport.height - 8}px` : '';
+  d.style.maxHeight = clavier.bas ? `calc(${Math.round(window.visualViewport.height)}px - env(safe-area-inset-top))` : '';
 }
 document.addEventListener('focusin', e => {
   if (!champTexte(e.target)) return;

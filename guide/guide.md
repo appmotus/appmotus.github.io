@@ -31,7 +31,8 @@ Motus vous aide à repérer ce que vous ressentez, ce dont vous avez besoin et c
 ### Changer de jour
 
 - Touchez un jour de la semaine, ou les flèches ‹ ›.
-- Glissez vers le haut ou vers le bas sur la date ou sur la semaine : le mini-calendrier du mois s'ouvre. Vers le bas, cela marche aussi depuis n'importe où, quand la page est tout en haut. Glissez vers le haut pour le refermer.
+- Glissez le doigt vers le bas, n'importe où : le mini-calendrier du mois descend sous la date, comme la barre Calendrier/Liste du Journal. Touchez un jour pour y aller ; il remonte quand vous redescendez dans la page.
+- Touchez la date pour choisir un jour d'un autre mois ou d'une autre année.
 - Glissez vers la gauche ou la droite sur la semaine : la semaine suivante ou précédente.
 
 ### Les cartes d'une émotion

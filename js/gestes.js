@@ -2,7 +2,8 @@
 'use strict';
 
 /* Glisser le doigt : dans Quotidien, sur la frise de la semaine, change de semaine (ailleurs, il change de carte : voir plus bas ;
-   v42, sa demande : plus de changement de jour par balayage, le jour se choisit d'un geste vertical dans le mini-calendrier) ; dans le
+   v42, sa demande : plus de changement de jour par balayage, le jour se choisit dans le mini-calendrier, qui descend sous la date
+   quand on remonte la page ou qu'on tire vers le bas tout en haut) ; dans le
    Journal, sur le calendrier ou sur la liste des notes, change de mois ; dans une page des Paramètres ou dans « Mes notes » de
    l'admin, vers la droite, revient en arrière. Pas de jour, de semaine ni de mois à venir.
    Le geste part plutôt à l'horizontale (moins de 45°) et fait 60 px en moins d'une seconde et quart, ou 30 px d'un geste vif :
@@ -283,31 +284,8 @@ document.addEventListener('touchend', e => {
 }, {passive:true});
 document.addEventListener('touchcancel', () => { const g = gc; gc = null; if (g?.sens === 'h') revenirCarte(g.c); }, {passive:true});
 
-/* Quotidien : un geste vertical sur la date ou sur la frise de la semaine (vers le haut ou vers le bas), ou vers le bas depuis
-   n'importe où quand la page est tout en haut, ouvre le mini-calendrier : les jours du mois, sous la date (choisirMois). Il
-   s'ouvre dès que le doigt a parcouru 50 px. Clavier ouvert, le geste vers le bas range d'abord le clavier. */
-let gm = null;
-document.addEventListener('touchstart', e => {
-  gm = null;
-  if (view !== 'day' || $('#app').hidden || $('dialog[open]') || e.touches.length !== 1 || texteSelectionne() || clavierOuvert()) return;
-  const tete = !!e.target.closest('#view .dayhead, #view .week');
-  if (!tete && (scrollY > 2 || e.target.closest('input, textarea, select'))) return;
-  gm = {tete, x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, ouvert:false};
-}, {passive:true});
-document.addEventListener('touchmove', e => {
-  const g = gm;
-  if (!g || g.ouvert || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
-  if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
-  if (g.sens !== 'v' || (!g.tete && dy < 0)) { if (g.sens) gm = null; return; }   // vers le haut, hors de l'en-tête : la page défile
-  if (e.cancelable) e.preventDefault();
-  if (Math.abs(dy) >= 50 && Date.now() - g.t < 1250) {
-    g.ouvert = true; avalerClic = Date.now() + 3000;   // jusqu'au lever du doigt, rien ne se touche dans le mini-calendrier
-    ligne && lacherAppui(ligne); ligne = null;
-    choisirMois(true);
-  }
-}, {passive:false});
-for (const ev of ['touchend', 'touchcancel']) document.addEventListener(ev, () => { if (gm?.ouvert) avalerClic = Date.now(); gm = null; }, {passive:true, capture:true});
+/* Quotidien, geste vertical : le mini-calendrier descend sous la date avec la même règle que la barre Calendrier/Liste du
+   Journal (barreQuotidien, journal-defilement.js). */
 
 /* Fenêtre d'une émotion : balayer vers la gauche passe à la carte suivante (besoin, puis action), vers la droite revient à la précédente.
    Le geste peut partir de n'importe où dans les volets, même d'un champ, sauf de celui où l'on écrit. */
