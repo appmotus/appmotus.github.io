@@ -40,69 +40,26 @@ function barreRepertoire() {
   inn.style.transform = `translateY(${-entR.cache}px)`;
   inn.style.visibility = entR.cache >= H ? '' : 'visible';
 }
-/* Quotidien : le mini-calendrier, avec la même règle que la barre Calendrier/Liste du Journal (sa demande, v42). Sous la date
-   collée en haut, il descend au rythme du doigt quand on remonte la page, et remonte quand on redescend ; tout en haut de la
-   page, tirer vers le bas le fait descendre de même. Lâché à moitié, il finit de s'ouvrir ou de se refermer. Toucher un jour
-   y mène ; ‹ › changent de mois. */
-const entQ = {y:0, cache:Infinity, ref:null, an:0, mo:0, fin:null};
-function contenuQ() {
-  if (entQ.ref !== cur) { entQ.ref = cur; entQ.an = +cur.slice(0, 4); entQ.mo = +cur.slice(5, 7) - 1; }
-  const n = new Date(), dernier = entQ.an === n.getFullYear() && entQ.mo >= n.getMonth();
-  return `<div class="annee-nav"><button type="button" class="icon-btn" data-act="moisQ" data-pas="-1" aria-label="Mois précédent">‹</button><b>${MOIS[entQ.mo]} ${entQ.an}</b><button type="button" class="icon-btn" data-act="moisQ" data-pas="1" aria-label="Mois suivant" ${dernier ? 'disabled' : ''}>›</button></div>
-    <div class="cal jours-grille">${grilleJours(entQ.an, entQ.mo, 'jourQ')}</div>`;
-}
-const barreQ = () => `<div id="barreQ"><div class="barreJ-in barreQ-in" aria-label="Mini-calendrier">${contenuQ()}</div></div>`;
-function poserQ(anim = false) {
-  const inn = $('#view #barreQ .barreQ-in'); if (!inn) return;
-  const H = inn.offsetHeight, c = Math.min(entQ.cache, H);
-  inn.style.transition = anim ? 'transform .2s ease-out' : 'none';
-  inn.style.transform = `translateY(${-c}px)`;
-  if (c < H) inn.style.visibility = 'visible';
-  else if (anim) setTimeout(() => { if (entQ.cache >= inn.offsetHeight) inn.style.visibility = ''; }, 210);
-  else inn.style.visibility = '';
-  $('#view .dayhead')?.classList.toggle('sans-trait', c < H);
-}
+/* Quotidien : le mini-calendrier, c'est-à-dire la frise de la semaine (L M M J V S D), avec la même règle que la barre
+   Calendrier/Liste du Journal (sa demande ; v43 montrait à tort le mois entier). La date reste collée en haut. Tant que la
+   vraie frise est visible sous elle, la copie reste cachée ; plus bas, la copie redescend sous la date au rythme du doigt quand
+   on remonte la page, et remonte quand on redescend. Elle se balaie et se touche comme la vraie. */
+const entQ = {y:0, cache:Infinity};
+const barreQ = () => `<div id="barreQ"><div class="barreJ-in barreQ-in">${weekStrip()}</div></div>`;
 function barreQuotidien() {
-  const bar = $('#view #barreQ'), h = $('#view .dayhead');
-  if (!bar || !h) return;
-  const y = Math.max(0, scrollY), d = y - entQ.y, H = bar.firstElementChild.offsetHeight;
+  const bar = $('#view #barreQ'), h = $('#view .dayhead'), nat = $('#view > .week');
+  if (!bar || !h || !nat) return;
+  const inn = bar.firstElementChild, y = Math.max(0, scrollY), d = y - entQ.y, haut = parseFloat(getComputedStyle(h).top) + h.offsetHeight;
   entQ.y = y;
-  bar.style.top = `${parseFloat(getComputedStyle(h).top) + h.offsetHeight}px`;
-  entQ.cache = Math.min(H, Math.max(0, entQ.cache + d));
-  poserQ();
-  // le défilement fini, un mini-calendrier à moitié sorti s'ouvre ou se referme
-  clearTimeout(entQ.fin);
-  entQ.fin = setTimeout(() => { const H2 = bar.firstElementChild?.offsetHeight || 0; if (entQ.cache > 0 && entQ.cache < H2 && !gq) { entQ.cache = entQ.cache < H2 / 2 ? 0 : H2; poserQ(true); } }, 180);
+  bar.style.top = `${haut}px`;
+  const H = inn.offsetHeight, copie = inn.querySelector('.week');
+  // la copie ne s'efface que lorsque la vraie frise est entièrement revenue à sa place, juste derrière elle
+  const revenu = y <= 0 || nat.getBoundingClientRect().top >= haut + (copie ? copie.offsetTop : 0) - 1;
+  entQ.cache = revenu ? H : Math.min(H, Math.max(0, entQ.cache + d));
+  inn.style.transform = `translateY(${-entQ.cache}px)`;
+  inn.style.visibility = entQ.cache >= H ? '' : 'visible';
+  h.classList.toggle('sans-trait', entQ.cache < H);
 }
-// tout en haut de la page, rien ne défile : le doigt qui tire vers le bas fait descendre le mini-calendrier lui-même
-let gq = null;
-document.addEventListener('touchstart', e => {
-  gq = null;
-  if (view !== 'day' || $('#app').hidden || $('dialog[open]') || e.touches.length !== 1 || scrollY > 1 || texteSelectionne() || clavierOuvert()) return;
-  if (e.target.closest('input, textarea, select') || !$('#view #barreQ')) return;
-  gq = {y:e.touches[0].clientY, x:e.touches[0].clientX, sens:null, c0:Math.min(entQ.cache, $('#view #barreQ .barreQ-in').offsetHeight)};
-}, {passive:true});
-document.addEventListener('touchmove', e => {
-  const g = gq;
-  if (!g || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
-  if (!g.sens && Math.hypot(dx, dy) > 10) g.sens = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
-  if (g.sens !== 'v') return;
-  const H = $('#view #barreQ .barreQ-in').offsetHeight, court = document.documentElement.scrollHeight <= innerHeight + 1;
-  if (dy < 0 && !court) { gq = null; return; }   // vers le haut : la page défile, et le défilement replie le mini-calendrier
-  if (e.cancelable) e.preventDefault();
-  entQ.cache = Math.min(H, Math.max(0, g.c0 - dy));
-  g.bouge = true;
-  poserQ();
-}, {passive:false});
-document.addEventListener('touchend', () => {
-  const g = gq; gq = null;
-  if (!g?.bouge) return;
-  avalerClic = Date.now();   // le doigt levé ne touche pas un jour
-  const H = $('#view #barreQ .barreQ-in')?.offsetHeight || 0;
-  entQ.cache = entQ.cache < H / 2 ? 0 : H;
-  poserQ(true);
-}, {passive:true});
 function replierEntete() {
   entJ.deploye = false;
   const p = $('#view .barreJ-plus'); if (p) p.hidden = true;

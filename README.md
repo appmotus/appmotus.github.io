@@ -85,8 +85,9 @@ Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pou
      quitter le champ (bouton retour d'Android).
    - Une fenêtre se pose juste au-dessus du clavier et rétrécit ; seul son contenu défile. Exceptions : le mini-calendrier
      (accroché sous la date) et les fenêtres plein écran.
-   - La page gagne en bas exactement la hauteur du clavier (`--clavier`) : de quoi remonter le texte, sans grand vide ni page
-     visible sous le clavier. À chaque frappe, la ligne du curseur reste au-dessus du clavier et des boutons de la fenêtre (`curseurVisible`).
+   - Toute la zone remonte au-dessus du clavier (ou des boutons du bas de la fenêtre) : le champ entier et ses boutons, sans que
+     son haut passe sous la date ou le titre (`zoneVisible`). À chaque frappe, la ligne du curseur reste visible (`curseurVisible`).
+   - La page gagne en bas la hauteur du clavier (`--clavier`) : de quoi remonter le texte, sans grand vide ni page visible sous le clavier.
    - Un champ s'allonge avec son texte, sans barre de défilement à l'intérieur ni saut de la page (`allonger`, `sansSaut`).
    - Une fenêtre ne s'ouvre pas avec le clavier (le titre prend le focus, `autofocus`), sauf celles où l'on doit aussitôt taper
      un code ou un mot de passe.
@@ -95,8 +96,8 @@ Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pou
 4. **Une fenêtre ouverte immobilise la page derrière elle** : seul ce qui défile dans la fenêtre défile, sans entraîner le fond.
    - La fenêtre des connecteurs se ferme d'un geste vers le bas depuis son haut ou d'un appui à côté ; la fenêtre du choix du
      jour, qui descend de la date, d'un geste vers le haut.
-   - Quotidien : le mini-calendrier descend sous la date avec la même règle que la barre Calendrier/Liste du Journal (au rythme
-     du doigt quand on remonte la page, ou en tirant vers le bas tout en haut).
+   - Quotidien : le « mini-calendrier », c'est la frise de la semaine (pas le mois). Elle redescend sous la date avec la même
+     règle que la barre Calendrier/Liste du Journal : au rythme du doigt quand on remonte la page, cachée tant que la vraie frise est visible.
 5. **Connecteurs** (`@mot` dans le texte)
    - Propositions dès la première lettre après le @ : 4 au plus, en petite liste sous la ligne en cours (au-dessus seulement si
      le clavier la cacherait), retirées quand on touche le texte.

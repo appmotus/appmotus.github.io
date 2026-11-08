@@ -31,7 +31,7 @@ Motus vous aide à repérer ce que vous ressentez, ce dont vous avez besoin et c
 ### Changer de jour
 
 - Touchez un jour de la semaine, ou les flèches ‹ ›.
-- Glissez le doigt vers le bas, n'importe où : le mini-calendrier du mois descend sous la date, comme la barre Calendrier/Liste du Journal. Touchez un jour pour y aller ; il remonte quand vous redescendez dans la page.
+- Plus bas dans la page, remontez un peu : la semaine redescend sous la date, comme la barre Calendrier/Liste du Journal. Elle remonte quand vous redescendez.
 - Touchez la date pour choisir un jour d'un autre mois ou d'une autre année.
 - Glissez vers la gauche ou la droite sur la semaine : la semaine suivante ou précédente.
 

@@ -2,8 +2,8 @@
 'use strict';
 
 /* Glisser le doigt : dans Quotidien, sur la frise de la semaine, change de semaine (ailleurs, il change de carte : voir plus bas ;
-   v42, sa demande : plus de changement de jour par balayage, le jour se choisit dans le mini-calendrier, qui descend sous la date
-   quand on remonte la page ou qu'on tire vers le bas tout en haut) ; dans le
+   v42, sa demande : plus de changement de jour par balayage ; la frise, son « mini-calendrier », redescend sous la date quand on
+   remonte la page, comme la barre Calendrier/Liste du Journal) ; dans le
    Journal, sur le calendrier ou sur la liste des notes, change de mois ; dans une page des Paramètres ou dans « Mes notes » de
    l'admin, vers la droite, revient en arrière. Pas de jour, de semaine ni de mois à venir.
    Le geste part plutôt à l'horizontale (moins de 45°) et fait 60 px en moins d'une seconde et quart, ou 30 px d'un geste vif :
@@ -25,10 +25,11 @@ document.addEventListener('touchstart', e => {
   const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('#view .week') : retour;
   // … même d'un champ, sauf de celui où l'on écrit : là, le doigt place le curseur et sélectionne le texte
   const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]') && champ !== document.activeElement));
-  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0, semaine:view === 'day'} : null;
+  // Quotidien : la frise touchée, la vraie ou sa copie collée sous la date (mini-calendrier)
+  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0, semaine:view === 'day', frise:view === 'day' ? zone : null} : null;
 }, {passive:true});
-// ce qui bouge : le jour (sous la frise), la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
-const cibleGlisse = g => view === 'day' ? $(g.semaine ? '#view .week' : '#jourCorps') : view === 'cal' ? $(calMode === 'list' ? '#listeNotes' : '#carteCal') : $('#view');
+// ce qui bouge : la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
+const cibleGlisse = g => view === 'day' ? g.frise : view === 'cal' ? $(calMode === 'list' ? '#listeNotes' : '#carteCal') : $('#view');
 // Quotidien : le jour d'à côté (cote 1 : la veille ; -1 : le lendemain), ou le même jour de la semaine d'à côté, jamais après aujourd'hui
 const jourVoisin = (g, cote) => { const k = addDays(cur, (cote < 0 ? 1 : -1) * (g.semaine ? 7 : 1)); return k > today() ? today() : k; };
 function glissePossible(g, dx) {
@@ -284,8 +285,8 @@ document.addEventListener('touchend', e => {
 }, {passive:true});
 document.addEventListener('touchcancel', () => { const g = gc; gc = null; if (g?.sens === 'h') revenirCarte(g.c); }, {passive:true});
 
-/* Quotidien, geste vertical : le mini-calendrier descend sous la date avec la même règle que la barre Calendrier/Liste du
-   Journal (barreQuotidien, journal-defilement.js). */
+/* Quotidien, geste vertical : la frise de la semaine (mini-calendrier) redescend sous la date avec la même règle que la barre
+   Calendrier/Liste du Journal (barreQuotidien, journal-defilement.js). */
 
 /* Fenêtre d'une émotion : balayer vers la gauche passe à la carte suivante (besoin, puis action), vers la droite revient à la précédente.
    Le geste peut partir de n'importe où dans les volets, même d'un champ, sauf de celui où l'on écrit. */
