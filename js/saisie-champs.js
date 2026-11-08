@@ -143,14 +143,21 @@ function placerFenetre(d) {
   d.style.marginBottom = clavier.bas ? `${clavier.bas}px` : '';
   d.style.maxHeight = clavier.bas ? `calc(${Math.round(window.visualViewport.height)}px - env(safe-area-inset-top))` : '';
 }
+/* Quand placer la zone : un champ dans une fenêtre, à chaque étape de l'ouverture du clavier (l'iPhone ne fait pas défiler la
+   fenêtre de lui-même). Un champ dans la page (synthèse du jour, notes de l'admin), une seule fois, quand le clavier a fini de
+   s'ouvrir : l'iPhone fait déjà défiler la page vers le champ pendant l'ouverture, et corriger en même temps que lui envoyait
+   le champ hors de l'écran (v44, sur son iPhone). */
+let zonePageMinuteur = null;
+const zonePage = () => { clearTimeout(zonePageMinuteur); zonePageMinuteur = setTimeout(() => { majClavier(); zoneVisible(undefined, true); }, 450); };
 document.addEventListener('focusin', e => {
   if (!champTexte(e.target)) return;
   clavier.focusA = Date.now(); majClavier();
   // le clavier s'ouvre en quelques centaines de millisecondes ; après une seconde, seul l'écran rétréci compte
   for (const t of [400, 1050]) setTimeout(() => { majClavier(); zoneVisible(); }, t);
+  zonePage();
 });
 document.addEventListener('focusout', () => setTimeout(majClavier, 60));   // d'un champ à l'autre, la barre ne clignote pas
-window.visualViewport?.addEventListener('resize', () => { majClavier(); requestAnimationFrame(() => zoneVisible()); });
+window.visualViewport?.addEventListener('resize', () => { majClavier(); requestAnimationFrame(() => zoneVisible()); zonePage(); });
 window.visualViewport?.addEventListener('scroll', majClavier);
 // une fenêtre refermée clavier ouvert reprend sa place pour la prochaine fois
 document.addEventListener('close', e => { const d = e.target; if (d?.tagName === 'DIALOG') { d.style.marginBottom = ''; d.style.maxHeight = ''; } }, true);
@@ -160,17 +167,21 @@ majClavier();
    des boutons du bas de la fenêtre) : le champ entier et, juste après lui, ses boutons ou son état (« Enregistré ✓ »), avec un
    peu d'air ; jamais au point de faire passer le haut du champ sous la date collée ou sous le titre de la fenêtre. Puis la ligne
    du curseur, pour un texte plus haut que la place disponible (curseurVisible). */
-function zoneVisible(el = document.activeElement) {
+function zoneVisible(el = document.activeElement, pageFinie = false) {
   const vv = window.visualViewport;
   if (!vv || !clavier.ouvert || !champTexte(el)) return;
-  const d = el.closest('dialog'), pied = d?.querySelector('.dlg-f'), tete = d ? d.querySelector('.dlg-h') : $('#view .dayhead, #view .calhead');
+  const d = el.closest('dialog');
+  if (!d && !pageFinie) return;   // champ de la page : seulement une fois le clavier ouvert (zonePage)
+  const pied = d?.querySelector('.dlg-f'), tete = d ? d.querySelector('.dlg-h') : $('#view .dayhead, #view .calhead');
   let limite = vv.offsetTop + vv.height;
   if (pied) limite = Math.min(limite, pied.getBoundingClientRect().top);
   const haut = Math.max(vv.offsetTop, tete ? tete.getBoundingClientRect().bottom : 0) + 8;
   const r = el.getBoundingClientRect(), apres = el.nextElementSibling;
   const bas = Math.max(r.bottom, apres?.matches('.row, .btn, button, .saved') ? apres.getBoundingClientRect().bottom : 0) + 12;
-  const ecart = Math.round(Math.min(bas - limite, r.top - haut));
-  if (ecart > 0) { if (d) d.scrollTop += ecart; else window.scrollBy(0, ecart); }
+  // le haut du champ d'abord : parti trop haut (sous la date ou le titre, ou hors de l'écran), il redescend ; sinon, son bas et ses
+  // boutons remontent au-dessus du clavier, sans faire passer son haut sous la date
+  const ecart = Math.round(r.top < haut ? r.top - haut : bas > limite ? Math.min(bas - limite, r.top - haut) : 0);
+  if (ecart) { if (d) d.scrollTop += ecart; else window.scrollBy(0, ecart); }
   curseurVisible(el);
 }
 function curseurVisible(ta = document.activeElement) {
