@@ -120,7 +120,7 @@ function openClientForm(id) {
       <label class="label" for="cfEmail">E-mail</label>
       <input type="text" id="cfEmail" inputmode="email" value="${esc(k.email || '')}" autocomplete="off">
       <label class="label" for="cfNote">Notes (visibles par vous seul(e))</label>
-      <textarea id="cfNote" rows="3">${esc(c?.note || '')}</textarea>
+      <textarea id="cfNote" rows="3" autocapitalize="sentences">${esc(c?.note || '')}</textarea>
       <div class="err" id="cfErr"></div>
     </div>
     <div class="dlg-f"><button type="button" class="btn primary" data-act="saveClient" data-id="${c ? esc(c.id) : ''}">Enregistrer</button></div>

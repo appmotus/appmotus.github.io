@@ -231,20 +231,42 @@ function consentirLien(o, ancien) {
   });
 }
 
-/* Données transmises au thérapeute : au moins un choix parmi les émotions, les synthèses et les notes personnelles ;
-   les lieux en plus, au choix. La couleur de la journée est toujours transmise. */
+/* Choix des données (v42) : deux listes de mêmes cases, l'une pour les envois au thérapeute (settings.partage), l'autre pour les
+   exports de l'utilisateur, Excel et .txt (settings.exportChoix). Les besoins et les actions associés se rangent en retrait sous
+   les émotions, et n'existent qu'avec elles. Au moins un choix parmi les émotions, les synthèses et les notes personnelles ;
+   les lieux en plus. Envois : la couleur de la journée est toujours transmise ; exports : elle se choisit aussi. */
 const PARTAGE = [['emotions', 'Les émotions, avec leur heure et leur raison'], ['synthese', 'La synthèse de la journée'], ['notes', 'Les notes personnelles']];
-const PARTAGE_N = {emotions:'Émotions', synthese:'synthèses', notes:'notes'};
+const SOUS_EMOTIONS = [['besoins', 'Les besoins associés'], ['actions', 'Les actions associées']];
+const PARTAGE_N = {emotions:'émotions', besoins:'besoins', actions:'actions', synthese:'synthèses', notes:'notes', lieu:'lieux', couleur:'couleurs'};
 const partageValide = p => PARTAGE.some(([k]) => p[k]);
-const resumePartage = () => { const p = data.settings.partage || {}, n = PARTAGE.filter(([k]) => p[k]).map(([k]) => PARTAGE_N[k]); const t = [...n, ...(p.emotions && p.besoins ? ['besoins'] : []), ...(p.lieu ? ['lieux'] : [])].join(', '); return t.charAt(0).toUpperCase() + t.slice(1); };
-function formPartage() {
-  const p = data.settings.partage || {}, ligne = (k, n) => `<label class="choix-case"><input type="checkbox" data-partage="${k}" ${p[k] ? 'checked' : ''}><span>${n}</span></label>`;
+function resumeChoix(p, avecCouleur = false) {
+  const t = ['emotions', ...(p.emotions ? ['besoins', 'actions'] : []), 'synthese', 'notes', 'lieu', ...(avecCouleur ? ['couleur'] : [])].filter(k => p[k]).map(k => PARTAGE_N[k]).join(', ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+const resumePartage = () => resumeChoix(data.settings.partage || {});
+const resumeExport = () => Object.values(data.settings.exportChoix).every(Boolean) ? 'Tout' : resumeChoix(data.settings.exportChoix, true);
+/* cible : 'partage' (thérapeute) ou 'export' ; chaque case porte data-choix="<cible>.<clé>" */
+function formChoix(cible) {
+  const p = cible === 'export' ? data.settings.exportChoix : data.settings.partage || {};
+  const ligne = (k, n, sous) => `<label class="choix-case${sous ? ' sous' : ''}"><input type="checkbox" data-choix="${cible}.${k}" ${p[k] ? 'checked' : ''} ${sous && !p.emotions ? 'disabled' : ''}><span>${n}</span></label>`;
   return `<p class="small muted" style="margin:0">Au moins un choix parmi :</p>
-    ${PARTAGE.map(([k, n]) => ligne(k, n)).join('')}
+    ${ligne('emotions', PARTAGE[0][1])}
+    ${SOUS_EMOTIONS.map(([k, n]) => ligne(k, n, true)).join('')}
+    ${PARTAGE.slice(1).map(([k, n]) => ligne(k, n)).join('')}
     <p class="small muted" style="margin:10px 0 0">En plus, si vous le souhaitez :</p>
-    ${ligne('besoins', 'Les besoins reliés aux émotions, et « Je pourrais… » (aussi dans le fichier Excel)')}
     ${ligne('lieu', 'Les lieux (ville et précision)')}
-    <p class="small muted" style="margin:10px 0 0">La couleur de la journée est toujours transmise.</p>`;
+    ${cible === 'export' ? ligne('couleur', 'La couleur de la journée') : '<p class="small muted" style="margin:10px 0 0">La couleur de la journée est toujours transmise.</p>'}`;
+}
+/* Une case touchée : les besoins et actions associés suivent la case des émotions ; dans la fenêtre du premier envoi (#ptForm),
+   le choix s'enregistre à la validation, ailleurs aussitôt */
+function changerChoix(c) {
+  const [cible, k] = c.dataset.choix.split('.'), boite = c.closest('form, section');
+  const sous = () => boite.querySelectorAll('.choix-case.sous input').forEach(i => i.disabled = !boite.querySelector('[data-choix$=".emotions"]').checked);
+  if (c.closest('#ptForm')) return sous();
+  const cle = cible === 'export' ? 'exportChoix' : 'partage', choix = {...data.settings[cle], [k]:c.checked};
+  if (!partageValide(choix)) { c.checked = true; sous(); return toast('Gardez au moins les émotions, les synthèses ou les notes.'); }
+  sous();
+  data.settings[cle] = choix; if (cible === 'partage') data.settings.partageChoisi = true; save();
 }
 function choisirPartage() {
   return new Promise(resolve => {
@@ -252,8 +274,8 @@ function choisirPartage() {
     D.innerHTML = `<form method="dialog" id="ptForm">
       <div class="dlg-h"><h2>Que transmettre à votre thérapeute ?</h2></div>
       <div class="dlg-b">
-        <p class="small muted">Ce choix vaut pour tous vos envois. Vous pourrez le changer dans Paramètres › Données transmises.</p>
-        ${formPartage()}
+        <p class="small muted">Ce choix vaut pour tous vos envois. Vous pourrez le changer dans Paramètres › Partage et export › Choix des données.</p>
+        ${formChoix('partage')}
         <div class="err" id="ptErr"></div>
       </div>
       <div class="dlg-f"><button type="button" class="btn" id="ptNon">Annuler</button><button class="btn primary">Continuer</button></div>
@@ -264,7 +286,7 @@ function choisirPartage() {
     $('#ptForm').onsubmit = e => {
       e.preventDefault();
       const choix = {};
-      D.querySelectorAll('[data-partage]').forEach(c => choix[c.dataset.partage] = c.checked);
+      D.querySelectorAll('[data-choix]').forEach(c => choix[c.dataset.choix.split('.')[1]] = c.checked);
       if (!partageValide(choix)) return $('#ptErr').textContent = 'Choisissez au moins les émotions, les synthèses ou les notes.';
       Object.assign(data.settings.partage, choix); data.settings.partageChoisi = true; save(); fin(true);
     };
@@ -273,8 +295,9 @@ function choisirPartage() {
 }
 function aTransmettre(d) {
   const p = data.settings.partage || {}, lieu = x => p.lieu ? x : {...x, ville:'', lieu:''};
-  const besoins = e => { if (p.besoins) return e; const {bes, bdet, piste, taches, ...reste} = e; return reste; };   // sans les cartes Besoin et Action, si on ne les transmet pas
-  const o = {color:d.color || null, entries:p.emotions ? (d.entries || []).map(lieu).map(besoins) : [], synth:p.synthese ? d.synth || '' : ''};
+  // les cartes Besoin et Action associées, chacune seulement si on la transmet
+  const cartes = e => { const {bes, bdet, piste, taches, ...reste} = e; return {...reste, ...(p.besoins ? {bes, bdet} : {}), ...(p.actions ? {piste, taches} : {})}; };
+  const o = {color:d.color || null, entries:p.emotions ? (d.entries || []).map(lieu).map(cartes) : [], synth:p.synthese ? d.synth || '' : ''};
   if (p.notes && dayNotes(d).length) o.notes = dayNotes(d).map(lieu);
   return o;
 }
@@ -346,8 +369,14 @@ const nbNouveaux = () => Object.values(data.clients || {}).filter(c => c.nouveau
 
 function pageDonnees() {
   return `<section class="card">
-    <p class="small muted" style="margin:0 0 6px">Ce que contiennent vos envois à votre thérapeute. Le fichier Excel, lui, contient tout sauf les notes personnelles, et les besoins seulement s’ils sont cochés ici.</p>
-    ${formPartage()}
+    <h2>Transmises à mon thérapeute</h2>
+    <p class="small muted" style="margin:4px 0 8px">Ce que contiennent vos envois. Ils sont chiffrés : seul(e) votre thérapeute peut les ouvrir.</p>
+    ${formChoix('partage')}
+  </section>
+  <section class="card">
+    <h2>Dans mes exports</h2>
+    <p class="small muted" style="margin:4px 0 8px">Ce que contiennent vos fichiers Excel et texte (.txt). Ils ne sont pas chiffrés : vous décidez à qui les donner.</p>
+    ${formChoix('export')}
   </section>`;
 }
 let retraitFait = null;
@@ -406,18 +435,18 @@ async function sendWeek() {
   }});
 }
 /* Mail prérempli : seulement la période et le nom, jamais le contenu des notes */
-function mailEnvoi(from, to, chiffre) {
+function mailEnvoi(from, to, chiffre, format) {
   const p = data.profile, periode = `du ${fmtFR(from)} au ${fmtFR(to)}`, signe = `${p.prenom} ${p.nom}`.trim();
   return {
     objet:`Export données Motus ${periode}`,
-    corps:`Bonjour,\n\nVous trouverez en pièce jointe mon ${chiffre ? 'fichier Motus' : 'tableau Excel Motus'} pour la période ${periode}.${chiffre ? ' Il est chiffré : il s’ouvre dans Motus, depuis ma fiche (Importer un fichier reçu).' : ''}\n\nBien cordialement,\n${signe}`,
+    corps:`Bonjour,\n\nVous trouverez en pièce jointe mon ${chiffre ? 'fichier Motus' : format === 'txt' ? 'journal Motus (fichier texte)' : 'tableau Excel Motus'} pour la période ${periode}.${chiffre ? ' Il est chiffré : il s’ouvre dans Motus, depuis ma fiche (Importer un fichier reçu).' : ''}\n\nBien cordialement,\n${signe}`,
   };
 }
 const lienMail = (a, {objet, corps}) => `mailto:${encodeURIComponent(a || '').replace(/%40/g, '@')}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps.replace(/\n/g, '\r\n'))}`;
 /* Dans l'ordre : joindre le fichier, puis le destinataire, puis le texte. Le menu de partage joint le fichier et le texte, mais aucune app web ne peut y
    indiquer de destinataire : son adresse est copiée pour être collée. Sans menu de partage (PC), le fichier est téléchargé et la messagerie s'ouvre préremplie. */
-async function envoyerParMail({file, from, to, chiffre, fait}) {
-  const a = data.therapist?.email || '', mail = mailEnvoi(from, to, chiffre);
+async function envoyerParMail({file, from, to, chiffre, format, fait}) {
+  const a = data.therapist?.email || '', mail = mailEnvoi(from, to, chiffre, format);
   if (navigator.canShare?.({files:[file]})) {
     if (a) navigator.clipboard?.writeText(a).catch(() => {});
     busy = true;

@@ -32,12 +32,12 @@ th{background:var(--surface);color:var(--brand)}
 <body>
 <main>
 <h1>Politique de confidentialité</h1>
-<p class="date">Motus · Version 3 du 3 novembre 2026</p>
+<p class="date">Motus · Version 4 du 8 novembre 2026</p>
 
 <div class="bref">
   <ul>
-    <li>Vos émotions, synthèses et notes restent sur votre téléphone, chiffrées avec votre mot de passe. Nous n'y avons pas accès.</li>
-    <li>Nos serveurs ne connaissent que votre compte et des compteurs d'utilisation, jamais le contenu de vos notes.</li>
+    <li>Vos émotions, besoins, actions, synthèses et notes restent sur votre téléphone, chiffrés avec votre mot de passe. Nous n'y avons pas accès.</li>
+    <li>Nos serveurs ne connaissent que votre compte, des compteurs d'utilisation et un journal de sécurité des connexions, jamais le contenu de vos notes.</li>
     <li>Rien n'est envoyé à votre thérapeute sans une action de votre part, et c'est votre propre messagerie qui fait l'envoi.</li>
     <li>Pas de publicité, et aucun outil de suivi publicitaire.</li>
   </ul>
@@ -51,9 +51,9 @@ Pour toute question ou demande : <a href="mailto:motus.app@outlook.fr">motus.app
 <div class="table"><table>
   <thead><tr><th>Où</th><th>Quelles données</th><th>Qui peut y accéder</th></tr></thead>
   <tbody>
-    <tr><td>Votre téléphone, chiffré</td><td>Émotions, couleurs, synthèses, notes personnelles, villes et lieux notés, profil, réglages, coordonnées de votre thérapeute, historique des envois, date d'acceptation de cette politique. Pour un thérapeute : fiches clients et données reçues.</td><td>Vous</td></tr>
+    <tr><td>Votre téléphone, chiffré</td><td>Émotions et les besoins et actions qui leur sont associés, couleurs, synthèses, notes personnelles, connecteurs (@), villes et lieux notés, profil, réglages (dont vos choix des données à transmettre et à exporter, et votre rappel d'export), coordonnées de votre thérapeute, historique des envois, date d'acceptation de cette politique. Pour un thérapeute : fiches clients et données reçues.</td><td>Vous</td></tr>
     <tr><td>Votre téléphone, non chiffré</td><td>Dernier identifiant utilisé et forme masquée de votre mail de récupération (par exemple adre*******@domaine.fr).</td><td>Toute personne ayant votre téléphone en main</td></tr>
-    <tr><td>Nos serveurs (Supabase, région Europe)</td><td>Identifiant, code utilisateur, type de compte, prénom, initiale du nom de famille, dates et nombre de connexions, compteurs quotidiens (connexions, notes saisies, envois), empreinte du mot de passe, empreinte du mail de récupération, clé de secours, date d'acceptation de cette politique. Pour un thérapeute : nom complet, type de thérapie et coordonnées, dont son mail professionnel en clair, ainsi que sa clé publique de chiffrement et son code d'invitation.</td><td>L'administrateur de Motus</td></tr>
+    <tr><td>Nos serveurs (Supabase, région Europe)</td><td>Identifiant, code utilisateur, type de compte, prénom, initiale du nom de famille, dates et nombre de connexions, compteurs quotidiens (connexions, notes saisies, envois), empreinte du mot de passe, empreinte du mail de récupération, clé de secours, date d'acceptation de cette politique, journal de sécurité des connexions (date et nature de chaque connexion, reconnexion et déconnexion), adresse IP et type d'appareil de chaque session ouverte. Pour un thérapeute : nom complet, type de thérapie et coordonnées, dont son mail professionnel en clair, ainsi que sa clé publique de chiffrement et son code d'invitation.</td><td>L'administrateur de Motus</td></tr>
     <tr><td>Nos serveurs, si un utilisateur et son thérapeute sont liés</td><td>Un canal qui contient les coordonnées de chacun et l'état du lien. Il est chiffré, nous ne pouvons pas le lire, et il n'est rattaché à aucun compte.</td><td>L'utilisateur et son thérapeute</td></tr>
     <tr><td>Nos serveurs, après la suppression de votre compte</td><td>Une trace : code utilisateur, identifiant, prénom, initiale du nom de famille (nom complet pour un thérapeute), dates de création et de suppression du compte, version et date d'acceptation de cette politique. Aucune donnée de votre journal.</td><td>L'administrateur de Motus, depuis l'hébergeur uniquement</td></tr>
     <tr><td>Service d'envoi d'e-mails (Brevo)</td><td>Votre mail de récupération et les messages envoyés (par exemple un code).</td><td>Brevo et l'administrateur de Motus, dans l'historique d'envoi conservé 1 mois</td></tr>
@@ -61,6 +61,7 @@ Pour toute question ou demande : <a href="mailto:motus.app@outlook.fr">motus.app
   </tbody>
 </table></div>
 <p><b>Ville automatique :</b> si vous l'activez, votre position est convertie en nom de ville sur votre téléphone. Elle n'est ni envoyée ni enregistrée : seule la ville est notée. Vous pouvez désactiver cette option dans les Paramètres.</p>
+<p><b>Exports et rappel :</b> les fichiers Excel et texte (.txt) sont créés sur votre téléphone, avec les données que vous choisissez (Paramètres › Partage et export › Choix des données). Ils ne sont pas chiffrés, et vous décidez seul(e) à qui les donner. Le rappel d'export s'affiche uniquement dans l'app : aucune notification n'est envoyée, ni par nous ni par un autre service.</p>
 
 <h2>3. Pourquoi, et sur quelle base ?</h2>
 <ul>
@@ -68,6 +69,7 @@ Pour toute question ou demande : <a href="mailto:motus.app@outlook.fr">motus.app
   <li><b>Créer et gérer votre compte :</b> l'exécution du service que vous demandez.</li>
   <li><b>Récupérer votre compte, confirmer un effacement :</b> l'exécution du service. Ce mail est obligatoire pour ces deux usages.</li>
   <li><b>Suivre l'utilisation et les limites du service :</b> notre intérêt légitime à le faire fonctionner, à partir de nombres uniquement.</li>
+  <li><b>Protéger votre compte contre un accès frauduleux :</b> notre intérêt légitime à assurer la sécurité du service, grâce au journal des connexions.</li>
   <li><b>Envoyer vos données à votre thérapeute :</b> votre décision, à chaque envoi.</li>
   <li><b>Garder une trace après la suppression de votre compte :</b> notre intérêt légitime à pouvoir prouver votre accord à cette politique et à défendre nos droits en cas de litige.</li>
 </ul>
@@ -77,7 +79,7 @@ Pour toute question ou demande : <a href="mailto:motus.app@outlook.fr">motus.app
   <li><b>Supabase</b> : hébergement des comptes, en région Europe.</li>
   <li><b>Brevo</b> : envoi des e-mails.</li>
   <li><b>GitHub</b> : hébergement du site. <span class="todo">[à vérifier : conditions et garanties pour les transferts hors de l'Union européenne, pour GitHub et Supabase]</span></li>
-  <li><b>Votre thérapeute, si vous en rejoignez un</b> : votre demande lui parvient avec votre prénom, votre nom et votre code utilisateur, et il l'accepte ou la refuse. Une fois votre demande acceptée, ces informations sont tenues à jour automatiquement. Il ne reçoit les données de votre journal qu'après avoir accepté votre demande, et seulement lorsque vous les lui envoyez : la couleur de vos journées et, selon vos choix (Paramètres › Données transmises), vos émotions avec leur heure et leur raison, vos synthèses, vos notes personnelles et vos lieux. Une fois reçues, ces données sont sous sa responsabilité.</li>
+  <li><b>Votre thérapeute, si vous en rejoignez un</b> : votre demande lui parvient avec votre prénom, votre nom et votre code utilisateur, et il l'accepte ou la refuse. Une fois votre demande acceptée, ces informations sont tenues à jour automatiquement. Il ne reçoit les données de votre journal qu'après avoir accepté votre demande, et seulement lorsque vous les lui envoyez : la couleur de vos journées et, selon vos choix (Paramètres › Partage et export › Choix des données), vos émotions avec leur heure et leur raison, les besoins et les actions qui leur sont associés, vos synthèses, vos notes personnelles et vos lieux. Une fois reçues, ces données sont sous sa responsabilité.</li>
   <li><b>Si vous êtes thérapeute</b> : votre lien d'invitation montre votre nom et votre type de thérapie à toute personne qui le reçoit. Vos coordonnées professionnelles (mail, téléphone, adresse) ne sont transmises qu'à vos clients, c'est-à-dire aux personnes que vous avez acceptées. Toute modification de vos coordonnées leur parvient automatiquement.</li>
 </ul>
 <p><b>Comment se fait l'envoi à votre thérapeute.</b> Vos Paramètres permettent de préparer l'envoi : Motus crée un fichier chiffré pour votre thérapeute seul, avec les données que vous avez choisies. L'envoi lui-même est fait par l'application que vous choisissez sur votre téléphone (votre messagerie, votre application de mail ou une autre), avec votre propre compte et selon les conditions de ce service. Motus n'intervient pas dans cet envoi : nous ne sommes pas responsables de son acheminement, ni de sa bonne réception par votre thérapeute, et nous ne pouvons pas vous la confirmer. Le fichier reste chiffré pendant le trajet. Le message qui l'accompagne, par exemple un mail, ne l'est pas : il contient seulement votre nom et les dates de la période.</p>
@@ -89,16 +91,18 @@ Pour toute question ou demande : <a href="mailto:motus.app@outlook.fr">motus.app
   <li><b>Compte et compteurs :</b> tant que le compte existe. <span class="todo">[à définir : durée maximale pour un compte inactif]</span></li>
   <li><b>Trace après la suppression du compte :</b> 5 ans (délai de prescription civile), puis elle est effacée.</li>
   <li><b>Historique d'envoi des e-mails :</b> 1 mois.</li>
-  <li><b>Données techniques de connexion :</b> <span class="todo">[à vérifier : durées de Supabase et de GitHub]</span></li>
+  <li><b>Journal des connexions :</b> 6 mois, conformément aux recommandations de la CNIL, puis il est effacé.</li>
+  <li><b>Adresse IP et appareil de la session :</b> jusqu'à la déconnexion ou la suppression du compte.</li>
+  <li><b>Données techniques de connexion chez GitHub :</b> <span class="todo">[à vérifier : durée de GitHub]</span></li>
 </ul>
 
 <h2>6. Sécurité, et ce qui reste de votre responsabilité</h2>
 <p>Vos notes sont chiffrées (AES 256 bits) avec une clé issue de votre mot de passe. Choisissez-en un solide et ne le partagez pas.</p>
-<p><b>Effacer vos données</b> retire de votre téléphone vos émotions, couleurs, synthèses et notes personnelles (pour un thérapeute, les données reçues). Votre compte et vos réglages sont conservés. Un thérapeute peut aussi effacer les données reçues d'un seul client, depuis sa fiche.</p>
-<p>Nous ne pouvons pas agir sur les fichiers déjà sortis de l'app : <b>sauvegardes</b>, <b>fichiers Excel</b> (non chiffrés) et <b>envois au thérapeute</b>. Pensez à supprimer vous-même ceux que vous ne souhaitez pas garder, et à demander à votre thérapeute de supprimer ce qu'il a reçu.</p>
+<p><b>Effacer vos données</b> retire de votre téléphone vos émotions (avec leurs besoins et actions), couleurs, synthèses et notes personnelles (pour un thérapeute, les données reçues). Votre compte et vos réglages sont conservés. Un thérapeute peut aussi effacer les données reçues d'un seul client, depuis sa fiche.</p>
+<p>Nous ne pouvons pas agir sur les fichiers déjà sortis de l'app : <b>sauvegardes</b>, <b>fichiers Excel et texte</b> (non chiffrés) et <b>envois au thérapeute</b>. Pensez à supprimer vous-même ceux que vous ne souhaitez pas garder, et à demander à votre thérapeute de supprimer ce qu'il a reçu.</p>
 
 <h2>7. Vos droits</h2>
-<p>Vous pouvez accéder à vos données, les rectifier, les effacer, en limiter le traitement, vous y opposer, en demander la portabilité et retirer votre consentement à tout moment. Pour supprimer votre compte : Paramètres › Supprimer mon compte ; seule la trace décrite plus haut est conservée, 5 ans. Pour exercer vos autres droits, écrivez à <a href="mailto:motus.app@outlook.fr">motus.app@outlook.fr</a>.</p>
+<p>Vous pouvez accéder à vos données, les rectifier, les effacer, en limiter le traitement, vous y opposer, en demander la portabilité et retirer votre consentement à tout moment. Pour récupérer toutes vos données (portabilité) : Paramètres › Partage et export › Export, en Excel ou en texte. Pour supprimer votre compte : Paramètres › Supprimer mon compte ; seule la trace décrite plus haut est conservée, 5 ans. Pour exercer vos autres droits, écrivez à <a href="mailto:motus.app@outlook.fr">motus.app@outlook.fr</a>.</p>
 <p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la CNIL : <a href="https://www.cnil.fr" target="_blank" rel="noopener">www.cnil.fr</a>.</p>
 
 <h2>8. Âge minimum</h2>

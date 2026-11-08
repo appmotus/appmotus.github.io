@@ -34,6 +34,7 @@ h2{font-size:.97rem;font-weight:600}
 .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 20px calc(env(safe-area-inset-bottom) + 96px);overflow-x:clip}
 .card{background:var(--surface);border-radius:var(--r);padding:15px 16px;margin:0 0 12px}
 .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.card-btns{display:flex;gap:6px}
 .count{color:var(--muted);font-size:.8rem;font-weight:500}
 .eyebrow{font-size:.85rem;color:var(--muted);font-weight:500}
 .muted{color:var(--muted)}
@@ -275,6 +276,8 @@ nav.tabs button .badge-nav{position:absolute;top:0;left:calc(50% + 6px);min-widt
 .demande{background:var(--bg);border-radius:15px;padding:11px 13px;margin-bottom:7px}
 .choix-case{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-size:.92rem}
 .choix-case em{font-style:normal;color:var(--muted)}
+.choix-case.sous{padding-left:28px}   /* besoins et actions associés, en retrait sous les émotions */
+.choix-case input:disabled+span{opacity:.45}
 .champ-recherche{position:relative;margin:0 0 12px}
 mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .champ-recherche input{padding-left:40px;padding-right:42px}
@@ -402,8 +405,11 @@ button.stat b{text-align:right}
 
 /* Barre de navigation : l'onglet actif est marqué par un trait fin et un texte plus foncé */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--border);display:flex;justify-content:center;padding:7px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
-@media (pointer:coarse){body.clavier nav.tabs{display:none}}   /* clavier ouvert : la barre ne remonte pas au-dessus (iPhone) */
-.wrap{padding-bottom:calc(env(safe-area-inset-bottom) + 96px + var(--clavier,0px))}   /* clavier ouvert (--clavier : sa hauteur), de quoi remonter le texte au-dessus */
+/* Clavier ouvert (body.clavier et --clavier, posés par majClavier seulement, sur écran tactile) : la barre du bas se retire, et la
+   page gagne en bas juste la hauteur du clavier, de quoi remonter le texte au-dessus, sans grand vide */
+body.clavier nav.tabs{display:none}
+.wrap{padding-bottom:calc(env(safe-area-inset-bottom) + 96px)}
+body.clavier .wrap{padding-bottom:calc(var(--clavier,0px) + 24px)}
 nav.tabs .in{display:flex;max-width:560px;width:100%}
 nav.tabs button{position:relative;flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:500;color:var(--muted);padding:4px 2px}
 nav.tabs button svg{width:23px;height:23px;stroke-width:1.4}
@@ -423,6 +429,24 @@ nav.tabs button.on::before{content:"";position:absolute;top:-8px;left:28%;right:
 .whois span{font-size:.82rem;color:var(--muted)}
 .gl{font-size:.85rem;font-weight:600;margin:15px 2px 6px;color:var(--brand)}
 .grp{background:var(--surface);border-radius:var(--r);overflow:hidden}
+.grp.seul{margin:0 0 12px}
+/* Guide d'utilisation (Paramètres) : texte de guide/guide.md, une rubrique repliable par carte */
+.guide p,.guide li{font-size:.92rem;line-height:1.5}
+.guide p{margin:0 0 8px}
+.guide ul,.guide ol{margin:4px 0 10px;padding-left:20px}
+.guide li{margin-bottom:4px}
+.guide h3{font-size:.95rem;margin:14px 0 6px}
+.guide-intro p:last-child{margin-bottom:0}
+.guide-r{padding:0}
+.guide-r>summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.guide-r>summary::-webkit-details-marker{display:none}
+.guide-r>summary::after{content:"›";flex:none;color:var(--muted);font-size:1.2rem;transform:rotate(90deg);transition:transform .2s}
+.guide-r[open]>summary::after{transform:rotate(-90deg)}
+.guide-c{padding:0 16px 12px}
+.guide figure{margin:4px 0 12px;text-align:center}
+.guide figure img{display:block;width:100%;max-width:300px;margin:0 auto;border-radius:14px;border:1px solid var(--border)}
+.guide figcaption{font-size:.8rem;color:var(--muted);margin-top:5px}
+.guide .astuce{background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:12px;padding:10px 12px;font-size:.9rem;margin:6px 0 10px}   /* une ligne vers une page, seule entre deux cartes (Partage et export) */
 .ro{display:flex;align-items:center;gap:13px;width:100%;min-height:46px;padding:0 15px;background:none;border:0;text-align:left;font-size:.94rem;font-weight:500;color:var(--text);text-decoration:none}
 .ro .ri{width:21px;height:21px}
 .ro .rn{flex:1 0 auto;white-space:nowrap}

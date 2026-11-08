@@ -35,8 +35,8 @@ function pageNotesAdmin() {
   return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour au tableau de bord">‹</button><h1>Mes notes</h1></div>
   <p class="small muted" style="margin:0 2px 12px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes. Elles s’enregistrent au fil de la frappe.</p>
   ${NOTES_ADMIN.map(([k, titre, aide]) => `<section class="card">
-    <div class="card-h" style="margin-bottom:0"><h2>${titre}</h2><button type="button" class="icon-btn copier" data-act="copierNoteAdmin" data-k="${k}" aria-label="Copier tout le texte de « ${titre} »">${ico('copie', '')}</button></div>
-    <textarea data-notes-admin="${k}" rows="3" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
+    <div class="card-h" style="margin-bottom:0"><h2>${titre}</h2><span class="card-btns"><button type="button" class="icon-btn copier" data-act="viderNoteAdmin" data-k="${k}" aria-label="Effacer tout le texte de « ${titre} »">${ico('gomme', '')}</button><button type="button" class="icon-btn copier" data-act="copierNoteAdmin" data-k="${k}" aria-label="Copier tout le texte de « ${titre} »">${ico('copie', '')}</button></span></div>
+    <textarea data-notes-admin="${k}" rows="3" autocapitalize="sentences" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
     <div class="small muted" data-etat="${k}" style="margin-top:6px;text-align:right">${n[k] ? 'Enregistré ✓' : ''}</div>
   </section>`).join('')}`;
 }

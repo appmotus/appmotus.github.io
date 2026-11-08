@@ -1,7 +1,8 @@
 // Motus — Gestes : balayages des pages, faces émotion / besoins, appui long, volets de la saisie
 'use strict';
 
-/* Glisser le doigt : dans Quotidien, change de jour (v41), sauf sur la frise de la semaine, où il change de semaine ; dans le
+/* Glisser le doigt : dans Quotidien, sur la frise de la semaine, change de semaine (ailleurs, il change de carte : voir plus bas ;
+   v42, sa demande : plus de changement de jour par balayage, le jour se choisit d'un geste vertical dans le mini-calendrier) ; dans le
    Journal, sur le calendrier ou sur la liste des notes, change de mois ; dans une page des Paramètres ou dans « Mes notes » de
    l'admin, vers la droite, revient en arrière. Pas de jour, de semaine ni de mois à venir.
    Le geste part plutôt à l'horizontale (moins de 45°) et fait 60 px en moins d'une seconde et quart, ou 30 px d'un geste vif :
@@ -19,11 +20,11 @@ document.addEventListener('touchstart', e => {
   if (texteSelectionne()) { glisse = null; return; }
   // pour revenir en arrière, le geste peut partir de n'importe où, même d'un champ de saisie (la page des notes en est presque entièrement couverte)
   const retour = (view === 'set' && setPage) || (view === 'admin' && admPage), champ = e.target.closest('input, textarea, select');
-  // les cartes (.duo) ne se balaient plus (v41) : elles changent par leurs pastilles, et le geste change de jour ou de mois
-  const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('#view') : retour;
-  // … même d'un champ (la synthèse du jour), sauf de celui où l'on écrit : là, le doigt place le curseur et sélectionne le texte
-  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || ((retour || view === 'day') && !champ.matches('select, input[type=range]') && champ !== document.activeElement));
-  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0, semaine:view === 'day' && !!e.target.closest('.week')} : null;
+  // Journal : les cartes (.duo) ne se balaient pas (v41), le geste change de mois ; Quotidien : seulement la frise (v42)
+  const zone = view === 'cal' ? !calQ.trim() && e.target.closest('#carteCal, #listeNotes') : view === 'day' ? e.target.closest('#view .week') : retour;
+  // … même d'un champ, sauf de celui où l'on écrit : là, le doigt place le curseur et sélectionne le texte
+  const ok = zone && !$('#app').hidden && e.touches.length === 1 && !$('dialog[open]') && (!champ || (retour && !champ.matches('select, input[type=range]') && champ !== document.activeElement));
+  glisse = ok ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, el:null, voisine:null, cote:0, semaine:view === 'day'} : null;
 }, {passive:true});
 // ce qui bouge : le jour (sous la frise), la frise de la semaine, le calendrier, la liste des notes, ou toute la page pour un retour en arrière
 const cibleGlisse = g => view === 'day' ? $(g.semaine ? '#view .week' : '#jourCorps') : view === 'cal' ? $(calMode === 'list' ? '#listeNotes' : '#carteCal') : $('#view');
@@ -114,9 +115,9 @@ document.addEventListener('touchend', e => {
   setTimeout(() => { changer(); nettoyer(g); }, 180);
 }, {passive:true});
 document.addEventListener('touchcancel', () => { const g = glisse; glisse = null; if (g) { bouger(g, 0, 'transform .2s ease-out'); setTimeout(() => nettoyer(g), 220); } }, {passive:true});
-/* Quotidien et Journal : une émotion a ses cartes (émotion, puis besoin et action quand ils existent), la synthèse du jour deux
-   faces (émotions traversées / besoins exprimés). Depuis la v41, on passe de l'une à l'autre seulement par les pastilles : le
-   balayage sur une ligne change de jour ou de mois, comme sur le reste de la page.
+/* Quotidien et Journal : une émotion a ses cartes (émotion, puis besoin et action quand ils existent), la synthèse du jour ses
+   faces (émotions traversées, besoins exprimés, actions du jour). Les pastilles y mènent ; dans Quotidien, le balayage aussi (v42,
+   sa demande : retour au balayage des cartes) ; dans le Journal, le balayage sur une ligne change de mois.
    Un appui long (sans bouger) sur une note ouvre un choix : dans Quotidien, Modifier ou Supprimer ; dans le Journal, Afficher dans
    Quotidien ou Supprimer. Supprimer demande ensuite confirmation. À la souris (ordinateur), le clic droit fait de même. */
 let ligne = null, avalerClic = 0;
@@ -241,6 +242,73 @@ async function menuAppui(el) {
   if (e) dd.entries = dd.entries.filter(x => x.id !== id); else if (n) dd.notes = dayNotes(dd).filter(x => x.id !== id); else dd.synth = '';
   save(); render(true); toast(e ? 'Émotion supprimée' : n ? 'Note supprimée' : 'Synthèse supprimée');
 }
+/* Quotidien : balayer une émotion vers la gauche montre sa carte suivante (besoin, puis action), vers la droite la précédente ;
+   de même pour la synthèse du jour. Mêmes règles de geste que pour les pages ; là où il n'y a pas d'autre carte, la ligne résiste
+   au doigt. Le geste peut partir de n'importe où sur la ligne. */
+let gc = null;
+const carteVoisine = (c, dx) => dx < 0 ? faceDe(c) < facesDe(c).length - 1 : faceDe(c) > 0;
+function revenirCarte(c) {
+  if (c.classList.contains('duo')) return placerFaces(c, 0, 'transform .2s ease-out');
+  const f = c.firstElementChild; if (f) { f.style.transition = 'transform .2s ease-out'; f.style.transform = ''; }
+}
+document.addEventListener('touchstart', e => {
+  gc = null;
+  if (view !== 'day' || $('#app').hidden || $('dialog[open]') || e.touches.length !== 1 || texteSelectionne()) return;
+  const li = e.target.closest('#jourCorps .entries li');
+  const c = e.target.closest('#jourCorps .duo') || (li?.querySelector(':scope > .face') ? li : null);   // une émotion, ou la synthèse
+  if (c) gc = {c, x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null};
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  const g = gc;
+  if (!g || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+  // chez un client (thérapeute), le texte se sélectionne : un doigt resté appuyé avant de bouger sélectionne
+  if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = src && Date.now() - g.t > 450 ? 'selection' : Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+  if (g.sens !== 'h') return;
+  if (texteSelectionne()) { gc = null; return revenirCarte(g.c); }
+  if (e.cancelable) e.preventDefault();
+  if (!g.c.classList.contains('duo')) { const f = g.c.firstElementChild; f.style.transition = 'none'; f.style.transform = `translateX(${dx / 4}px)`; return; }
+  placerFaces(g.c, carteVoisine(g.c, dx) ? dx : dx / 4);
+}, {passive:false});
+document.addEventListener('touchend', e => {
+  const g = gc;
+  if (!g) return;
+  gc = null;
+  if (g.sens !== 'h') return;
+  avalerClic = Date.now();   // le doigt levé n'ouvre rien
+  const p = e.changedTouches[0], dx = p.clientX - g.x, dy = p.clientY - g.y, dt = Date.now() - g.t;
+  const va = dt < 1250 && Math.abs(dy) <= 1.2 * Math.abs(dx) && (Math.abs(dx) >= 60 || (Math.abs(dx) >= 30 && Math.abs(dx) / dt > .5));
+  if (!g.c.classList.contains('duo')) return revenirCarte(g.c);
+  poserFace(g.c, faceDe(g.c) + (va && carteVoisine(g.c, dx) ? (dx < 0 ? 1 : -1) : 0));
+}, {passive:true});
+document.addEventListener('touchcancel', () => { const g = gc; gc = null; if (g?.sens === 'h') revenirCarte(g.c); }, {passive:true});
+
+/* Quotidien : un geste vertical sur la date ou sur la frise de la semaine (vers le haut ou vers le bas), ou vers le bas depuis
+   n'importe où quand la page est tout en haut, ouvre le mini-calendrier : les jours du mois, sous la date (choisirMois). Il
+   s'ouvre dès que le doigt a parcouru 50 px. Clavier ouvert, le geste vers le bas range d'abord le clavier. */
+let gm = null;
+document.addEventListener('touchstart', e => {
+  gm = null;
+  if (view !== 'day' || $('#app').hidden || $('dialog[open]') || e.touches.length !== 1 || texteSelectionne() || clavierOuvert()) return;
+  const tete = !!e.target.closest('#view .dayhead, #view .week');
+  if (!tete && (scrollY > 2 || e.target.closest('input, textarea, select'))) return;
+  gm = {tete, x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now(), sens:null, ouvert:false};
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  const g = gm;
+  if (!g || g.ouvert || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+  if (!g.sens && Math.hypot(dx, dy) > 12) g.sens = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
+  if (g.sens !== 'v' || (!g.tete && dy < 0)) { if (g.sens) gm = null; return; }   // vers le haut, hors de l'en-tête : la page défile
+  if (e.cancelable) e.preventDefault();
+  if (Math.abs(dy) >= 50 && Date.now() - g.t < 1250) {
+    g.ouvert = true; avalerClic = Date.now() + 3000;   // jusqu'au lever du doigt, rien ne se touche dans le mini-calendrier
+    ligne && lacherAppui(ligne); ligne = null;
+    choisirMois(true);
+  }
+}, {passive:false});
+for (const ev of ['touchend', 'touchcancel']) document.addEventListener(ev, () => { if (gm?.ouvert) avalerClic = Date.now(); gm = null; }, {passive:true, capture:true});
+
 /* Fenêtre d'une émotion : balayer vers la gauche passe à la carte suivante (besoin, puis action), vers la droite revient à la précédente.
    Le geste peut partir de n'importe où dans les volets, même d'un champ, sauf de celui où l'on écrit. */
 let gv = null;

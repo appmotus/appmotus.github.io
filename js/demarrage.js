@@ -51,11 +51,17 @@ document.addEventListener('change', e => {
     if (f) f.size > 3e6 ? toast('Fichier trop volumineux (3 Mo au plus).') : f.text().then(analyserTexte);
   }
   else if (e.target.id === 'geoloc') { data.settings.geoloc = e.target.checked; save(); }
-  else if (e.target.dataset.partage && !e.target.closest('#ptForm')) {
-    const choix = {...data.settings.partage, [e.target.dataset.partage]:e.target.checked};
-    if (!partageValide(choix)) { e.target.checked = true; return toast('Gardez au moins les émotions, les synthèses ou les notes.'); }
-    data.settings.partage = choix; data.settings.partageChoisi = true; save();
+  else if (e.target.id === 'rappelFreq') {   // rappel d'export : le premier rappel, par défaut, une période plus tard
+    const r = rappelExport(), f = e.target.value, t = today();
+    Object.assign(r, {freq:f, fait:'', plusTard:''});
+    if (f !== 'non' && (!r.debut || r.debut <= t)) r.debut = f === 'mois' ? moisPlus(t, 1) : addDays(t, f === 'quinzaine' ? 14 : 7);
+    save(); render(true);
   }
+  else if (e.target.id === 'rappelDebut' && e.target.value) {
+    Object.assign(rappelExport(), {debut:e.target.value, fait:'', plusTard:''});
+    save(); render(true);
+  }
+  else if (e.target.dataset.choix) changerChoix(e.target);   // Choix des données (thérapeute, exports)
 });
 $('#entryDlg').addEventListener('click', e => { if (e.target === e.currentTarget && !$('#nText')) e.currentTarget.close(); });   // une note en cours ne se perd pas d'un appui à côté
 

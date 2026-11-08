@@ -60,10 +60,12 @@ function actionHtml(e, k, actif = false) {
   return (ts.length ? `<span class="taches-v">${ts.map(x => caseTache(e, x, k, actif)).join('')}</span>` : '') + (p ? `Je pourrais ${esc(p)}.` : '');
 }
 const tachesTexte = e => tachesDe(e).map(x => `${x.ok ? '☑' : '☐'} ${x.t.trim()}`);   // sans mise en forme (export Excel)
-function besoinsTexte(e) {   // les deux cartes, sans mise en forme (export Excel)
-  const bs = besoinsDe(e), d = detailDe(e), p = pisteDe(e);
-  return [bs.length ? 'J’ai besoin ' + joinFr(bs.map(x => deMot(x.w) + lc(x.w))) + '.' : '', d ? finPhrase(d) : '', ...tachesTexte(e), p ? `Je pourrais ${p}.` : ''].filter(Boolean).join(' ');
+/* Les cartes Besoin et Action, sans mise en forme (exports) : « J’ai besoin de sécurité. Savoir ce qu’on attend de moi. » */
+function besoinTexte(e) {
+  const bs = besoinsDe(e), d = detailDe(e);
+  return [bs.length ? 'J’ai besoin ' + joinFr(bs.map(x => deMot(x.w) + lc(x.w))) + '.' : '', d ? finPhrase(d) : ''].filter(Boolean).join(' ');
 }
+const actionLignes = e => [...tachesDe(e).map(x => `[${x.ok ? 'x' : ' '}] ${x.t.trim()}`), ...(pisteDe(e) ? [`Je pourrais ${pisteDe(e)}.`] : [])];
 /* Les pastilles des cartes, à droite de la ligne (son choix du 2026-11-07, à la place de « Besoin › ») : toujours les trois, dans
    l'ordre émotion, besoin, action. Celle de la carte affichée est pleine ; une autre carte remplie est cerclée de sa couleur, et la
    toucher y mène ; une carte vide est grisée. Les icônes sont celles d'ICO (app.js). */

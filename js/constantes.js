@@ -1,10 +1,10 @@
 // Motus — Version de l'app, compteurs de travail, engagements de la version d'essai, messages, toast
 'use strict';
 
-const APP_VERSION = 41;   // même numéro que CACHE dans sw.js
-const HEURES_TRAVAIL = 31;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
-const JETONS_CONSOMMES = {total:897, cache:883, envoyes:11.2, ecrits:3.1};   // en millions, même script, même moment
-const RGPD_VERSION = 3; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
+const APP_VERSION = 42;   // même numéro que CACHE dans sw.js
+const HEURES_TRAVAIL = 33;   // à chaque nouvelle version : résultat de outils/compter-heures.ps1, arrondi à l'heure
+const JETONS_CONSOMMES = {total:972, cache:957, envoyes:11.9, ecrits:3.3};   // en millions, même script, même moment
+const RGPD_VERSION = 4; // version de confidentialite.html ; l'augmenter redemande l'acceptation à tous les comptes
 const ESSAI_VERSION = 1; // engagements de la version d'essai ; l'augmenter les redemande à tous les comptes
 const ESSAI_INTRO = 'Cette application est en version d’essai. Je l’utilise avec l’accord de l’administrateur. En l’utilisant, je m’engage à :';
 const ENGAGEMENTS = [

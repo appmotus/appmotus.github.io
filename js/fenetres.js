@@ -119,14 +119,8 @@ function ouvrirConnecteurs() {
   maj();
   D.classList.add('conn-dlg');
   D.onclick = e => { if (e.target === D) D.close(); };   // un appui sur le voile, à côté de la fenêtre, la ferme toujours
-  // le clavier ne cache jamais la fenêtre : elle se pose juste au-dessus et rétrécit, seule la liste défile
+  // le clavier ne cache jamais la fenêtre : comme toutes les autres, elle se pose juste au-dessus (majClavier) ; seule la liste défile
   const vv = window.visualViewport, ac = new AbortController(), o = {signal:ac.signal, passive:false};
-  const caler = () => {
-    const bas = vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
-    D.style.marginBottom = bas > 0 ? `${bas}px` : '';
-    D.style.maxHeight = bas > 0 ? `${vv.height - 8}px` : '';
-  };
-  vv?.addEventListener('resize', caler, {signal:ac.signal}); vv?.addEventListener('scroll', caler, {signal:ac.signal});
   /* Gestes : la liste défile ; le doigt qui y descend jusqu'au clavier le range ; glisser vers le bas depuis le haut de la fenêtre
      (titre, recherche) la ferme ; partout ailleurs, rien ne bouge, ni la fenêtre ni le fond de l'app */
   let g = null;
@@ -171,7 +165,6 @@ document.addEventListener('touchstart', e => {
   const y = e.touches[0]?.clientY ?? 0;
   Object.assign(appui, {t:Date.now(), attente:null, y0:y, y, bloque:0});
 }, {passive:true, capture:true});
-const clavierOuvert = () => { const vv = window.visualViewport, a = document.activeElement; return !!vv && innerHeight - vv.height > 120 && !!a?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea'); };
 function peutDefiler(el, dy) {
   const oy = getComputedStyle(el).overflowY;
   if ((oy !== 'auto' && oy !== 'scroll') || el.scrollHeight <= el.clientHeight + 1) return false;

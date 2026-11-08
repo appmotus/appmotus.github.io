@@ -155,6 +155,20 @@ function choisirMois(jour = false) {
     setTimeout(() => { [an, mo] = decaler(-cote); grille(); finir(); }, 180);
   }, {passive:true});
 
+  /* Elle descend de la date : un geste vers le haut, parti de n'importe où dans la fenêtre, la referme (v42) */
+  let gh = null;
+  const form = $('#moisForm');
+  form.addEventListener('touchstart', e => { gh = e.touches.length === 1 ? {x:e.touches[0].clientX, y:e.touches[0].clientY, t:Date.now()} : null; }, {passive:true});
+  form.addEventListener('touchmove', e => {
+    if (!gh || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - gh.x, dy = e.touches[0].clientY - gh.y;
+    if (dy < -50 && Math.abs(dy) > Math.abs(dx) && Date.now() - gh.t < 1250) {
+      gh = null; dlg.close();
+      // le doigt levé ne touche rien sur la page
+      avalerClic = Date.now() + 3000; document.addEventListener('touchend', () => avalerClic = Date.now(), {once:true, capture:true});
+    }
+  }, {passive:true});
+
   grille();
   dlg.showModal();
 }

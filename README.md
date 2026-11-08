@@ -14,6 +14,7 @@ Web app (PWA) pour les personnes suivies par un thérapeute : noter ses émotion
 | `sw.js` | Fonctionnement hors connexion (liste de tous les fichiers à garder en cache) |
 | `confidentialite.html` | Politique de confidentialité, à accepter à l'inscription (version dans `RGPD_VERSION`, dans `js/constantes.js`) |
 | `fonts/` | Police Plus Jakarta Sans (licence libre), livrée avec l'app pour qu'elle soit la même partout, sans jamais appeler Google |
+| `guide/` | Guide d'utilisation : son texte (`guide.md`, modifiable sans toucher au code) et ses captures (voir « Modifier le guide d'utilisation ») |
 | `communes.txt` | Liste des communes françaises (nom + coordonnées du centre) pour trouver la ville sans connexion |
 | `manifest.webmanifest`, `icon-*.png` | Installation sur l'écran d'accueil |
 | `outils/generer-communes.ps1` | Régénère `communes.txt` depuis geo.api.gouv.fr |
@@ -39,19 +40,71 @@ Depuis la version 39, le code est réparti en fichiers de `js/`, chargés par `i
 | `app.js` | État de l'app, affichage (`render`), onglets, icônes |
 | `vue-quotidien.js`, `vue-journal.js`, `vue-repertoire.js`, `vue-parametres.js` | Les onglets |
 | `import-texte.js`, `page-connecteurs.js` | Pages Importer des notes et Connecteurs |
+| `guide.js` | Page Guide d'utilisation : met en page le texte de `guide/guide.md` |
 | `therapeute-lien.js`, `therapeute-canal.js`, `vue-clients.js` | Lien client-thérapeute, envois, fiches clients |
 | `admin.js` | Administration (`LIMITES`) |
 | `saisie.js` | Ville automatique, fenêtre d'une émotion (volets émotions et besoins), note personnelle |
-| `export-excel.js` | Export Excel |
+| `export-excel.js` | Exports Excel et texte (.txt), selon le choix des données |
 | `dialogue-code.js` | Fenêtre de saisie d'un mot de passe ou d'un code |
 | `actions.js` | Actions des boutons (`ACT`), registre des pages des Paramètres (`PAGES_REGLAGES`) |
 | `gestes.js` | Balayages (jour, semaine, mois, retour), cartes émotion / besoin / action, appui long (Modifier, Afficher, Supprimer), volets de la saisie |
 | `fenetres.js` | Confirmation, choix d'une action, bulle d'un connecteur, choix des connecteurs, fond immobile derrière les fenêtres |
 | `journal-defilement.js` | Journal : en-têtes collés, barre compacte, choix du mois |
-| `saisie-champs.js` | Propositions de connecteurs, hauteur des champs, barre du bas cachée clavier ouvert |
+| `saisie-champs.js` | Propositions de connecteurs, hauteur des champs, majuscules, état unique du clavier (barre du bas, fenêtres, `--clavier`) |
 | `demarrage.js` | Écouteurs généraux, lien d'invitation, service worker, démarrage (`boot`) |
 
 Pour ajouter, renommer ou retirer un fichier : le faire dans `index.html` **et** dans la liste `CODE` de `sw.js`, sinon l'app ne fonctionnerait plus hors connexion.
+
+## Modifier le guide d'utilisation
+
+Le guide (Paramètres › Guide d'utilisation) n'est pas dans le code : son texte est dans `guide/guide.md`, un fichier texte à
+modifier avec n'importe quel éditeur (Bloc-notes compris), et ses captures sont dans le même dossier `guide/`.
+
+- La syntaxe est rappelée en tête de `guide/guide.md` : `## Rubrique`, `### Intertitre`, `- liste`, `> astuce`, `**gras**`,
+  `![Légende](capture.jpg)`. Une rubrique marquée `{utilisateur}` ou `{therapeute}` n'est montrée qu'à ce type de compte.
+- Une capture citée dans le texte est gardée hors connexion d'elle-même : rien à ajouter dans `sw.js`.
+- Captures : thème clair, largeur d'un téléphone (375 px), au format JPEG, et jamais la barre d'onglets du bas (l'onglet
+  Admin ne doit pas y figurer).
+- Pour que les téléphones reçoivent le guide modifié, augmenter `APP_VERSION` (`js/constantes.js`) et `CACHE` (`sw.js`).
+
+## Règles des zones de texte et des fenêtres (à respecter partout, y compris pour tout nouveau champ)
+
+Fixées par l'administrateur (dernière mise à jour le 2026-11-08) : ne pas les changer sans son accord.
+
+Dans le code, tout ce qui touche au clavier part d'**un seul état**, `clavier` (`majClavier`, dans `saisie-champs.js`) : la barre
+du bas, la place des fenêtres, la marge de la page et le geste qui range le clavier le lisent, et rien d'autre ne les change.
+Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pour respecter les règles 2 à 4.
+
+1. **Majuscules automatiques**
+   - Tout champ de texte libre : `autocapitalize="sentences"`.
+   - Champ qui continue une phrase de l'app (« … car », « Plus précisément… », « Je pourrais… ») : pas de majuscule au premier
+     mot, mais une au début de chaque nouvelle ligne (`majLigne`, `CHAMPS_MAJ`). Chaque action à cocher en prend une dès sa première lettre.
+   - Jamais dans les identifiants, mails, mots de passe, codes et recherches (`autocapitalize="none"`).
+2. **Le clavier ne recouvre jamais la zone de texte** (le texte, son cadre et ses boutons)
+   - La barre d'onglets du bas se cache tant que le clavier est là (`body.clavier`), et revient dès qu'il se range, même sans
+     quitter le champ (bouton retour d'Android).
+   - Une fenêtre se pose juste au-dessus du clavier et rétrécit ; seul son contenu défile. Exceptions : le mini-calendrier
+     (accroché sous la date) et les fenêtres plein écran.
+   - La page gagne en bas exactement la hauteur du clavier (`--clavier`) : de quoi remonter le texte, sans grand vide ni page
+     visible sous le clavier. À chaque frappe, la ligne du curseur reste au-dessus du clavier et des boutons de la fenêtre (`curseurVisible`).
+   - Un champ s'allonge avec son texte, sans barre de défilement à l'intérieur ni saut de la page (`allonger`, `sansSaut`).
+   - Une fenêtre ne s'ouvre pas avec le clavier (le titre prend le focus, `autofocus`), sauf celles où l'on doit aussitôt taper
+     un code ou un mot de passe.
+3. **Un geste vers le bas range le clavier**, partout : le doigt qui descend jusqu'au clavier, ou qui glisse vers le bas sur ce
+   qui ne défile pas (`fenetres.js`).
+4. **Une fenêtre ouverte immobilise la page derrière elle** : seul ce qui défile dans la fenêtre défile, sans entraîner le fond.
+   - La fenêtre des connecteurs se ferme d'un geste vers le bas depuis son haut ou d'un appui à côté ; le mini-calendrier, qui
+     descend de la date, d'un geste vers le haut.
+5. **Connecteurs** (`@mot` dans le texte)
+   - Propositions dès la première lettre après le @ : 4 au plus, en petite liste sous la ligne en cours (au-dessus seulement si
+     le clavier la cacherait), retirées quand on touche le texte.
+   - Une fois la note enregistrée : italique, couleur normale, souligné fin couleur accent ; jamais de gras ni de couleur de texte.
+   - Pendant la frappe, le champ montre son propre texte, sans mise en forme (v38 : une copie superposée décalait le curseur sur iPhone).
+6. **Gestes et confirmations**
+   - Balayages faciles (45°, 60 px, 1,25 s), jamais pendant une sélection de texte ; un retour en arrière peut partir d'un
+     champ, sauf de celui où l'on écrit.
+   - Toute recherche a sa croix pour s'effacer ; tout mot de passe a son œil.
+   - Toute action qui efface du texte ou des données demande confirmation, dans une fenêtre de l'app.
 
 ## Confidentialité
 
@@ -61,9 +114,9 @@ Pour ajouter, renommer ou retirer un fichier : le faire dans `index.html` **et**
 - Le code n'est stocké nulle part : **code oublié = notes perdues**.
 - Verrouillage automatique quand l'app passe en arrière-plan (délai réglable).
 - Envoi par mail, en un appui : le menu de partage du téléphone joint le fichier et préremplit le texte, mais aucune app web ne peut y indiquer le destinataire ; le mail du thérapeute lié est donc copié pour être collé. Sans menu de partage (PC), le fichier est téléchargé et la messagerie s'ouvre avec le destinataire, l'objet et le texte, et le fichier s'y joint à la main. Le texte du mail ne contient que le nom et les dates de la période.
-- L'export Excel et la sauvegarde sont générés sur le téléphone ; l'utilisateur décide à qui les envoyer. La sauvegarde (`.json`) reste chiffrée ; le fichier Excel, lui, est en clair.
+- Les exports (Excel ou texte `.txt`) et la sauvegarde sont générés sur le téléphone ; l'utilisateur décide à qui les envoyer. La sauvegarde (`.json`) reste chiffrée ; les exports, eux, sont en clair, avec les données choisies dans Partage et export › Choix des données (tout, par défaut).
 - Recherche (Journal › Liste) : un mot est cherché dans tous les mois, sur l'appareil, sans tenir compte des accents ni des majuscules.
-- Les notes personnelles (texte libre, à côté des émotions) restent privées : elles sont dans le journal chiffré et la sauvegarde, mais jamais dans les envois au thérapeute ni dans le fichier Excel.
+- Les notes personnelles (texte libre, à côté des émotions) sont dans le journal chiffré et la sauvegarde ; elles ne vont dans les envois au thérapeute ou dans les exports que si l'utilisateur les y coche (Choix des données).
 
 ## Comptes et administration
 
@@ -96,6 +149,7 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 9. Carte « Services et limites » de la page admin : exécuter `serveur/limites.sql`. Les valeurs maximales sont inscrites dans `LIMITES`, dans `js/admin.js`, à mettre à jour si les offres changent.
 10. Trace après suppression d'un compte : exécuter `serveur/comptes-supprimes.sql`. Avant chaque suppression, le code utilisateur, l'identifiant, le prénom, le nom tel que le serveur le connaît, les dates de création et de suppression et l'accord à la politique sont copiés dans `comptes_supprimes`, lisible seulement depuis le tableau de bord Supabase, puis effacés au bout de 5 ans.
 11. Compteurs « Aujourd'hui » de la page admin : exécuter `serveur/compteur-du-jour.sql`.
+12. Journal de connexion gardé 6 mois (recommandation de la CNIL) : dans *Authentication › Configuration › Audit Logs*, activer « Write audit logs to the database », puis exécuter `serveur/journal-connexions.sql`. Supabase note alors chaque connexion, reconnexion et déconnexion dans `auth.audit_log_entries` ; une tâche planifiée (`pg_cron`) efface chaque nuit les lignes de plus de 6 mois. La page admin ne lit pas ce journal.
 
 ## Lien entre un client et son thérapeute
 

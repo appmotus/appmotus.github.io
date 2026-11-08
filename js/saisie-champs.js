@@ -1,4 +1,4 @@
-// Motus — Champs de saisie : propositions de connecteurs, hauteur automatique, barre du bas et clavier
+// Motus — Champs de saisie : propositions de connecteurs, hauteur automatique, majuscules, et l'état du clavier (barre du bas, fenêtres)
 'use strict';
 
 /* Saisie : dès qu'on tape « @ », une petite liste (4 lignes au plus) propose les connecteurs déjà utilisés qui commencent par
@@ -64,11 +64,6 @@ function champAllonge(ta) {
   allonger(ta);
 }
 function surlignerChamps() { document.querySelectorAll('#eCar, #nText, #synth, #eBdet, #ePiste').forEach(champAllonge); }   // les champs de CHAMPS_CONN, le besoin en détail et « Je pourrais… »
-/* Clavier ouvert sur un téléphone : la barre du bas se retire. Sur iPhone, une barre fixée en bas de l'écran peut remonter
-   au-dessus du clavier pendant le défilement (par exemple en écrivant la synthèse du jour). */
-const champTexte = el => !!el?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=submit]), textarea');
-document.addEventListener('focusin', e => document.body.classList.toggle('clavier', champTexte(e.target)));
-document.addEventListener('focusout', () => setTimeout(() => document.body.classList.toggle('clavier', champTexte(document.activeElement)), 60));
 // toucher une proposition ne doit pas fermer le clavier
 for (const ev of ['pointerdown', 'mousedown']) document.addEventListener(ev, e => { if (e.target.closest('[data-conn-mot]')) e.preventDefault(); });
 document.addEventListener('click', e => {
@@ -110,23 +105,55 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('compositionend', e => { if (avecMaj(e.target)) majLigne(e.target, e.data || ''); });
 
-/* Le texte qu'on écrit ne descend jamais sous le clavier (v40). Clavier ouvert, une fenêtre se pose juste au-dessus de lui et
-   rétrécit (comme celle des connecteurs, qui a son propre réglage) ; la page gagne en bas la hauteur du clavier, de quoi remonter.
-   Puis, à chaque frappe, la ligne du curseur est ramenée au-dessus du clavier, et au-dessus des boutons du bas de la fenêtre. */
-const basClavier = () => { const vv = window.visualViewport; return vv && clavierOuvert() ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0; };
-const FENETRE_A_PART = 'conn-dlg, .pleine, .en-haut';   // fenêtres qui ne bougent pas ainsi (connecteurs : leur propre réglage)
-function calerFenetres() {
-  const vv = window.visualViewport, bas = basClavier();
-  document.documentElement.style.setProperty('--clavier', `${bas}px`);
-  for (const d of document.querySelectorAll('dialog[open]')) {
-    if (d.matches(`.${FENETRE_A_PART}`)) continue;
-    d.style.marginBottom = bas > 0 ? `${bas}px` : '';
-    d.style.maxHeight = bas > 0 ? `${vv.height - 8}px` : '';
-  }
+/* ───────────── Clavier : un seul état pour toute l'app (v42) ─────────────
+   Les règles des zones de texte (README) reposent toutes sur cet état, calculé en un seul endroit (majClavier) :
+   - clavier.ouvert : un champ de texte a le focus sur un écran tactile, et le clavier est là (l'écran visible a rétréci de plus
+     de 120 px) ou s'ouvre (moins d'une seconde après le focus). Sur Android, le bouton retour range le clavier sans quitter le
+     champ : l'état le voit, et la barre du bas revient ;
+   - clavier.hauteur : la hauteur du clavier ; clavier.bas : ce qu'il cache en bas de l'écran à cet instant (l'iPhone peut
+     décaler la partie visible pendant le défilement).
+   Il en découle, et rien d'autre ne les change : la classe body.clavier (barre du bas cachée), la variable --clavier (la page
+   gagne la hauteur du clavier en bas, de quoi remonter le texte au-dessus, sans plus) et la place des fenêtres, posées juste
+   au-dessus du clavier (sauf le mini-calendrier, accroché en haut, et les fenêtres plein écran). Puis, à chaque frappe, la
+   ligne du curseur est ramenée au-dessus du clavier et des boutons du bas de la fenêtre (curseurVisible). */
+const champTexte = el => !!el?.matches?.('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=submit]), textarea');
+const tactile = () => matchMedia('(pointer:coarse)').matches;
+const clavier = {ouvert:false, hauteur:0, bas:0, focusA:0, plein:0, largeur:0};
+const clavierOuvert = () => clavier.ouvert;
+function majClavier() {
+  const vv = window.visualViewport, h = vv ? vv.height : innerHeight, champ = tactile() && champTexte(document.activeElement);
+  // la hauteur de l'écran sans clavier, remesurée dès qu'aucun champ n'a le focus ; inconnue juste après une rotation
+  if (innerWidth !== clavier.largeur) { clavier.largeur = innerWidth; clavier.plein = champ ? 0 : h; }
+  else if (!champ) clavier.plein = h;
+  const ouvert = champ && (!clavier.plein || clavier.plein - h > 120 || Date.now() - clavier.focusA < 1000);
+  const hauteur = ouvert && vv ? Math.max(0, Math.round(innerHeight - vv.height)) : 0;
+  const bas = ouvert && vv ? Math.max(0, Math.round(innerHeight - (vv.offsetTop + vv.height))) : 0;
+  if (ouvert !== clavier.ouvert) document.body.classList.toggle('clavier', ouvert);
+  if (hauteur !== clavier.hauteur) document.documentElement.style.setProperty('--clavier', `${hauteur}px`);
+  Object.assign(clavier, {ouvert, hauteur, bas});
+  document.querySelectorAll('dialog[open]').forEach(placerFenetre);
 }
+function placerFenetre(d) {
+  if (d.matches('.pleine, .en-haut')) return;
+  d.style.marginBottom = clavier.bas ? `${clavier.bas}px` : '';
+  d.style.maxHeight = clavier.bas ? `${window.visualViewport.height - 8}px` : '';
+}
+document.addEventListener('focusin', e => {
+  if (!champTexte(e.target)) return;
+  clavier.focusA = Date.now(); majClavier();
+  // le clavier s'ouvre en quelques centaines de millisecondes ; après une seconde, seul l'écran rétréci compte
+  for (const t of [400, 1050]) setTimeout(() => { majClavier(); curseurVisible(); }, t);
+});
+document.addEventListener('focusout', () => setTimeout(majClavier, 60));   // d'un champ à l'autre, la barre ne clignote pas
+window.visualViewport?.addEventListener('resize', () => { majClavier(); requestAnimationFrame(() => curseurVisible()); });
+window.visualViewport?.addEventListener('scroll', majClavier);
+// une fenêtre refermée clavier ouvert reprend sa place pour la prochaine fois
+document.addEventListener('close', e => { const d = e.target; if (d?.tagName === 'DIALOG') { d.style.marginBottom = ''; d.style.maxHeight = ''; } }, true);
+majClavier();
+
 function curseurVisible(ta = document.activeElement) {
   const vv = window.visualViewport;
-  if (!vv || ta?.tagName !== 'TEXTAREA' || !clavierOuvert()) return;
+  if (!vv || ta?.tagName !== 'TEXTAREA' || !clavier.ouvert) return;
   const p = positionDans(ta, ta.selectionEnd), r = ta.getBoundingClientRect();
   const bas = r.top + Math.min(Math.max(p.y, 0) + p.h, ta.clientHeight) + 12;   // bas de la ligne du curseur, et un peu d'air
   const d = ta.closest('dialog'), pied = d?.querySelector('.dlg-f');
@@ -136,9 +163,4 @@ function curseurVisible(ta = document.activeElement) {
   if (ecart <= 0) return;
   if (d) d.scrollTop += ecart; else window.scrollBy(0, ecart);
 }
-window.visualViewport?.addEventListener('resize', () => { calerFenetres(); requestAnimationFrame(() => curseurVisible()); });
-document.addEventListener('focusin', e => { if (champTexte(e.target)) setTimeout(() => { calerFenetres(); curseurVisible(); }, 350); });
-document.addEventListener('focusout', () => setTimeout(calerFenetres, 80));
 document.addEventListener('input', e => { if (e.target.tagName === 'TEXTAREA') requestAnimationFrame(() => curseurVisible(e.target)); });
-// une fenêtre refermée clavier ouvert reprend sa place pour la prochaine fois
-document.addEventListener('close', e => { const d = e.target; if (d?.tagName === 'DIALOG' && !d.matches(`.${FENETRE_A_PART}`)) { d.style.marginBottom = ''; d.style.maxHeight = ''; } }, true);

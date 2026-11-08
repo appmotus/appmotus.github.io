@@ -30,6 +30,9 @@ function defaults(d = {}) {
   d.settings = Object.assign({autolock:1, geoloc:true}, d.settings);
   // données transmises au thérapeute ; les besoins (v39) accompagnent les émotions, sauf si on les retire
   d.settings.partage = Object.assign({emotions:true, besoins:true, synthese:false, notes:false, lieu:false}, d.settings.partage);
+  d.settings.partage.actions ??= d.settings.partage.besoins;   // v42 : les actions se choisissent à part ; avant, elles suivaient les besoins
+  // v42 : ce que contiennent les exports (Excel, .txt) de l'utilisateur ; par défaut, tout
+  d.settings.exportChoix = Object.assign({emotions:true, besoins:true, actions:true, synthese:true, notes:true, lieu:true, couleur:true}, d.settings.exportChoix);
   d.days = d.days || {};
   d.role ||= 'client';            // 'client' ou 'therapeute'
   d.uid ||= rid(8);               // identifiant anonyme, transmis au thérapeute avec les envois

@@ -5,11 +5,11 @@
 /* Pages des Paramètres. Ce registre nomme des pages définies dans plusieurs fichiers (vue-parametres, page-connecteurs, therapeute-canal) : il vient après eux. */
 const PAGES_REGLAGES = {
   infos:['Informations personnelles', pageInfos], secu:['Mot de passe et verrouillage', pageSecu],
-  thera:['Mon thérapeute', therapistCard], partage:['Partage et export', pagePartage], donnees:['Données transmises', pageDonnees], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
+  thera:['Mon thérapeute', therapistCard], partage:['Partage et export', pagePartage], donnees:['Choix des données', pageDonnees], rappel:['Rappel d’export', pageRappel], couleurs:['Code couleur', pageCouleurs], geo:['Localisation', pageGeo],
   invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
   sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
   apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos], contact:['Nous contacter', pageContact], importer:['Importer des notes', pageImporter],
-  connecteurs:['Connecteurs', pageConnecteurs],
+  connecteurs:['Connecteurs', pageConnecteurs], guide:['Guide d’utilisation', pageGuide],
 };
 
 let installEvt = null;
@@ -83,10 +83,22 @@ const ACT = {
       if (err.name !== 'AbortError') { try { await navigator.clipboard.writeText(url); toast('Lien de Motus copié'); } catch { window.prompt('Copiez ce lien :', url); } }
     } finally { setTimeout(() => busy = false, 1500); }
   },
-  mailXlsx: () => {
-    const x = exportRange(); if (!x) return;
-    envoyerParMail({file:new File([buildXlsx(x.from, x.to)], x.name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), from:x.from, to:x.to, chiffre:false});
+  /* Export (Partage et export) : Excel ou texte, selon le format choisi ; tout export efface le rappel en cours */
+  formatExport: t => { data.settings.exportFormat = t.dataset.f; save(); render(true); },
+  toutJournal: () => {
+    const ks = Object.keys(data.days).filter(k => dayFilled(data.days[k])).sort();
+    $('#xFrom').value = ks[0] || today(); $('#xTo').value = today();
+    for (const id of ['xFrom', 'xTo']) $(`#${id}Wd`).textContent = weekday($(`#${id}`).value);
   },
+  exporter: () => { const x = fichierExport(); if (x) { withBusy(() => download(x.file, x.name)); exportFait(); } },
+  partagerExport: () => {
+    const x = fichierExport(); if (!x) return;
+    withBusy(async () => {
+      if (navigator.canShare?.({files:[x.file]})) { try { await navigator.share({files:[x.file], title:'Motus'}); exportFait(); } catch {} }
+      else { download(x.file, x.name); exportFait(); }
+    });
+  },
+  mailExport: () => { const x = fichierExport(); if (x) envoyerParMail({file:x.file, from:x.from, to:x.to, chiffre:false, format:x.format, fait:exportFait}); },
   goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
   voirThera: () => { view = 'set'; setPage = 'thera'; render(); synchroCanaux(true); },
   // Journal en liste : la barre compacte déploie (ou replie) la recherche et les filtres, sans quitter la lecture
@@ -129,7 +141,7 @@ const ACT = {
     toast(nouveau ? `C’est fait : connectez-vous désormais avec « ${nouveau} ».` : 'Vos informations sont modifiées');
   },
   // le retour au menu reprend la position où l'on était avant d'ouvrir la page
-  // une page ouverte depuis une autre (Données transmises depuis Partage et export) y ramène au retour
+  // une page ouverte depuis une autre (Choix des données, Rappel d'export depuis Partage et export) y ramène au retour
   setPage: t => { if (!setPage) menuScroll = scrollY; else pagePrec = {de:setPage, vers:t.dataset.p, y:scrollY}; setPage = t.dataset.p; if (setPage === 'connecteurs') connAide = false; render(); if (setPage === 'thera') synchroCanaux(true); },
   setBack: () => {
     const prec = pageRetour(); pagePrec = null;
@@ -192,6 +204,16 @@ const ACT = {
       const ta = $(`[data-notes-admin="${t.dataset.k}"]`); ta.focus(); ta.select(); document.execCommand('copy'); ta.setSelectionRange(0, 0); ta.blur();
     }
     toast('Texte copié');
+  },
+  // … et la gomme, à côté, vide le cadre après confirmation (v42)
+  viderNoteAdmin: async t => {
+    const k = t.dataset.k, titre = NOTES_ADMIN.find(x => x[0] === k)?.[1] || '';
+    if (!(data.notesAdmin[k] || '').trim()) return toast('La note est déjà vide.');
+    if (!await confirmerAction({titre:'Effacer cette note ?', texte:`Tout le texte de « ${esc(titre)} » sera effacé. Pensez à le copier avant si vous voulez le garder.`, bouton:'Effacer'})) return;
+    data.notesAdmin[k] = ''; await saveNow();
+    const ta = $(`[data-notes-admin="${k}"]`); if (ta) { ta.value = ''; ajusterHauteur(ta); }
+    const s = $(`[data-etat="${k}"]`); if (s) s.textContent = '';
+    toast('Note effacée');
   },
   voirConnecteurs: t => { t.closest('dialog')?.close(); if (!setPage) menuScroll = 0; view = 'set'; setPage = 'connecteurs'; connQ = ''; connAide = false; render(); window.scrollTo(0, 0); },
   plierAide: t => plierAide(t),
@@ -324,15 +346,9 @@ const ACT = {
     const d = ensureDay(cur); d.entries = d.entries.filter(x => x.id !== ed.id);
     save(); $('#entryDlg').close(); render();
   },
-  exportXlsx: () => { const x = exportRange(); if (x) withBusy(() => download(buildXlsx(x.from, x.to), x.name)); },
-  shareXlsx: () => {
-    const x = exportRange(); if (!x) return;
-    const file = new File([buildXlsx(x.from, x.to)], x.name, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    withBusy(async () => {
-      if (navigator.canShare?.({files:[file]})) { try { await navigator.share({files:[file], title:'Motus'}); } catch {} }
-      else download(file, x.name);
-    });
-  },
+  // rappel d'export (bandeau de Quotidien) : vers Partage et export, ou remis à demain
+  allerExport: () => { menuScroll = 0; view = 'set'; setPage = 'partage'; render(); window.scrollTo(0, 0); },
+  rappelPlusTard: () => { rappelExport().plusTard = today(); save(); $('.export-rappel')?.remove(); },
   changeCode: async () => {
     if (!session) return toast('Connexion internet nécessaire pour changer de mot de passe.');
     if (!await verifierAvantMdp()) return;   // mot de passe actuel, ou code reçu par e-mail

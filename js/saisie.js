@@ -83,13 +83,13 @@ function lieuFields(time, ville, lieu) {
       <div class="row">
         <div style="flex:0 0 116px"><label class="label" for="eTime">Heure</label><input type="time" id="eTime" value="${esc(time)}"></div>
         <div><label class="label" for="eVille">Ville</label>
-          <div class="withbtn"><input type="text" id="eVille" list="villesList" value="${esc(ville || '')}" placeholder="Ville" autocomplete="off">
+          <div class="withbtn"><input type="text" id="eVille" list="villesList" value="${esc(ville || '')}" placeholder="Ville" autocomplete="off" autocapitalize="sentences">
             <button type="button" class="geo-btn" data-act="locate" aria-label="Trouver ma ville"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg></button></div>
           <datalist id="villesList">${villes.map(l => `<option value="${esc(l)}">`).join('')}</datalist></div>
       </div>
       <div class="geo-st small muted" id="geoSt" aria-live="polite"></div>
       <label class="label" for="eLieu" style="margin-top:4px">Lieu (précision)</label>
-      <input type="text" id="eLieu" list="lieuxList" value="${esc(lieu)}" placeholder="Maison, travail, voiture…" autocomplete="off">
+      <input type="text" id="eLieu" list="lieuxList" value="${esc(lieu)}" placeholder="Maison, travail, voiture…" autocomplete="off" autocapitalize="sentences">
       <datalist id="lieuxList">${recent('lieu').map(l => `<option value="${esc(l)}">`).join('')}</datalist>`;
 }
 
@@ -217,7 +217,7 @@ function openNote(id) {
     <div class="dlg-b">
       ${lieuFields(n?.time || (cur === today() ? nowTime() : '12:00'), n ? n.ville : villeParDefaut(), n?.lieu)}
       <label class="label" for="nText">Ma note</label>
-      <textarea id="nText" rows="6" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier… Tapez @ pour relier vos notes : @travail, @un-ami">${esc(n?.text || '')}</textarea>
+      <textarea id="nText" rows="6" autocapitalize="sentences" placeholder="Une pensée, un souvenir, quelque chose à ne pas oublier… Tapez @ pour relier vos notes : @travail, @un-ami">${esc(n?.text || '')}</textarea>
       <div class="err" id="nErr"></div>
     </div>
     <div class="dlg-f">

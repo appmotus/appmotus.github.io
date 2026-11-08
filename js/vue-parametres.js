@@ -34,7 +34,7 @@ function vSetMenu() {
   ]) : groupeMenu('Mon suivi', [
     ligneMenu('thera', 'Mon thérapeute', {val:t ? (attenteAcceptation(t) ? 'En attente' : `${initiale(t.prenom)} ${t.nom}`.trim()) : 'À ajouter', page:'thera'}),
     ligneMenu('send', 'Partage et export', {page:'partage'}),
-    ligneMenu('shield', 'Données transmises', {val:resumePartage(), page:'donnees'}),
+    ligneMenu('shield', 'Choix des données', {page:'donnees'}),
     ligneMenu('col', 'Code couleur', {page:'couleurs'}),
     ligneMenu('at', 'Connecteurs', {val:connecteurs().size ? String(connecteurs().size) : '', page:'connecteurs'}),
     ligneMenu('pin', 'Localisation', {val:data.settings.geoloc ? 'Activée' : 'Désactivée', page:'geo'}),
@@ -46,6 +46,7 @@ function vSetMenu() {
     ligneMenu('usersup', 'Supprimer mon compte', {page:'supprimer', cl:'dan'}),
   ])}
   ${groupeMenu('Application', [
+    ligneMenu('guide', 'Guide d’utilisation', {page:'guide'}),
     ligneMenu('sun', 'Apparence', {val:THEME_N[themeChoisi()], page:'apparence'}),
     ligneMenu('share', 'Partager Motus', {act:'partagerApp'}),
     ...(CONTACT_MAIL ? [ligneMenu('mail', 'Nous contacter', {page:'contact'})] : []),   // visible dès que l'adresse de contact est renseignée
@@ -100,9 +101,14 @@ function pageSecu() {
   </section>`;
 }
 
-/* La période choisie sert aux deux : l'envoi chiffré au thérapeute et le fichier Excel */
+/* Partage et export (v42, son ordre) : la période, le choix des données (page à part), l'envoi chiffré au thérapeute, l'export
+   Excel ou texte, le rappel d'export (page à part), puis les semaines envoyées. La période sert à l'envoi comme à l'export. */
+const FORMATS = {xlsx:'Excel (.xlsx)', txt:'Texte (.txt)'};
+const formatExport = () => data.settings.exportFormat === 'txt' ? 'txt' : 'xlsx';
+const ligneSeule = l => `<div class="grp seul">${l}</div>`;   // une ligne vers une page, comme dans le menu des Paramètres
 function pagePartage() {
   const t = today(), th = data.therapist, attente = attenteAcceptation(th), peutEnvoyer = th && !attente, qui = esc(th?.prenom || 'votre thérapeute');
+  const r = rappelExport(), f = formatExport();
   return `<section class="card">
     <h2>Période</h2>
     <div class="weeknav">
@@ -116,12 +122,14 @@ function pagePartage() {
         <div><label class="label" for="xFrom">Du</label><input type="date" id="xFrom" value="${xStart}"><div class="wd-hint" id="xFromWd">${weekday(xStart)}</div></div>
         <div><label class="label" for="xTo">Au</label><input type="date" id="xTo" value="${addDays(xStart, 6)}"><div class="wd-hint" id="xToWd">${weekday(addDays(xStart, 6))}</div></div>
       </div>
+      <button type="button" class="btn block" data-act="toutJournal">Tout mon journal</button>
     </details>
   </section>
+  ${ligneSeule(ligneMenu('shield', 'Choix des données', {page:'donnees'}))}
   <section class="card">
-    <h2>Partage à mon thérapeute</h2>
-    <button class="stat" data-act="setPage" data-p="donnees" style="margin-top:4px"><span>Données transmises</span><b>${esc(resumePartage())} ›</b></button>
-    ${!th ? `<p class="small muted" style="margin:6px 0 0">Vous n’êtes lié(e) à aucun thérapeute : le partage n’est pas possible pour l’instant. Ajoutez d’abord votre thérapeute, avec le lien d’invitation qu’il vous a donné.</p>
+    <h2>Transmission au thérapeute</h2>
+    <p class="small muted" style="margin:4px 0 0">Contenu : ${esc(resumePartage())}.</p>
+    ${!th ?`<p class="small muted" style="margin:6px 0 0">Vous n’êtes lié(e) à aucun thérapeute : le partage n’est pas possible pour l’instant. Ajoutez d’abord votre thérapeute, avec le lien d’invitation qu’il vous a donné.</p>
     <button class="btn primary block" data-act="voirThera">Ajouter mon thérapeute</button>`
     : attente ? `<p class="small muted" style="margin:6px 0 0">${esc(nomDe(th) || 'Votre thérapeute')} n’a pas encore accepté votre demande : le partage sera possible dès qu’il l’aura acceptée.</p>`
     : `<p class="small muted" style="margin:6px 0 0">Le fichier est chiffré : seul(e) ${qui} peut l’ouvrir.</p>
@@ -130,14 +138,17 @@ function pagePartage() {
     <div class="small muted" id="sentSt" style="margin-top:6px;text-align:center">${sentStatus()}</div>`}
   </section>
   <section class="card">
-    <h2>Export Excel</h2>
+    <h2>Export</h2>
+    <div class="seg two" role="group" aria-label="Format du fichier" style="margin:10px 0 0">${Object.entries(FORMATS).map(([k, n]) => `<button type="button" data-act="formatExport" data-f="${k}" class="${f === k ? 'on' : ''}" aria-pressed="${f === k}">${n}</button>`).join('')}</div>
+    <p class="small muted" style="margin:6px 0 0">Contenu : ${esc(resumeExport())}.</p>
     <div class="row" style="margin-top:10px">
-      <button class="btn ${peutEnvoyer ? '' : 'primary'}" data-act="exportXlsx">Télécharger</button>
-      ${navigator.canShare ? '<button class="btn" data-act="shareXlsx">Partager…</button>' : ''}
+      <button class="btn ${peutEnvoyer ? '' : 'primary'}" data-act="exporter">Télécharger</button>
+      ${navigator.canShare ? '<button class="btn" data-act="partagerExport">Partager…</button>' : ''}
     </div>
-    ${peutEnvoyer ? '' : '<button class="btn block" data-act="mailXlsx">Envoyer par mail</button>'}
-    <p class="small muted" style="margin:6px 0 0"><b>Vos notes personnelles n’y figurent pas.</b> <b>Le fichier n’est pas chiffré :</b> vos émotions y sont lisibles.${peutEnvoyer ? '' : ` ${aideEnvoi('')}`}</p>
+    <button class="btn block" data-act="mailExport">Envoyer par mail</button>
+    <p class="small muted" style="margin:6px 0 0"><b>Le fichier n’est pas chiffré :</b> tout ce qu’il contient est lisible. ${aideEnvoi(peutEnvoyer ? th.email : '')}</p>
   </section>
+  ${ligneSeule(ligneMenu('cloche', 'Rappel d’export', {val:r.freq === 'non' ? 'Aucun' : RAPPEL_FREQ[r.freq], page:'rappel'}))}
   <section class="card">
     <h2>Mes semaines</h2>
     <p class="small muted" style="margin:4px 0 6px">Ce que vous avez envoyé à votre thérapeute, de la semaine en cours à la création de votre compte. Touchez une semaine pour la choisir.</p>
@@ -164,11 +175,54 @@ function listeSemaines() {
   return lignes.join('');
 }
 
+/* Rappel d'export (v42) : une seule fois ou régulier, affiché seulement dans l'app (bandeau en haut de Quotidien), jamais par une
+   notification du téléphone. Gardé dans le journal chiffré : data.settings.rappelExport = {freq, debut (premier rappel),
+   fait (jour du dernier export), plusTard (jour où il a été remis au lendemain)}. Un export, quel qu'il soit, l'efface. */
+const RAPPEL_FREQ = {non:'Jamais', une:'Une seule fois', semaine:'Toutes les semaines', quinzaine:'Toutes les 2 semaines', mois:'Tous les mois'};
+const rappelExport = () => (data.settings.rappelExport ||= {freq:'non', debut:'', fait:'', plusTard:''});
+const moisPlus = (k, n) => {   // même jour, n mois plus tard (le 31 devient le dernier jour d'un mois plus court)
+  const d = parse(k), x = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  x.setDate(Math.min(d.getDate(), new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate()));
+  return ymd(x);
+};
+const rappelN = (r, n) => r.freq === 'mois' ? moisPlus(r.debut, n) : addDays(r.debut, n * (r.freq === 'quinzaine' ? 14 : 7));
+const jourCourt = k => `${JOURS[parse(k).getDay()].slice(0, 3)}. ${fmtFR(k)}`;   // « Dim. 15/11/2026 »
+/* due : un rappel est passé sans export depuis ; date : ce rappel-là, sinon le prochain (vide s'il n'y en a plus) */
+function rappelEtat(r = rappelExport()) {
+  if (r.freq === 'non' || !r.debut) return null;
+  const t = today();
+  if (r.freq === 'une') return {due:r.debut <= t && !(r.fait >= r.debut), date:r.fait >= r.debut ? '' : r.debut};
+  let n = 0, k = r.debut, dernier = '';
+  while (k <= t) { dernier = k; k = rappelN(r, ++n); }
+  const due = !!dernier && !(r.fait >= dernier);
+  return {due, date:due ? dernier : k};
+}
+function pageRappel() {
+  const r = rappelExport(), e = rappelEtat(r);
+  const etat = !e ? '' : e.due ? `Rappel affiché depuis le ${jourCourt(e.date)} : il disparaîtra à votre prochain export.`
+    : e.date ? `Prochain rappel : ${jourCourt(e.date)}.` : `Rappel terminé : export fait le ${fmtFR(r.fait)}.`;
+  return `<section class="card" id="carteRappel">
+    <div class="setrow" style="padding-top:0"><label for="rappelFreq">Fréquence</label><select id="rappelFreq">${Object.entries(RAPPEL_FREQ).map(([k, n]) => `<option value="${k}" ${r.freq === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    ${r.freq === 'non' ? '' : `<div class="setrow"><label for="rappelDebut">${r.freq === 'une' ? 'Le' : 'À partir du'}</label><input type="date" id="rappelDebut" value="${r.debut}"></div>
+    <p class="small" id="rappelEtat" style="margin:0">${etat}</p>`}
+    <p class="small muted" style="margin:6px 0 0">Le rappel apparaît seulement dans Motus, en haut de Quotidien, le jour venu. Aucune notification n’est envoyée sur votre téléphone ni ailleurs.</p>
+  </section>`;
+}
+function exportReminder() {
+  if (data.role === 'therapeute') return '';
+  const r = rappelExport(), e = rappelEtat(r);
+  if (!e?.due || r.plusTard === today()) return '';
+  return `<div class="banner export-rappel"><span><b>Rappel d’export</b><br>${r.freq === 'une' ? 'Vous aviez prévu d’exporter vos notes aujourd’hui.' : `C’est le moment d’exporter vos notes (rappel ${RAPPEL_FREQ[r.freq].toLowerCase()}).`}</span>
+    <div class="banner-actions"><button class="btn primary" data-act="allerExport">Exporter</button><button class="link small" data-act="rappelPlusTard">Plus tard</button></div></div>`;
+}
+/* Un export vient d'être fait : le rappel en cours s'efface */
+function exportFait() { const r = rappelExport(); if (r.freq === 'non') return; r.fait = today(); r.plusTard = ''; save(); }
+
 function pageCouleurs() {
   return `<section class="card">
     <p class="small muted" style="margin:0">Le nom de chaque couleur, dans votre journal et dans vos envois.</p>
     ${COL.map(c => `<label class="label" for="lab-${c}"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--${c});margin-right:6px"></span>${COLNAME[c]}</label>
-      <input type="text" id="lab-${c}" data-label="${c}" value="${esc(data.labels[c])}" maxlength="40">`).join('')}
+      <input type="text" id="lab-${c}" data-label="${c}" value="${esc(data.labels[c])}" maxlength="40" autocapitalize="sentences">`).join('')}
   </section>`;
 }
 
@@ -196,7 +250,7 @@ function pagePro() {
     <div class="stat" style="margin-top:14px"><span class="muted">Mail professionnel</span><b style="overflow-wrap:anywhere;text-align:right">${esc(t.email || '—')}</b></div>
     <p class="small muted" style="margin:4px 0 0">Il se change dans « Informations personnelles », après confirmation par un code.</p>
     <label class="label" for="tAdr">Adresse du cabinet</label>
-    <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}">
+    <input type="text" id="tAdr" data-thera="adresse" value="${esc(t.adresse)}" autocapitalize="sentences">
   </section>`;
 }
 
@@ -280,7 +334,7 @@ function pageContact() {
     <label class="label" for="ctSujet">Sujet</label>
     <select id="ctSujet">${SUJETS_CONTACT.map(s => `<option>${s}</option>`).join('')}</select>
     <label class="label" for="ctMsg">Votre message</label>
-    <textarea id="ctMsg" rows="7" placeholder="Écrivez votre message…"></textarea>
+    <textarea id="ctMsg" rows="7" autocapitalize="sentences" placeholder="Écrivez votre message…"></textarea>
     <p class="small muted" style="margin:6px 0 0">Pour vous répondre plus facilement, votre code utilisateur et la version de l’app sont ajoutés au message. N’y mettez pas le contenu de vos notes.</p>
     <button class="btn primary block" data-act="envoyerContact" ${CONTACT_MAIL ? '' : 'disabled'}>Écrire à Motus</button>
     ${CONTACT_MAIL ? `<p class="small muted" style="margin:8px 0 0;text-align:center">${esc(CONTACT_MAIL)}</p>` : '<p class="small muted" style="margin:8px 0 0">L’adresse de contact sera bientôt disponible.</p>'}

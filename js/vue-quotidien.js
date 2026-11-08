@@ -25,7 +25,7 @@ function weekStrip() {
 function vDay() {
   const isT = cur === today(), dj = parse(cur);
   return `
-  ${clientBar()}${src ? '' : safariAvis() + sauvegardeReminder() + recupReminder() + adminReminder() + sendReminder()}
+  ${clientBar()}${src ? '' : safariAvis() + sauvegardeReminder() + exportReminder() + recupReminder() + adminReminder() + sendReminder()}
   <div class="dayhead">
     <div class="dayhead-t">
       <div class="eyebrow">${isT ? 'Aujourd’hui' : cur === addDays(today(), -1) ? 'Hier' : dj.getFullYear()}${isT ? '' : ' · <button class="link" data-act="goToday">Revenir à aujourd’hui</button>'}</div>
@@ -37,15 +37,15 @@ function vDay() {
   ${weekStrip()}
   ${corpsJour()}`;
 }
-/* Ce qui change d'un jour à l'autre sous la frise : un balayage latéral (gestes.js) le fait glisser, le jour voisin arrivant à côté */
+/* Ce qui change d'un jour à l'autre sous la frise (le jour se choisit par la frise, les flèches ou le mini-calendrier) */
 function corpsJour() {
   const d = getDay(cur), isT = cur === today();
   const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
   const fs = famSummary(ents), fb = besSummary(ents), ro = !!src;
   /* Une émotion et ses cartes : l'émotion d'abord, puis la carte Besoin et la carte Action quand elles existent. On passe d'une
-     carte à l'autre par les pastilles (v41 : plus par balayage, qui change de jour). Toucher une carte ne fait rien, sauf sur un
-     connecteur ; un appui long propose de la modifier (sur la carte affichée) ou de la supprimer. */
+     carte à l'autre par les pastilles ou par un balayage (v42). Toucher une carte ne fait rien, sauf sur un connecteur ; un appui
+     long propose de la modifier (sur la carte affichée) ou de la supprimer. */
   const ligneEmo = e => {
     const cs = cartesDe(e), duo = cs.length > 1, tag = ro ? 'div' : 'button', coul = couleursCartes(e);
     const attrs = v => ro ? '' : ` type="button" data-type="emo" data-id="${e.id}" data-v="${v}"`;
@@ -113,7 +113,7 @@ function corpsJour() {
         <span class="dot"></span>${esc(D().labels[c])}
       </button>`).join('')}</div>
     <label class="label" for="synth">En quelques mots</label>
-    <textarea id="synth" rows="5" placeholder="Ce qui a marqué ma journée, ce que j’ai ressenti, ce que j’ai mis en place…">${esc(d.synth)}</textarea>
+    <textarea id="synth" rows="5" autocapitalize="sentences" placeholder="Ce qui a marqué ma journée, ce que j’ai ressenti, ce que j’ai mis en place…">${esc(d.synth)}</textarea>
     <div class="saved" id="saved" aria-live="polite"></div>`}
   </section></div>`;
 }

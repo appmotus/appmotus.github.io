@@ -1,4 +1,4 @@
-// Motus — Export Excel (.xlsx créé sur le téléphone)
+// Motus — Exports Excel (.xlsx) et texte (.txt), créés sur le téléphone
 'use strict';
 
 /* ───────────── Export Excel (.xlsx généré sur le téléphone, sans bibliothèque externe) ───────────── */
@@ -111,11 +111,18 @@ const S = {title:1, sub:2, lab:3, val:4, sect:5, vert:6, jaune:7, rouge:8, legen
 const cellStyle = c => c ? S['c' + c] : S.cell;
 const estLines = (t, w) => t.split('\n').reduce((a, l) => a + Math.max(1, Math.ceil(l.length / w)), 0);
 
+/* Ce que contient un export : chez le thérapeute, tout ce qu'il a reçu ; chez l'utilisateur, son choix (Partage et export ›
+   Choix des données › Dans mes exports). Les besoins et les actions n'existent qu'avec leur émotion. */
+const TOUT = {emotions:true, besoins:true, actions:true, synthese:true, notes:true, lieu:true, couleur:true};
+function choixExport() {
+  const c = src ? TOUT : {...TOUT, ...data.settings.exportChoix};
+  return {...c, besoins:c.emotions && c.besoins, actions:c.emotions && c.actions};
+}
 function buildXlsx(from, to) {
-  const L = D().labels, p = D().profile;
-  const avecNotes = !!src;   // l'Excel du client ne contient pas ses notes personnelles ; celui du thérapeute contient celles qu'il a reçues
-  // les besoins suivent chaque émotion, si le client les transmet (Paramètres › Données transmises) ; le thérapeute garde ceux reçus
-  const avecB = !!src || !!data.settings.partage?.besoins, besE = e => avecB && aBesoins(e) ? sansArobase(besoinsTexte(e)) : '';
+  const L = D().labels, p = D().profile, ch = choixExport();
+  const ou = o => ch.lieu ? where(o) : '', couleur = d => ch.couleur && d?.color || null;
+  const cartesE = e => sansArobase([ch.besoins ? besoinTexte(e) : '', ...(ch.actions ? tachesTexte(e) : []), ch.actions && pisteDe(e) ? `Je pourrais ${pisteDe(e)}.` : ''].filter(Boolean).join(' '));
+  const rempli = d => !!d && !!((ch.emotions && d.entries?.length) || (ch.synthese && d.synth?.trim()) || (ch.notes && dayNotes(d).length) || couleur(d));
   const keys = []; for (let k = from; k <= to; k = addDays(k, 1)) keys.push(k);
   const byTime = d => [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
 
@@ -129,7 +136,7 @@ function buildXlsx(from, to) {
     xRow(6, [cS('A6', S.sect, 'CONSIGNES & CODE COULEUR DE LA JOURNÉE'), ...fill(6, S.sect)], 24),
     xRow(7, [cS('A7', S.vert, 'VERT'), cS('B7', S.legend, L.vert), cS('C7', S.jaune, 'JAUNE'), cS('D7', S.legend, L.jaune), cS('E7', S.rouge, 'ROUGE'), cS('F7', S.legend, L.rouge)], 22),
     xRow(8, [cS('A8', S.txt, '• Au fil de la journée : heure / ville / lieu — « Je me sens [émotion du répertoire] car [ce qui l’a déclenchée]. »'
-      + (avecB ? ' Puis : « J’ai besoin de [besoin du répertoire]. Je pourrais [action concrète saine]. »' : ''))], avecB ? 30 : 18),
+      + (ch.besoins || ch.actions ? ' Puis : « J’ai besoin de [besoin du répertoire]. Je pourrais [action concrète saine]. »' : ''))], ch.besoins || ch.actions ? 30 : 18),
     xRow(9, [cS('A9', S.txt, '• Chaque soir : une synthèse de la journée et une couleur (vert, jaune ou rouge).')], 18),
     xRow(10, [cS('A10', S.conf, 'Ce tableau est confidentiel et constitue une base de travail essentielle.')], 18),
     xRow(12, [cS('A12', S.head, 'Semaine / Date'), ...['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map((j, i) => cS(H[i+1] + 12, S.head, j))], 28),
@@ -144,65 +151,75 @@ function buildXlsx(from, to) {
     for (let i = 0; i < 7; i++) {
       const k = addDays(mon, i), ref = H[i+1] + r, d = D().days[k];
       if (k < from || k > to) { cells.push(cE(ref, S.off)); continue; }
-      if (!(avecNotes ? dayFilled(d) : dayUsed(d))) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
-      let t = fmtFR(k).slice(0, 5) + (d.color ? ' — ' + L[d.color] : '');
-      byTime(d).forEach(e => t += `\n\n${e.time}${where(e) ? ' · ' + where(e) : ''}\n${sansArobase(sentence(e))}${besE(e) ? '\n' + besE(e) : ''}`);
-      if (d.synth?.trim()) t += `\n\nSYNTHÈSE : ${sansArobase(d.synth.trim())}`;
-      if (avecNotes) dayNotes(d).forEach(n => t += `\n\nNOTE PERSONNELLE ${n.time}${where(n) ? ' · ' + where(n) : ''} :\n${sansArobase(n.text)}`);
+      if (!rempli(d)) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
+      let t = fmtFR(k).slice(0, 5) + (couleur(d) ? ' — ' + L[d.color] : '');
+      if (ch.emotions) byTime(d).forEach(e => t += `\n\n${e.time}${ou(e) ? ' · ' + ou(e) : ''}\n${sansArobase(sentence(e))}${cartesE(e) ? '\n' + cartesE(e) : ''}`);
+      if (ch.synthese && d.synth?.trim()) t += `\n\nSYNTHÈSE : ${sansArobase(d.synth.trim())}`;
+      if (ch.notes) dayNotes(d).forEach(n => t += `\n\nNOTE PERSONNELLE ${n.time}${ou(n) ? ' · ' + ou(n) : ''} :\n${sansArobase(n.text)}`);
       lines = Math.max(lines, estLines(t, 34));
-      cells.push(cS(ref, cellStyle(d.color), t));
+      cells.push(cS(ref, cellStyle(couleur(d)), t));
     }
     r1.push(xRow(r, cells, Math.min(409, Math.max(60, lines * 11.5 + 8))));
   }
-  const s1 = sheet({cols:[16,30,30,30,30,30,30,30], rows:r1, merges:['A1:H1','A2:H2','B4:C4','E4:F4','A6:H6','A8:H8','A9:H9','A10:H10'], landscape:true});
+  const feuilles = [['Tableau d’observation', sheet({cols:[16,30,30,30,30,30,30,30], rows:r1, merges:['A1:H1','A2:H2','B4:C4','E4:F4','A6:H6','A8:H8','A9:H9','A10:H10'], landscape:true})]];
 
-  /* Feuille 2 : détail de chaque émotion notée */
-  const h2 = ['Date','Jour','Heure','Ville','Lieu','Émotion','Intensité','Je me sens…','… car', ...(avecB ? ['Besoin','J’ai besoin de…','Plus précisément','Je pourrais…'] : []), 'Couleur du jour'];
-  const r2 = [xRow(1, h2.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
-  let n2 = 2;
-  for (const k of keys) {
-    const d = D().days[k]; if (!d?.entries?.length) continue;
-    for (const e of byTime(d)) {
-      const vals = [fmtFR(k), JOURS[parse(k).getDay()], e.time, e.ville || '', e.lieu,
-        [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', '),
-        [...new Set(e.emos.map(x => INTN[x.i]))].join(', '),
-        joinFr(e.emos.map(x => lc(x.w))), sansArobase((e.car || '').trim()),
-        ...(avecB ? [[...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '), joinFr(besoinsDe(e).map(x => lc(x.w))), detailDe(e), [...tachesTexte(e), sansArobase(pisteDe(e))].filter(Boolean).join(' · ')] : [])];
-      const row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
-      row.push(d.color ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
-      r2.push(xRow(n2, row, Math.min(409, Math.max(15, Math.max(estLines(e.car || '', 60), estLines(vals[7], 34)) * 12 + 4))));
-      n2++;
+  /* Feuille 2 : détail de chaque émotion notée, avec ses cartes Besoin et Action (colonnes selon le choix) */
+  if (ch.emotions) {
+    const C2 = [
+      ['Date', 11, (e, k) => fmtFR(k)], ['Jour', 10, (e, k) => JOURS[parse(k).getDay()]], ['Heure', 7, e => e.time],
+      ...(ch.lieu ? [['Ville', 16, e => e.ville || ''], ['Lieu', 16, e => e.lieu || '']] : []),
+      ['Émotion', 14, e => [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', ')],
+      ['Intensité', 11, e => [...new Set(e.emos.map(x => INTN[x.i]))].join(', ')],
+      ['Je me sens…', 30, e => joinFr(e.emos.map(x => lc(x.w)))],
+      ['… car', 55, e => sansArobase((e.car || '').trim())],
+      ...(ch.besoins ? [['Besoin', 18, e => [...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', ')], ['J’ai besoin de…', 30, e => joinFr(besoinsDe(e).map(x => lc(x.w)))], ['Plus précisément', 40, e => sansArobase(detailDe(e))]] : []),
+      ...(ch.actions ? [['Actions', 40, e => sansArobase(tachesTexte(e).join('\n'))], ['Je pourrais…', 40, e => sansArobase(pisteDe(e))]] : []),
+    ];
+    const r2 = [xRow(1, [...C2.map(([h], i) => cS(colL(i) + 1, S.head, h)), ...(ch.couleur ? [cS(colL(C2.length) + 1, S.head, 'Couleur du jour')] : [])], 26)];
+    let n2 = 2;
+    for (const k of keys) {
+      const d = D().days[k]; if (!d?.entries?.length) continue;
+      for (const e of byTime(d)) {
+        const vals = C2.map(([, , f]) => f(e, k, d)), row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
+        if (ch.couleur) row.push(couleur(d) ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
+        const haut = Math.max(estLines(e.car || '', 60), estLines(joinFr(e.emos.map(x => x.w)), 34), ...C2.map(([, w], i) => estLines(vals[i], w + 4)));
+        r2.push(xRow(n2, row, Math.min(409, Math.max(15, haut * 12 + 4))));
+        n2++;
+      }
     }
+    feuilles.push(['Détail des émotions', sheet({cols:[...C2.map(([, w]) => w), ...(ch.couleur ? [18] : [])], rows:r2, landscape:true})]);
   }
-  const s2 = sheet({cols:[11,10,7,16,16,14,11,30,55, ...(avecB ? [18,30,40,40] : []), 18], rows:r2, landscape:true});
 
-  /* Feuille 3 : synthèses quotidiennes */
-  const h3 = ['Date','Jour','Couleur','Nb d’émotions notées','Synthèse de la journée'];
-  const r3 = [xRow(1, h3.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
-  let n3 = 2;
-  for (const k of keys) {
-    const d = D().days[k]; if (!dayUsed(d)) continue;
-    const st = cellStyle(d.color);
-    r3.push(xRow(n3, [cS('A' + n3, st, fmtFR(k)), cS('B' + n3, st, JOURS[parse(k).getDay()]), d.color ? cS('C' + n3, st, L[d.color]) : cE('C' + n3, st),
-      cN('D' + n3, st, d.entries.length), cS('E' + n3, st, sansArobase((d.synth || '').trim()))], Math.min(409, Math.max(15, estLines(d.synth || '', 85) * 12 + 4))));
-    n3++;
+  /* Feuille 3 : synthèses quotidiennes et couleurs */
+  if (ch.synthese || ch.couleur) {
+    const h3 = ['Date', 'Jour', ...(ch.couleur ? ['Couleur'] : []), ...(ch.emotions ? ['Nb d’émotions notées'] : []), ...(ch.synthese ? ['Synthèse de la journée'] : [])];
+    const r3 = [xRow(1, h3.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
+    let n3 = 2;
+    for (const k of keys) {
+      const d = D().days[k];
+      if (!d || !(couleur(d) || (ch.synthese && d.synth?.trim()) || (ch.emotions && d.entries?.length))) continue;
+      const st = cellStyle(couleur(d)), c = [cS('A' + n3, st, fmtFR(k)), cS('B' + n3, st, JOURS[parse(k).getDay()])];
+      if (ch.couleur) c.push(couleur(d) ? cS(colL(c.length) + n3, st, L[d.color]) : cE(colL(c.length) + n3, st));
+      if (ch.emotions) c.push(cN(colL(c.length) + n3, st, d.entries.length));
+      if (ch.synthese) c.push(cS(colL(c.length) + n3, st, sansArobase((d.synth || '').trim())));
+      r3.push(xRow(n3, c, Math.min(409, Math.max(15, (ch.synthese ? estLines(d.synth || '', 85) : 1) * 12 + 4))));
+      n3++;
+    }
+    feuilles.push(['Synthèses', sheet({cols:[11, 10, ...(ch.couleur ? [18] : []), ...(ch.emotions ? [12] : []), ...(ch.synthese ? [80] : [])], rows:r3})]);
   }
-  const s3 = sheet({cols:[11,10,18,12,80], rows:r3});
-  const feuilles = [['Tableau d’observation', s1], ['Détail des émotions', s2], ['Synthèses', s3]];
 
-  /* Feuille 4, pour le thérapeute : les notes personnelles que le client a choisi de lui transmettre */
-  if (avecNotes) {
-    const h4 = ['Date','Jour','Heure','Ville','Lieu','Note personnelle'];
+  /* Feuille 4 : les notes personnelles (celles de l'utilisateur, s'il les exporte ; chez le thérapeute, celles reçues) */
+  if (ch.notes) {
+    const h4 = ['Date', 'Jour', 'Heure', ...(ch.lieu ? ['Ville', 'Lieu'] : []), 'Note personnelle'];
     const r4 = [xRow(1, h4.map((h, i) => cS(colL(i) + 1, S.head, h)), 26)];
     let n4 = 2;
     for (const k of keys) for (const n of [...dayNotes(D().days[k])].sort((a, b) => a.time.localeCompare(b.time))) {
-      const vals = [fmtFR(k), JOURS[parse(k).getDay()], n.time, n.ville || '', n.lieu || '', sansArobase(n.text)];
+      const vals = [fmtFR(k), JOURS[parse(k).getDay()], n.time, ...(ch.lieu ? [n.ville || '', n.lieu || ''] : []), sansArobase(n.text)];
       r4.push(xRow(n4, vals.map((v, i) => cS(colL(i) + n4, S.cell, v)), Math.min(409, Math.max(15, estLines(n.text, 85) * 12 + 4))));
       n4++;
     }
-    if (n4 > 2) feuilles.push(['Notes personnelles', sheet({cols:[11,10,7,16,16,80], rows:r4})]);
+    if (n4 > 2) feuilles.push(['Notes personnelles', sheet({cols:[11, 10, 7, ...(ch.lieu ? [16, 16] : []), 80], rows:r4})]);
   }
-
   const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', nums = feuilles.map((f, i) => i + 1);
   return zip([
     {name:'[Content_Types].xml', data: X + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${nums.map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
@@ -232,7 +249,52 @@ function exportRange() {
   if ($('#xCustom').open) { from = $('#xFrom').value; to = $('#xTo').value; }
   if (!from || !to) { toast('Choisissez une période.'); return null; }
   if (from > to) [from, to] = [to, from];
-  return {from, to, name:`Motus_${from}_${to}.xlsx`};
+  return {from, to};
+}
+/* Le fichier d'export de la période, au format choisi (Partage et export › Export) */
+function fichierExport() {
+  const x = exportRange(); if (!x) return null;
+  const format = formatExport(), nom = `Motus_${x.from}_${x.to}.${format}`;
+  const file = format === 'txt' ? new File(['﻿' + buildTxt(x.from, x.to)], nom, {type:'text/plain;charset=utf-8'})   // le BOM : accents justes dans le Bloc-notes
+    : new File([buildXlsx(x.from, x.to)], nom, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  return {...x, file, name:nom, format};
+}
+
+/* ───────────── Export texte (.txt, v42) ─────────────
+   Lisible partout. Chaque note commence par une ligne « Dim. 08/11/2026 - 09:12 - Paris - Bureau - Émotion » (date, heure, ville,
+   précision du lieu, type ; un champ vide est omis). Une émotion et ses cartes associées forment un seul bloc (sa demande) :
+   l'émotion, puis en retrait, sous elle, sa carte Besoin et sa carte Action (↳). Les connecteurs gardent leur @. */
+const RETRAIT = '    ';
+function buildTxt(from, to) {
+  const ch = choixExport(), L = data.labels, p = data.profile, maintenant = new Date();
+  const tete = (k, o, type) => [jourCourt(k), o?.time, ...(ch.lieu && o ? [o.ville, o.lieu] : []), type].filter(Boolean).join(' - ');
+  const suite = (s, r) => s.trim().split('\n').join('\n' + r);   // un texte sur plusieurs lignes reste aligné sous son début
+  const emotion = (k, e) => {
+    const nuances = [...new Set(e.emos.map(x => `${FAMK[x.f].n}, ${INTN[x.i].toLowerCase()}`))].join(' ; ');
+    const l = [tete(k, e, 'Émotion'), `${suite(sentence(e), '')} (${nuances})`];
+    const b = ch.besoins ? besoinTexte(e) : '', a = ch.actions ? actionLignes(e) : [];
+    if (b) l.push(`${RETRAIT}↳ Besoin : ${suite(b, RETRAIT + '  ')}`);
+    if (a.length === 1 && !tachesDe(e).length) l.push(`${RETRAIT}↳ Action : ${suite(a[0], RETRAIT + '  ')}`);
+    else if (a.length) l.push(`${RETRAIT}↳ Action :`, ...a.map(x => RETRAIT.repeat(2) + suite(x, RETRAIT.repeat(2) + '    ')));
+    return l.join('\n');
+  };
+  const jours = [];
+  for (let k = from; k <= to; k = addDays(k, 1)) {
+    const d = data.days[k]; if (!d) continue;
+    const notes = [...(ch.emotions ? (d.entries || []).map(e => [e.time, emotion(k, e)]) : []),
+      ...(ch.notes ? dayNotes(d).map(n => [n.time, `${tete(k, n, 'Note personnelle')}\n${n.text.trim()}`]) : [])].sort((a, b) => a[0].localeCompare(b[0]));
+    const synth = ch.synthese && d.synth?.trim(), coul = ch.couleur && d.color;
+    if (!notes.length && !synth && !coul) continue;
+    const trait = '='.repeat(40);
+    jours.push([`${trait}\n${jourCourt(k)}${coul ? ' - ' + L[d.color] : ''}\n${trait}`, ...notes.map(x => x[1]), ...(synth ? [`${jourCourt(k)} - Synthèse de la journée\n${synth}`] : [])].join('\n\n'));
+  }
+  const qui = `${p.prenom} ${p.nom}`.trim();
+  return [`MOTUS — Export de mon journal`,
+    `${qui ? qui + ' · ' : ''}exporté le ${jourCourt(ymd(maintenant))} à ${pad(maintenant.getHours())}:${pad(maintenant.getMinutes())}`,
+    `Période : du ${jourCourt(from)} au ${jourCourt(to)}`,
+    `Contenu : ${resumeChoix(ch, true).toLowerCase()}`,
+    `Ce fichier n’est pas chiffré : toute personne qui l’ouvre peut le lire.`,
+    '', ...(jours.length ? [jours.join('\n\n\n')] : ['Aucune note sur cette période.'])].join('\n') + '\n';
 }
 function download(blob, name) {
   const a = document.createElement('a');
