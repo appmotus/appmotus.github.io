@@ -1,6 +1,6 @@
 // Service worker : met l'application en cache pour qu'elle fonctionne hors connexion.
 // Il ne voit jamais les notes (elles sont dans le localStorage chiffré, pas dans des requêtes réseau).
-const CACHE = 'journal-emotions-v45';   // même numéro que APP_VERSION dans index.html
+const CACHE = 'journal-emotions-v46';   // même numéro que APP_VERSION dans index.html
 // le code de l'app, dans l'ordre d'index.html : un fichier ajouté, renommé ou retiré dans js/ doit l'être aussi ici
 const CODE = ['repertoires', 'utilitaires', 'connecteurs', 'constantes', 'chiffrement', 'donnees', 'serveur', 'connexion', 'compte',
   'app', 'vue-quotidien', 'vue-journal', 'vue-repertoire', 'vue-parametres', 'import-texte', 'page-connecteurs', 'guide',

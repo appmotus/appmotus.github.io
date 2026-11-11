@@ -47,17 +47,19 @@ const aBesoins = e => aBesoin(e) || aAction(e);                  // au moins une
 const cartesDe = e => ['e', ...(aBesoin(e) ? ['b'] : []), ...(aAction(e) ? ['a'] : [])];
 const deMot = w => /^[aeiouyhàâéèêëîïôûü]/i.test(w) ? 'd’' : 'de ';   // « d’écoute », « d’harmonie », « de repos »
 const finPhrase = s => { s = s.charAt(0).toUpperCase() + s.slice(1); return /[.!?…]$/.test(s) ? s : s + '.'; };   // une phrase à part entière
-function besoinHtml(e) {
+/* Les textes écrits des cartes Besoin et Action montrent leurs connecteurs comme une émotion (v46) ; actif : les toucher les ouvre */
+function besoinHtml(e, actif = false) {
   const bs = besoinsDe(e), d = detailDe(e);
   return (bs.length ? 'J’ai besoin ' + joinFr(bs.map(x => `${deMot(x.w)}<b style="--fc:${coulB(x.b)}">${esc(lc(x.w))}</b>`)) + '.' : '')
-    + (d ? `${bs.length ? ' ' : ''}${esc(finPhrase(d))}` : '');
+    + (d ? `${bs.length ? ' ' : ''}${avecConnecteurs(finPhrase(d), actif)}` : '');
 }
 /* Une action à cocher, affichée (carte Action, synthèse du jour) ; actif : on peut la cocher (ses propres notes), k : le jour.
-   Sans espace entre les balises : le texte des cartes garde ses blancs (pre-wrap). */
-const caseTache = (e, x, k, actif) => `<span class="tache${x.ok ? ' ok' : ''}" role="checkbox" aria-checked="${!!x.ok}"${actif ? ` data-act="cocher" data-k="${k}" data-tache="${e.id}:${x.id}"` : ' aria-disabled="true"'}><span class="coche"></span><span class="tache-txt">${esc(x.t.trim())}</span></span>`;
+   Sans espace entre les balises : le texte des cartes garde ses blancs (pre-wrap). Ses connecteurs s'ouvrent toujours, comme
+   ceux de la phrase de l'émotion ; les toucher ne coche pas l'action. */
+const caseTache = (e, x, k, actif) => `<span class="tache${x.ok ? ' ok' : ''}" role="checkbox" aria-checked="${!!x.ok}"${actif ? ` data-act="cocher" data-k="${k}" data-tache="${e.id}:${x.id}"` : ' aria-disabled="true"'}><span class="coche"></span><span class="tache-txt">${avecConnecteurs(x.t.trim(), true)}</span></span>`;
 function actionHtml(e, k, actif = false) {
   const ts = tachesDe(e), p = pisteDe(e);
-  return (ts.length ? `<span class="taches-v">${ts.map(x => caseTache(e, x, k, actif)).join('')}</span>` : '') + (p ? `Je pourrais ${esc(p)}.` : '');
+  return (ts.length ? `<span class="taches-v">${ts.map(x => caseTache(e, x, k, actif)).join('')}</span>` : '') + (p ? `Je pourrais ${avecConnecteurs(p, true)}.` : '');
 }
 const tachesTexte = e => tachesDe(e).map(x => `${x.ok ? '☑' : '☐'} ${x.t.trim()}`);   // sans mise en forme (export Excel)
 /* Les cartes Besoin et Action, sans mise en forme (exports) : « J’ai besoin de sécurité. Savoir ce qu’on attend de moi. » */

@@ -3,19 +3,23 @@
 
 /* Saisie : dès qu'on tape « @ », une petite liste (4 lignes au plus) propose les connecteurs déjà utilisés qui commencent par
    ce qui est tapé (puis ceux qui le contiennent), les plus fréquents d'abord. Elle s'ouvre juste sous la ligne en cours, à partir
-   du @ ; au-dessus seulement si le clavier la cacherait. */
-const CHAMPS_CONN = ['eCar', 'nText', 'synth'];
+   du @ ; au-dessus seulement si le clavier la cacherait.
+   Tous les textes libres du journal en ont (v46 : aussi le besoin en détail, « Je pourrais… » et chaque action à cocher).
+   Les notes de l'administrateur, la fiche d'un client et les messages ne font pas partie du journal : pas de connecteurs. */
+const CHAMPS_CONN = ['eCar', 'eBdet', 'ePiste', 'nText', 'synth'];
+const champConn = t => CHAMPS_CONN.includes(t?.id) || ligneAction(t);
 const CONN_PROPOSES = 4;
 const ancreConn = ta => ta.previousElementSibling?.classList.contains('conn-ancre') ? ta.previousElementSibling : null;
-/* Où se trouve, dans le champ, le caractère n° i : une copie invisible du champ, même largeur et même police, le mesure */
+/* Où se trouve, dans le champ, le caractère n° i : une copie invisible du champ, même largeur et même police, le mesure.
+   Une action à cocher est un champ d'une ligne (input) : son texte ne revient pas à la ligne et défile de côté. */
 function positionDans(ta, i) {
-  const s = getComputedStyle(ta), m = document.createElement('div'), b = document.createElement('span');
+  const s = getComputedStyle(ta), m = document.createElement('div'), b = document.createElement('span'), uneLigne = ta.tagName === 'INPUT';
   for (const p of ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
     'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize']) m.style[p] = s[p];
-  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:'pre-wrap', overflowWrap:'break-word', borderStyle:'solid'});
+  Object.assign(m.style, {position:'absolute', visibility:'hidden', top:'0', left:'-9999px', whiteSpace:uneLigne ? 'pre' : 'pre-wrap', overflowWrap:'break-word', borderStyle:'solid'});
   m.textContent = ta.value.slice(0, i); b.textContent = '​'; m.appendChild(b);
   document.body.appendChild(m);
-  const r = {x:b.offsetLeft, y:b.offsetTop - ta.scrollTop, h:parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.25};
+  const r = {x:b.offsetLeft - (uneLigne ? ta.scrollLeft : 0), y:b.offsetTop - ta.scrollTop, h:parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.25};
   m.remove();
   return r;
 }
@@ -24,23 +28,28 @@ function suggererConn(ta) {
   // rien tant qu'aucune lettre ne suit le @
   const m = ta.selectionStart === ta.selectionEnd && avant.match(/(?:^|[^\p{L}\p{N}_@])@([\p{L}\p{N}][\p{L}\p{N}'’-]*)$/u);
   let a = ancreConn(ta);
-  const q = m ? cleConn(m[1]) : null, tous = m ? [...connecteurs().values()] : [];
+  // l'article élidé tapé (« @l’ent ») ne compte pas ; une forme proche déjà complète (« @procrastiné ») propose son connecteur
+  const q = m ? cleConn(sansElision(m[1])) : null, r = m ? cleC(m[1]) : null, tous = m ? [...connecteurs().values()] : [];
   const tri = (x, y) => y.n - x.n || x.label.localeCompare(y.label, 'fr');
-  const liste = [...tous.filter(c => c.k.startsWith(q)).sort(tri), ...(q ? tous.filter(c => !c.k.startsWith(q) && c.k.includes(q)).sort(tri) : [])].slice(0, CONN_PROPOSES);
+  const debut = c => cleConn(c.label).startsWith(q) || c.k.startsWith(q) || c.k === r, dedans = c => cleConn(c.label).includes(q) || c.k.includes(q);
+  const liste = [...tous.filter(debut).sort(tri), ...(q ? tous.filter(c => !debut(c) && dedans(c)).sort(tri) : [])].slice(0, CONN_PROPOSES);
   if (!liste.length) { a?.remove(); return; }
   if (!a) { a = document.createElement('div'); a.className = 'conn-ancre'; ta.before(a); }
   a.innerHTML = `<div class="conn-sugg" role="listbox" aria-label="Connecteurs">${liste.map(c => `<button type="button" role="option" data-conn-mot="${esc(c.label)}"><span class="conn">${esc(c.label)}</span><small>${c.n}</small></button>`).join('')}</div>`;
   const menu = a.firstElementChild, p = positionDans(ta, avant.length - m[1].length - 1), rt = ta.getBoundingClientRect(), ra = a.getBoundingClientRect();
   const ligne = Math.min(Math.max(p.y, 0), ta.clientHeight - p.h);   // la ligne du @, gardée dans la partie visible du champ
   menu.style.left = `${rt.left - ra.left + Math.max(0, Math.min(p.x, ta.clientWidth - menu.offsetWidth))}px`;
-  let top = rt.top - ra.top + ligne + p.h + 2;
+  // un champ d'une ligne (action) : sous son cadre, ou au-dessus ; un champ de plusieurs lignes : sous la ligne du @, ou au-dessus
+  const uneLigne = ta.tagName === 'INPUT', haut = uneLigne ? 0 : ligne, bas = uneLigne ? rt.height : ligne + p.h;
+  let top = rt.top - ra.top + bas + 2;
   const vv = window.visualViewport, basVisible = vv ? vv.offsetTop + vv.height : innerHeight;
-  if (ra.top + top + menu.offsetHeight > basVisible - 4) top = rt.top - ra.top + ligne - menu.offsetHeight - 2;
+  if (ra.top + top + menu.offsetHeight > basVisible - 4) top = rt.top - ra.top + haut - menu.offsetHeight - 2;
   menu.style.top = `${top}px`;
 }
 function placerConn(ta, label) {
-  const pos = ta.selectionStart, debut = ta.value.slice(0, pos).replace(/@[\p{L}\p{N}'’-]*$/u, ''), apres = ta.value.slice(pos).replace(/^[\p{L}\p{N}'’-]*/u, '');
-  const mot = motConn(label) + (/^\s/.test(apres) ? '' : ' ');
+  const pos = ta.selectionStart, avant = ta.value.slice(0, pos), debut = avant.replace(/@[\p{L}\p{N}'’-]*$/u, ''), apres = ta.value.slice(pos).replace(/^[\p{L}\p{N}'’-]*/u, '');
+  const art = avant.match(/@([\p{L}\p{N}'’-]*)$/u)?.[1].match(RE_ART)?.[0] || '';   // « @l’ent » → « @l’entreprise »
+  const mot = '@' + art + motConn(label).slice(1) + (/^\s/.test(apres) ? '' : ' ');
   ta.value = debut + mot + apres;
   ta.focus();
   ta.setSelectionRange(debut.length + mot.length, debut.length + mot.length);
@@ -71,13 +80,13 @@ document.addEventListener('click', e => {
   if (b) { e.preventDefault(); const ta = b.closest('.conn-ancre')?.nextElementSibling; if (ta) placerConn(ta, b.dataset.connMot); }
   // un appui dans le texte : l'iPhone peut y ouvrir sa barre (Sélectionner, Copier…) ; la liste se retire pour ne pas passer
   // dessous, et revient dès la lettre suivante
-  else if (CHAMPS_CONN.includes(e.target.id)) ancreConn(e.target)?.remove();
+  else if (champConn(e.target)) ancreConn(e.target)?.remove();
 });
 document.addEventListener('focusout', e => {
   const ta = e.target;
-  if (CHAMPS_CONN.includes(ta.id)) setTimeout(() => { if (document.activeElement !== ta) ancreConn(ta)?.remove(); }, 200);
+  if (champConn(ta)) setTimeout(() => { if (document.activeElement !== ta) ancreConn(ta)?.remove(); }, 200);
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && CHAMPS_CONN.includes(e.target.id) && ancreConn(e.target)) { e.preventDefault(); ancreConn(e.target).remove(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && champConn(e.target) && ancreConn(e.target)) { e.preventDefault(); ancreConn(e.target).remove(); } });
 
 /* Champs des cartes (… car, Plus précisément…, Je pourrais…) : le premier mot suit la phrase de l'app (« car », « Je pourrais »),
    donc pas de majuscule (autocapitalize="none") ; mais chaque nouvelle ligne (v41) et chaque nouvelle phrase, après . ! ? ou …

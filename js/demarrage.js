@@ -4,8 +4,7 @@
 document.addEventListener('input', e => {
   const t = e.target;
   if (!data) return;
-  if (CHAMPS_CONN.includes(t.id)) { if (t.dataset.surligne) allonger(t); suggererConn(t); }
-  if ((t.id === 'ePiste' || t.id === 'eBdet') && t.dataset.surligne) allonger(t);
+  if (champConn(t)) { if (t.dataset.surligne) allonger(t); suggererConn(t); }
   if (t.id === 'synth') {
     ensureDay(cur).synth = t.value; $('#saved').textContent = '…';
     clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow().then(() => { const s = $('#saved'); if (s) s.textContent = 'Enregistré ✓'; }), 500);
@@ -93,10 +92,13 @@ document.addEventListener('drop', e => {
   const f = [...e.dataTransfer.files]; if (f.length) importerFichiers(f, null);
 });
 
-/* Lien d'invitation ouvert directement : on le garde pour après le déverrouillage et on l'efface de l'adresse */
+/* Lien d'invitation ouvert directement : on le garde pour après le déverrouillage et on l'efface de l'adresse.
+   Lien de création d'un compte thérapeute (#t=…, v46) : gardé pour l'inscription (connexion.js). */
 {
-  const m = location.hash.match(/(?:inv|i)=([A-Za-z0-9_-]+)/);
-  if (m) { pendingInv = m[1]; history.replaceState(null, '', location.pathname + location.search); }
+  const t = location.hash.match(/^#t=([0-9a-f]{32})$/i), m = !t && location.hash.match(/(?:inv|i)=([A-Za-z0-9_-]+)/);
+  if (t) { lienTh = t[1].toLowerCase(); lienThOk = null; lienThMsg = ''; try { localStorage.setItem(LIEN_TH, lienTh); } catch {} }
+  if (m) pendingInv = m[1];
+  if (t || m) history.replaceState(null, '', location.pathname + location.search);
 }
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

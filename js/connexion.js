@@ -23,7 +23,35 @@ function navIntegre() {
   const u = navigator.userAgent;
   return /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Snapchat|Line\/|MicroMessenger|LinkedInApp|GSA\/|; wv\)/.test(u) || (surIOS() && !/Safari\//.test(u));
 }
-const lienInvitation = () => `${location.origin}${location.pathname}${pendingInv ? `#${CODE_COURT.test(pendingInv) ? 'i' : 'inv'}=${pendingInv}` : ''}`;
+const lienInvitation = () => `${location.origin}${location.pathname}${lienTh ? `#t=${lienTh}` : pendingInv ? `#${CODE_COURT.test(pendingInv) ? 'i' : 'inv'}=${pendingInv}` : ''}`;
+
+/* ───────────── Compte thérapeute (v46) ─────────────
+   L'inscription ordinaire crée un compte utilisateur. Un compte thérapeute ne se crée qu'avec un lien personnel que
+   l'administrateur crée dans sa page Admin (#t= suivi de 32 caractères) : à usage unique, valable 30 jours, vérifié par le
+   serveur (serveur/lien-therapeute.sql), qui refuse toute autre inscription de thérapeute.
+   lienTh : le code reçu ; lienThOk : sa date de fin, une fois vérifié ; lienThMsg : pourquoi il n'a pas pu servir.
+   Le navigateur d'un téléphone garde le code pour l'app installée (Android) ; sur iPhone, ils ne partagent rien : le lien se
+   copie, puis se colle dans le champ Identifiant (lienDansIdentifiant). Un utilisateur ne voit jamais de mention des
+   thérapeutes en se connectant ou en créant son compte (sa demande du 2026-11-11). */
+const LIEN_TH = 'journal-emotions.lien-therapeute';
+let lienTh = null, lienThOk = null, lienThMsg = '';
+try { lienTh = localStorage.getItem(LIEN_TH); } catch {}
+const LIEN_TH_MSG = {
+  invalide: 'Ce lien de création de compte thérapeute n’est plus valable : déjà utilisé, retiré ou expiré. Demandez-en un nouveau à l’administrateur de Motus.',
+  reseau: 'Pas de connexion internet : impossible de vérifier votre lien thérapeute.',
+  serveur: 'Votre lien thérapeute n’a pas pu être vérifié pour le moment. Réessayez plus tard.',
+};
+function oublierLienTh() { lienTh = lienThOk = null; try { localStorage.removeItem(LIEN_TH); } catch {} }
+async function verifierLienTh(code) {
+  lienTh = code.toLowerCase(); lienThOk = null; lienThMsg = '';
+  try { localStorage.setItem(LIEN_TH, lienTh); } catch {}
+  try {
+    const r = await API.rpcAnon('lien_therapeute_valable', {p_code:lienTh});
+    if (r?.expire_le) { lienThOk = r.expire_le; return true; }
+    oublierLienTh(); lienThMsg = LIEN_TH_MSG.invalide;
+  } catch (x) { lienThMsg = LIEN_TH_MSG[x.code === 'reseau' ? 'reseau' : 'serveur']; }
+  return false;
+}
 function etapesInstall() {
   const u = navigator.userAgent, autre = /CriOS|FxiOS|EdgiOS|OPiOS|OPT\//.test(u);
   const e = surIOS() ? [
@@ -64,7 +92,11 @@ function showInstall() {
     <img class="logo" src="icon-192.png" alt="">
     <h1>Motus s’utilise depuis votre écran d’accueil</h1>
     <p class="muted">Cela protège vos notes et garde tout au même endroit.</p>
-    ${pendingInv ? `<section class="card">
+    ${lienTh ? `<section class="card">
+      <h2>Votre lien pour créer un compte thérapeute</h2>
+      <p class="small muted" style="margin:6px 0 0">Copiez d’abord ce lien. Puis ouvrez Motus depuis son icône (installez-le si besoin) et collez-le dans le champ « Identifiant » : le formulaire de votre compte thérapeute s’ouvrira.</p>
+      <button class="btn primary block" data-act="copierLien">Copier le lien</button>
+    </section>` : pendingInv ? `<section class="card">
       <h2>Vous avez reçu une invitation</h2>
       <p class="small muted" style="margin:6px 0 0">Motus est déjà installé ? Copiez l’invitation, ouvrez Motus depuis votre écran d’accueil, puis collez-la dans Paramètres › Mon thérapeute. Sinon, installez d’abord Motus.</p>
       <button class="btn primary block" data-act="copierLien">Copier l’invitation</button>
@@ -109,6 +141,13 @@ function showLock(mode = 'login') {
   }
   const demo = DEMO ? '<div class="warn">Mode démonstration : en attendant le serveur, les comptes sont simulés dans ce navigateur.</div>' : '';
   const inv = pendingInv ? '<div class="warn">Vous avez reçu une invitation de votre thérapeute : connectez-vous ou créez votre compte, elle vous sera proposée juste après.</div>' : '';
+  // un lien thérapeute reçu se vérifie avant d'ouvrir son formulaire (une seule fois : un échec affiche le formulaire utilisateur)
+  if (mode === 'signup' && lienTh && !lienThOk && !lienThMsg) {
+    L.innerHTML = `<div class="lockcard"><img class="logo" src="icon-192.png" alt=""><h1>Créer un compte thérapeute</h1><p class="muted">Vérification de votre lien…</p></div>`;
+    verifierLienTh(lienTh).then(() => showLock('signup'));
+    return;
+  }
+  const th = mode === 'signup' && !!lienThOk;   // formulaire thérapeute : seulement avec un lien vérifié
   if (mode === 'forgot' || mode === 'code') {
     L.innerHTML = mode === 'forgot' ? `
     <div class="lockcard">
@@ -160,7 +199,7 @@ function showLock(mode = 'login') {
       <h1>Motus</h1>
       <p class="tagline">Éclairer ce qui se passe en soi</p>
       <p class="muted">Connectez-vous pour ouvrir votre journal.</p>
-      ${inv}${safariAvis()}
+      ${lienTh ? '<div class="warn">Vous avez reçu un lien pour créer votre compte thérapeute. <button class="link" data-act="goSignup">Créer mon compte thérapeute</button></div>' : inv}${safariAvis()}
       <form id="loginForm">
         <label class="label" for="lId">Identifiant</label>
         <input type="text" id="lId" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(localStorage.getItem(LAST_ID) || '')}">
@@ -175,19 +214,19 @@ function showLock(mode = 'login') {
     </div>` : `
     <div class="lockcard">
       <img class="logo" src="icon-192.png" alt="">
-      <h1>Créer un compte</h1>
-      <ul>
+      <h1>${th ? 'Créer un compte thérapeute' : 'Créer un compte'}</h1>
+      ${th ? `<ul>
+        <li>Les données que vous recevrez de vos clients restent <b>uniquement sur votre appareil</b>, chiffrées avec votre mot de passe.</li>
+        <li>Le serveur ne connaît que votre identifiant, votre nom, votre type de compte et les coordonnées professionnelles que vous indiquez.</li>
+        <li>Vos clients vous rejoignent avec votre lien d’invitation, et vous acceptez chaque demande.</li>
+      </ul>
+      <p class="small muted">Lien personnel, valable jusqu’au ${fmtFR(ymd(new Date(lienThOk)))}, pour un seul compte.</p>` : `<ul>
         <li>Vos notes restent <b>uniquement sur votre téléphone</b>, chiffrées avec votre mot de passe.</li>
         <li>Le serveur ne connaît que votre identifiant, votre nom et votre type de compte.</li>
-        <li>Vous choisissez ce que vous partagez : envoi chiffré à votre thérapeute, export Excel.</li>
+        <li>Vous choisissez ce que vous partagez, et avec qui : envoi chiffré, export Excel.</li>
       </ul>
-      ${inv}${safariAvis()}
+      ${lienThMsg ? `<div class="warn">${esc(lienThMsg)}${lienTh ? ' <button class="link" data-act="reessayerLienTh">Réessayer</button>' : ''}</div>` : inv}`}${safariAvis()}
       <form id="signupForm">
-        <p class="label">Je suis…</p>
-        <div class="roles">
-          <label class="role"><input type="radio" name="role" value="client" checked> Utilisateur</label>
-          <label class="role"><input type="radio" name="role" value="therapeute" ${pendingInv ? 'disabled' : ''}> Thérapeute</label>
-        </div>
         <div class="row">
           <div><label class="label" for="sPrenom">Prénom</label><input type="text" id="sPrenom" autocomplete="given-name"></div>
           <div><label class="label" for="sNom">Nom</label><input type="text" id="sNom" autocomplete="family-name"></div>
@@ -199,23 +238,37 @@ function showLock(mode = 'login') {
         <input type="password" id="sPw" autocomplete="new-password">
         <label class="label" for="sPw2">Confirmez le mot de passe</label>
         <input type="password" id="sPw2" autocomplete="new-password">
-        <label class="label" for="sMail" id="sMailNom">${MAIL_NOM.client}</label>
+        <label class="label" for="sMail" id="sMailNom">${MAIL_NOM[th ? 'therapeute' : 'client']}</label>
         <input type="email" id="sMail" autocomplete="email" autocapitalize="none">
-        <div class="small muted" id="sMailAide" style="margin-top:4px">${MAIL_AIDE.client}</div>
+        <div class="small muted" id="sMailAide" style="margin-top:4px">${MAIL_AIDE[th ? 'therapeute' : 'client']}</div>
         <label class="label" for="sMail2">Confirmez le mail</label>
         <input type="email" id="sMail2" autocomplete="off" autocapitalize="none">
         <label class="rgpd"><input type="checkbox" id="sRgpd"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener" data-act="voirPolitique">politique de confidentialité</a> et j’accepte le traitement de mes données, y compris celles qui peuvent concerner ma santé.</span></label>
         <div class="err" id="lockErr"></div>
-        <button class="btn primary block" id="signupBtn">Créer mon compte</button>
+        <button class="btn primary block" id="signupBtn">Créer mon compte${th ? ' thérapeute' : ''}</button>
       </form>
       <p style="margin-top:20px">Déjà un compte ? <button class="link" data-act="goLogin">Se connecter</button></p>
       ${demo}
     </div>`;
   $('#loginForm')?.addEventListener('submit', onLogin);
   $('#signupForm')?.addEventListener('submit', onSignup);
-  if ($('#sId')) $('#sId').oninput = e => { const v = e.target.value.replace(/\s/g, ''); if (v !== e.target.value) e.target.value = v; };
-  document.querySelectorAll('input[name=role]').forEach(r => r.onchange = () => { $('#sMailAide').textContent = MAIL_AIDE[r.value]; $('#sMailNom').textContent = MAIL_NOM[r.value]; });
+  if ($('#sId')) $('#sId').addEventListener('input', e => { const v = e.target.value.replace(/\s/g, ''); if (v !== e.target.value) e.target.value = v; });
+  // un lien thérapeute collé dans l'identifiant (connexion ou inscription) ouvre le formulaire thérapeute
+  for (const c of [$('#lId'), $('#sId')]) c?.addEventListener('input', lienDansIdentifiant);
   (mode === 'login' ? ($('#lId').value ? $('#lPw') : $('#lId')) : $('#sPrenom')).focus();
+}
+/* Sur iPhone, un lien n'ouvre pas l'app installée : le thérapeute colle son lien dans le champ Identifiant (la page
+   d'installation le lui dit). Rien ne l'indique sur l'écran de connexion : un utilisateur n'y voit aucune mention des
+   thérapeutes. Un identifiant ne peut pas contenir « #t= » suivi de 32 caractères : aucune confusion possible. */
+const RE_LIEN_TH_COLLE = /#t=([0-9a-f]{32})\s*$/i;
+async function lienDansIdentifiant(e) {
+  const m = e.target.value.match(RE_LIEN_TH_COLLE);
+  if (!m) return;
+  e.target.value = '';
+  const err = $('#lockErr');
+  if (err) err.textContent = 'Vérification du lien…';
+  if (await verifierLienTh(m[1])) return showLock('signup');
+  if ($('#lockErr')) $('#lockErr').textContent = lienThMsg;
 }
 
 const LOGIN_ERR = {
@@ -250,7 +303,8 @@ async function onLogin(e) {
 async function onSignup(e) {
   e.preventDefault();
   const v = s => $(s).value.trim(), err = $('#lockErr'), btn = $('#signupBtn');
-  const f = {role:document.querySelector('input[name=role]:checked').value, prenom:v('#sPrenom'), nom:v('#sNom'), identifiant:v('#sId').toLowerCase(), password:$('#sPw').value};
+  const f = {role:lienThOk ? 'therapeute' : 'client', prenom:v('#sPrenom'), nom:v('#sNom'), identifiant:v('#sId').toLowerCase(), password:$('#sPw').value};
+  if (lienThOk) f.lien = lienTh;
   if (!f.prenom || !f.nom) return err.textContent = 'Indiquez votre prénom et votre nom.';
   if (!ID_RE.test(f.identifiant)) return err.textContent = 'Identifiant : 3 à 30 caractères, lettres minuscules, chiffres, point ou tiret.';
   if (f.password.length < 8) return err.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
@@ -263,7 +317,9 @@ async function onSignup(e) {
   btn.disabled = true; btn.textContent = 'Création…'; err.textContent = '';
   try { await API.signUp({...f, nom:f.role === 'therapeute' ? f.nom : initiale(f.nom)}); profil = await API.rpc('ouvrir_session'); }
   catch (x) {
-    btn.disabled = false; btn.textContent = 'Créer mon compte';
+    // thérapeute refusé par le serveur : le lien a servi entre-temps, a été retiré ou a expiré ; sans lien, c'est le formulaire utilisateur
+    if (f.lien && x.code === 'serveur' && !await verifierLienTh(f.lien)) return showLock('signup');
+    btn.disabled = false; btn.textContent = f.lien ? 'Créer mon compte thérapeute' : 'Créer mon compte';
     return err.textContent = {
       pris: 'Cet identifiant est déjà utilisé : choisissez-en un autre.',
       faible: 'Mot de passe trop simple : allongez-le ou ajoutez des chiffres.',
@@ -271,6 +327,7 @@ async function onSignup(e) {
       confirmation: 'Le serveur demande une confirmation par e-mail : désactivez-la dans Supabase (Authentication › Email).',
     }[x.code] || 'Création impossible pour le moment. Réessayez plus tard.';
   }
+  if (f.lien) oublierLienTh();   // le lien a servi : le serveur l'a effacé
   differeMail = true;   // le mail vient d'être saisi : rien à redemander
   try {
     await openJournal(f.identifiant, f.password, {role:f.role, profile:{prenom:f.prenom, nom:f.nom}, consentement:{...f.rgpd, envoye:true}});

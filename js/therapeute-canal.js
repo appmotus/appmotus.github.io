@@ -466,19 +466,13 @@ async function envoyerParMail({file, from, to, chiffre, format, fait}) {
 const aideEnvoi = a => navigator.canShare
   ? `Choisissez votre messagerie : le fichier est joint et le texte prérempli.${a ? ' L’adresse de votre thérapeute est copiée : collez-la dans « À ».' : ''}`
   : 'Le fichier se télécharge et votre messagerie s’ouvre, préremplie : joignez-y le fichier.';
-/* Rappel si rien n'a été envoyé depuis 7 jours (ou depuis l'ajout du thérapeute) et qu'il y a des notes non envoyées */
+/* Bandeau de Quotidien tant que le thérapeute n'a pas accepté la demande. (v46 : le rappel « rien envoyé depuis 7 jours » est
+   supprimé, à sa demande du 2026-11-11 ; ne pas le remettre sans son accord.) */
 const attenteAcceptation = th => !!(th?.canal && !th.accepte);
 function sendReminder() {
   const th = data.therapist;
-  if (!th) return '';
-  if (attenteAcceptation(th)) return `<div class="banner attente">${ico('sablier', 'bi')}<span><b>Demande envoyée à ${esc(nomDe(th) || 'votre thérapeute')}</b><br>En attente de son acceptation. Vous pourrez ensuite lui envoyer vos données.</span>
+  if (!attenteAcceptation(th)) return '';
+  return `<div class="banner attente">${ico('sablier', 'bi')}<span><b>Demande envoyée à ${esc(nomDe(th) || 'votre thérapeute')}</b><br>En attente de son acceptation. Vous pourrez ensuite lui envoyer vos données.</span>
     <button class="btn" data-act="voirThera">Voir</button></div>`;
-  const l = lastSent(), ref = l ? l[1].at : data.therapist.addedAt;
-  const since = Math.floor((Date.now() - new Date(ref)) / 864e5);
-  const coveredTo = Object.values(data.sent).reduce((m, s) => s.to > m ? s.to : m, '');
-  if (since < 7 || !Object.keys(data.days).some(k => k > coveredTo && k <= today() && dayUsed(data.days[k]))) return '';
-  const who = esc(data.therapist.prenom || 'votre thérapeute');
-  return `<div class="banner"><span>${l ? `Votre dernier envoi à ${who} date d’il y a ${since} jours.` : `Vous n’avez encore rien envoyé à ${who}.`}</span>
-    <button class="btn primary" data-act="goSend">Envoyer</button></div>`;
 }
 

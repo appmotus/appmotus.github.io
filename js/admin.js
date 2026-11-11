@@ -46,6 +46,7 @@ function vAdmin() {
   if (!session) return head + '<section class="card"><p class="empty">Hors connexion : l’administration nécessite internet.</p></section>';
   if (!adm.users) { loadAdmin(); return head + '<section class="card"><p class="empty">Chargement…</p></section>'; }
   if (!adm.limites && !adm.limEnCours) loadLimites();
+  if (adm.liensTh === undefined && !adm.liensEnCours) loadLiensTh();
   data.adminVu = new Date().toISOString(); save();
   const s = adm.stats, a = s?.activite;
   const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
@@ -82,7 +83,7 @@ function vAdmin() {
     <div class="heures" style="margin-top:14px"><b>≈ ${JETONS_CONSOMMES.total.toLocaleString('fr-FR')} M</b><span class="small muted">de jetons consommés par Claude</span></div>
     <p class="small muted" style="margin:6px 0 0">Dont ${mio(JETONS_CONSOMMES.cache)} relus depuis le cache, ${mio(JETONS_CONSOMMES.envoyes)} envoyés à Claude et ${mio(JETONS_CONSOMMES.ecrits)} écrits par Claude.</p>
     <p class="small muted" style="margin:10px 0 0">Jusqu’à la version ${APP_VERSION}, mis à jour à chaque version.</p>
-  </section>` + limitsCard() + `
+  </section>` + limitsCard() + carteLiensTh() + `
   <section class="card">
     <div class="card-h"><h2>Liste des comptes</h2><span class="count">${list.length}</span></div>
     <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Utilisateurs'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
@@ -167,6 +168,40 @@ function limitsCard() {
     ${jauge('Données de Motus', local, LIMITES.journal, fmtOctets, 'notes, réglages et compte, chiffrés : c’est sur elles que porte la limite du navigateur. Les réglages du téléphone affichent davantage, car ils comptent aussi les fichiers qui les contiennent.')}
   </section>`;
 }
+/* Comptes thérapeute (v46) : un thérapeute crée son compte avec un lien que l'administrateur lui envoie, à sa demande. Chaque lien
+   sert une seule fois et reste valable 30 jours (serveur/lien-therapeute.sql). Le serveur n'en garde que l'empreinte : le lien ne
+   s'affiche qu'au moment de sa création (adm.lienNeuf). adm.liensTh : ceux qui n'ont pas encore servi, null s'ils sont indisponibles. */
+const lienThUrl = code => `${location.origin}${location.pathname}#t=${code}`;
+async function loadLiensTh() {
+  adm.liensEnCours = true;
+  const moi = adm;
+  let l = null;
+  try { l = await API.rpc('admin_liens_therapeute'); } catch {}
+  if (adm !== moi) return;
+  adm.liensTh = Array.isArray(l) ? l : null;
+  adm.liensEnCours = false;
+  const c = $('#carteLiensTh');
+  if (c) c.outerHTML = carteLiensTh();
+}
+function carteLiensTh() {
+  const L = adm.liensTh, n = adm.lienNeuf, jour = iso => fmtFR(ymd(new Date(iso)));
+  const corps = L === undefined ? '<p class="empty">Chargement…</p>'
+    : L === null ? '<p class="small muted" style="margin:10px 0 0">Liens indisponibles : vérifiez la connexion, ou exécutez <b>serveur/lien-therapeute.sql</b> dans Supabase (SQL Editor).</p>'
+    : `${n ? `<div class="lien-neuf">
+        <label class="label" for="lienThNeuf">Nouveau lien, valable jusqu’au ${jour(n.expire_le)}</label>
+        <textarea id="lienThNeuf" rows="2" readonly aria-label="Lien de création d’un compte thérapeute">${esc(lienThUrl(n.code))}</textarea>
+        <p class="small muted" style="margin:6px 0 0">Envoyez-le maintenant : pour la sécurité des comptes, il ne pourra plus être affiché.</p>
+        <div class="row" style="margin-top:8px"><button class="btn primary" data-act="partagerLienTh">Partager</button><button class="btn" data-act="copierLienTh">Copier</button></div>
+      </div>` : ''}
+      <button class="btn block" data-act="creerLienTh">Créer un lien</button>
+      ${L.length ? `<p class="label">En attente d’utilisation</p>
+      ${L.map(l => `<div class="stat"><span>Créé le ${jour(l.cree_le)}<br><span class="small muted">valable jusqu’au ${jour(l.expire_le)}</span></span><button class="btn" data-act="retirerLienTh" data-id="${esc(String(l.id))}">Retirer</button></div>`).join('')}` : ''}`;
+  return `<section class="card" id="carteLiensTh">
+    <div class="card-h"><h2>Comptes thérapeute</h2>${Array.isArray(L) && L.length ? `<span class="count">${L.length}</span>` : ''}</div>
+    <p class="small muted" style="margin:0">Un thérapeute crée son compte avec un lien que vous lui envoyez, à sa demande. Chaque lien sert une seule fois et reste valable 30 jours. L’inscription ordinaire crée un compte utilisateur.</p>
+    ${corps}
+  </section>`;
+}
 function userRow(u) {
   const open = adm.ouvert === u.id, moi = u.id === profil?.id, th = u.role === 'therapeute';
   return `<div class="urow" data-name="${esc(`${who(u)} ${codeU(u.numero)} ${u.identifiant}`.toLowerCase())}">
@@ -200,7 +235,7 @@ async function admAction(id, question, run) {
   if (!u || !await confirmerCode(question(u))) return;
   try { await run(u); toast('Modification enregistrée'); }
   catch (x) { toast(x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Action impossible'); }
-  adm = {...admInit(), filtre:adm.filtre, ouvert:adm.ouvert};
+  adm = {...admInit(), filtre:adm.filtre, ouvert:adm.ouvert, lienNeuf:adm.lienNeuf};   // un lien qui vient d'être créé reste affiché
   render(true);
 }
 

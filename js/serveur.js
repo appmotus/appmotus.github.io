@@ -37,7 +37,8 @@ function supabaseApi() {
   }
   return {
     async signUp(f) {
-      const j = await call('/auth/v1/signup', {email:email(f.identifiant), password:f.password, data:{identifiant:f.identifiant, role:f.role, nom:f.nom, prenom:f.prenom, rgpd:f.rgpd}});
+      // lien : le code du lien de l'administrateur, exigé par le serveur pour un compte thérapeute (serveur/lien-therapeute.sql)
+      const j = await call('/auth/v1/signup', {email:email(f.identifiant), password:f.password, data:{identifiant:f.identifiant, role:f.role, nom:f.nom, prenom:f.prenom, rgpd:f.rgpd, ...(f.lien ? {lien:f.lien} : {})}});
       if (!j?.access_token) throw apiErr('confirmation');
       session = j;
     },
@@ -135,10 +136,25 @@ function demoApi() {
       admin(x); pasMoi(p_id); delete x.comptes[p_id];
       for (const k of Object.keys(x.usage)) if (x.usage[k].id === p_id) delete x.usage[k];
     },
+    // liens de création d'un compte thérapeute (en démonstration, le code est gardé tel quel)
+    admin_creer_lien_therapeute(x) {
+      admin(x); liensValables(x);
+      const l = {id:Date.now(), code:rid(16), cree_le:new Date().toISOString(), expire_le:new Date(Date.now() + 30 * 864e5).toISOString()};
+      x.liensTh.push(l); return l;
+    },
+    admin_liens_therapeute(x) { admin(x); return liensValables(x).map(({id, cree_le, expire_le}) => ({id, cree_le, expire_le})).reverse(); },
+    admin_annuler_lien_therapeute(x, {p_id}) { admin(x); x.liensTh = liensValables(x).filter(l => l.id !== p_id); },
+    lien_therapeute_valable(x, {p_code}) { const l = liensValables(x).find(l => l.code === String(p_code).toLowerCase()); return l ? {expire_le:l.expire_le} : null; },
   };
+  const liensValables = x => x.liensTh = (x.liensTh || []).filter(l => new Date(l.expire_le) > Date.now());
   return {
     async signUp(f) {
       const x = db(); if (x.comptes[f.identifiant]) throw apiErr('pris');
+      if (f.role === 'therapeute') {   // comme le serveur : un lien valable, qui ne resservira pas
+        const n = liensValables(x).length;
+        x.liensTh = x.liensTh.filter(l => l.code !== f.lien);
+        if (x.liensTh.length === n) throw apiErr('serveur', 'lien_therapeute');
+      }
       x.comptes[f.identifiant] = {mdp:await hash(f.password), profil:{id:f.identifiant, identifiant:f.identifiant, numero:numero(x, f.role), role:f.role,
         est_admin:!Object.keys(x.comptes).length, actif:true, nom:f.nom, prenom:f.prenom, therapie:'', telephone:'', email_contact:'', adresse:'',
         cree_le:new Date().toISOString(), derniere_connexion:null, nb_connexions:0}};

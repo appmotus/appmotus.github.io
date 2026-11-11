@@ -99,6 +99,14 @@ Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pou
    - Quotidien : le « mini-calendrier », c'est la frise de la semaine (pas le mois). Elle redescend sous la date avec la même
      règle que la barre Calendrier/Liste du Journal : au rythme du doigt quand on remonte la page, cachée tant que la vraie frise est visible.
 5. **Connecteurs** (`@mot` dans le texte)
+   - Dans tous les textes libres du journal : « … car », « Plus précisément… », chaque action à cocher, « Plus librement… »,
+     note personnelle, synthèse (`CHAMPS_CONN`, `champConn`). Ils y sont proposés, comptés, filtrés, renommés et mis en forme
+     (`texteEmotion` réunit les textes d'une émotion). Pas dans les notes de l'administrateur, la fiche d'un client ni les messages,
+     qui ne font pas partie du journal.
+   - Les formes proches sont un seul connecteur (`racineConn`, `cleC`) : article élidé (@l’entreprise = @entreprise), pluriel
+     (@entreprises), infinitif et participe (@procrastiné = @procrastiner), et un e final sans accent si le verbe est écrit
+     ailleurs (« je @procrastine »). Un e final seul ne suffit pas : @Michel et @Michèle restent deux connecteurs. Le nom retenu :
+     sans article, l'infinitif d'abord, puis le singulier, puis la forme la plus fréquente ; dans le texte, chaque forme reste écrite telle quelle.
    - Propositions dès la première lettre après le @ : 4 au plus, en petite liste sous la ligne en cours (au-dessus seulement si
      le clavier la cacherait), retirées quand on touche le texte.
    - Une fois la note enregistrée : italique, couleur normale, souligné fin couleur accent ; jamais de gras ni de couleur de texte.
@@ -124,6 +132,14 @@ Un nouveau champ ou une nouvelle fenêtre n'a donc rien à faire de spécial pou
 ## Comptes et administration
 
 L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec un lien pour créer un compte.
+
+- **Compte utilisateur ou thérapeute** (v46) : le formulaire d'inscription crée toujours un compte utilisateur. Un thérapeute
+  demande un lien à l'administrateur, qui le crée dans sa page Admin (carte « Comptes thérapeute ») : `#t=` suivi d'un code de
+  32 caractères, à usage unique, valable 30 jours, retirable tant qu'il n'a pas servi. Ouvert, ou collé dans le champ
+  Identifiant (iPhone : le lien n'ouvre pas l'app installée), il affiche le formulaire thérapeute. Aucune mention des
+  thérapeutes n'apparaît sur les écrans de connexion et d'inscription d'un utilisateur. Le serveur ne garde que l'empreinte du code et ses dates,
+  efface le lien dès qu'il a servi, et refuse toute inscription de thérapeute sans lien valable (`serveur/lien-therapeute.sql`).
+  L'administrateur peut toujours changer le type d'un compte existant.
 
 - **Préférences à la création du compte** : une fenêtre propose le temps de verrouillage et, pour un client, la ville automatique (GPS), sur « Oui » par défaut. Elle s'affiche avant l'envoi du code de confirmation.
 - **Mail de récupération (obligatoire)** : demandé à l'inscription, et à l'ouverture de l'app pour les comptes plus anciens tant qu'il n'est pas confirmé. Sans internet, si l'envoi échoue ou si rien n'arrive au bout de 2 minutes, le journal reste accessible et un bandeau le redemande. Confirmé par un code à 6 chiffres reçu par e-mail (renvoi possible après 1 minute), il peut être changé dans les Paramètres mais pas retiré. Il permet de recevoir un code à 6 chiffres si le mot de passe est oublié (5 demandes par 24 heures, 5 essais par code, validité 15 minutes). Le serveur n'en garde qu'une empreinte illisible : elle n'apparaît ni dans la page admin ni dans Supabase, et l'utilisateur la retape à l'identique en cas d'oubli. Le service d'envoi (Brevo) reçoit l'adresse à chaque envoi et l'affiche dans l'historique du compte Brevo, conservé 1 mois et visible par la personne qui gère ce compte. Sans adresse enregistrée, un mot de passe perdu ne peut pas être réinitialisé.
@@ -153,6 +169,8 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 10. Trace après suppression d'un compte : exécuter `serveur/comptes-supprimes.sql`. Avant chaque suppression, le code utilisateur, l'identifiant, le prénom, le nom tel que le serveur le connaît, les dates de création et de suppression et l'accord à la politique sont copiés dans `comptes_supprimes`, lisible seulement depuis le tableau de bord Supabase, puis effacés au bout de 5 ans.
 11. Compteurs « Aujourd'hui » de la page admin : exécuter `serveur/compteur-du-jour.sql`.
 12. Journal de connexion gardé 6 mois (recommandation de la CNIL) : dans *Authentication › Configuration › Audit Logs*, activer « Write audit logs to the database », puis exécuter `serveur/journal-connexions.sql`. Supabase note alors chaque connexion, reconnexion et déconnexion dans `auth.audit_log_entries` ; une tâche planifiée (`pg_cron`) efface chaque nuit les lignes de plus de 6 mois. La page admin ne lit pas ce journal.
+13. Comptes thérapeute sur lien de l'administrateur : exécuter `serveur/lien-therapeute.sql` (après `schema.sql`). Il remplace la
+    fonction qui crée le profil à l'inscription : un compte thérapeute exige désormais un lien valable.
 
 ## Lien entre un client et son thérapeute
 
@@ -165,10 +183,10 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 
 ## Profils client et thérapeute
 
-Au premier lancement, on choisit « Utilisateur » ou « Thérapeute ». Pour le thérapeute, les utilisateurs qu'il suit sont ses « clients » ; dans le code, le rôle interne reste `client`. Il n'y a toujours **aucun serveur** : tout passe par des fichiers que l'utilisateur envoie lui-même.
+L'inscription crée un compte « Utilisateur » ; un compte « Thérapeute » se crée avec un lien de l'administrateur (voir « Comptes et administration »). Pour le thérapeute, les utilisateurs qu'il suit sont ses « clients » ; dans le code, le rôle interne reste `client`. Il n'y a toujours **aucun serveur** : tout passe par des fichiers que l'utilisateur envoie lui-même.
 
 1. **Invitation** : le thérapeute partage son lien d'invitation (Paramètres). Ce lien contient un code court (`#i=…`) : le client s'en sert pour lire sur le serveur la clé publique, le nom et le type de thérapie du thérapeute. Le client ouvre le lien, ou le colle dans Paramètres › Mon thérapeute. Les deux voient le même **code de sécurité** (ex. `F455-D132`), à comparer de vive voix pour s'assurer que le lien n'a pas été modifié.
-2. **Envoi** : le client choisit une période (par défaut les 7 derniers jours) puis appuie sur « Envoyer à … ». L'app crée un fichier chiffré (ECDH P-256 + AES-GCM 256) que seul ce thérapeute peut ouvrir, puis l'envoie par e-mail ou messagerie depuis le menu de partage. Rien n'est envoyé automatiquement ; un rappel s'affiche si rien n'a été envoyé depuis 7 jours.
+2. **Envoi** : le client choisit une période (par défaut les 7 derniers jours) puis appuie sur « Envoyer à … ». L'app crée un fichier chiffré (ECDH P-256 + AES-GCM 256) que seul ce thérapeute peut ouvrir, puis l'envoie par e-mail ou messagerie depuis le menu de partage. Rien n'est envoyé automatiquement, et aucun rappel d'envoi ne s'affiche (retiré en v46) ; seul le rappel d'export, que l'utilisateur règle lui-même, existe.
 3. **Fiches clients** : le thérapeute crée une fiche par client (onglet Clients : nom, coordonnées, notes personnelles), avec recherche dès que la liste s'allonge.
 4. **Import** : depuis la fiche du client, « Importer un fichier reçu », autant de fois que nécessaire. Au premier import, la fiche est liée à l'app du client ; si un fichier est ensuite importé dans la mauvaise fiche, l'app le signale. Le thérapeute voit l'historique des envois, le calendrier du client (avec le filtre par émotion), ses journées en lecture seule, et peut exporter en Excel. Les données reçues restent chiffrées sur son appareil.
 

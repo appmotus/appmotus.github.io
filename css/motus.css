@@ -326,6 +326,8 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appeara
 .tache-l{display:flex;align-items:center;gap:10px}
 .tache-l .coche{width:24px;height:24px;cursor:pointer}
 .tache-l input{flex:1 1 auto;min-width:0}
+.lien-neuf{margin:12px 0}                                                         /* admin : lien thérapeute qui vient d'être créé */
+.tache-l .conn-ancre{position:absolute}   /* hors de la ligne : ni décalage ni espace en plus entre la coche et l'action */
 /* Choix ouvert par l'appui long : les boutons les uns sous les autres (sans flex:1, que Safari écrase à zéro en colonne) */
 .dlg-f.choix-f{flex-direction:column}
 .dlg-f.choix-f .btn{flex:none}

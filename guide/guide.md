@@ -60,7 +60,7 @@ Seule l'émotion est obligatoire. Touchez **Enregistrer**.
 
 Un connecteur relie des notes entre elles : une personne, un lieu, un sujet.
 
-- Dans une émotion, une note ou une synthèse, tapez @ puis un mot : Motus propose ceux que vous avez déjà utilisés.
+- Dans n'importe quel texte de votre journal (émotion, besoin, actions, note, synthèse), tapez @ puis un mot : Motus propose ceux que vous avez déjà utilisés.
 - Le tiret remplace l'espace : @un-ami s'affiche « un ami ». Les villes et les lieux saisis sont aussi des connecteurs.
 - Touchez un connecteur dans une note pour voir toutes les notes qui le contiennent.
 - Paramètres › Connecteurs : la liste complète, et le renommage dans toutes vos notes.

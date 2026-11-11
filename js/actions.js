@@ -99,7 +99,6 @@ const ACT = {
     });
   },
   mailExport: () => { const x = fichierExport(); if (x) envoyerParMail({file:x.file, from:x.from, to:x.to, chiffre:false, format:x.format, fait:exportFait}); },
-  goSend: () => { xStart = addDays(today(), -6); view = 'set'; setPage = 'partage'; render(); },
   voirThera: () => { view = 'set'; setPage = 'thera'; render(); synchroCanaux(true); },
   // Journal en liste : la barre compacte déploie (ou replie) la recherche et les filtres, sans quitter la lecture
   deployerEntete: () => {
@@ -408,10 +407,11 @@ const ACT = {
   /* connexion, inscription */
   goSignup: () => showLock('signup'),
   goLogin: () => showLock('login'),
+  reessayerLienTh: () => { lienThMsg = ''; showLock('signup'); },
   forgot: () => showLock('forgot'),
   /* administration */
   goAdmin: () => { src = null; view = 'admin'; render(); },
-  admReload: () => { adm = admInit(); render(true); },
+  admReload: () => { adm = {...admInit(), lienNeuf:adm.lienNeuf}; render(true); },
   admFiltre: t => { adm.filtre = t.dataset.f; render(true); },
   admOpen: t => { adm.ouvert = adm.ouvert === t.dataset.id ? null : t.dataset.id; render(true); },
   admActif: t => admAction(t.dataset.id,
@@ -421,6 +421,33 @@ const ACT = {
   admType: t => admAction(t.dataset.id,
     u => ({titre:`Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'utilisateur'} ?`, texte:'Un nouveau code utilisateur lui sera attribué ; l’ancien ne sera pas réutilisé.', bouton:'Changer le type'}),
     u => API.rpc('admin_type', {p_id:u.id, p_role:u.role === 'client' ? 'therapeute' : 'client'})),
+  /* liens de création d'un compte thérapeute (admin.js) */
+  creerLienTh: async t => {
+    t.disabled = true;
+    try { adm.lienNeuf = await API.rpc('admin_creer_lien_therapeute'); }
+    catch (x) { toast(x.code === 'reseau' ? 'Pas de connexion internet.' : 'Création impossible : exécutez serveur/lien-therapeute.sql dans Supabase.'); }
+    await loadLiensTh();
+  },
+  partagerLienTh: async () => {
+    const n = adm.lienNeuf; if (!n) return;
+    const url = lienThUrl(n.code), text = `Voici votre lien pour créer votre compte thérapeute sur Motus. Il sert une seule fois et reste valable jusqu’au ${fmtFR(ymd(new Date(n.expire_le)))}.`;
+    try {
+      if (navigator.share) await navigator.share({title:'Motus — compte thérapeute', text, url});
+      else { await navigator.clipboard.writeText(url); toast('Lien copié'); }
+    } catch {}
+  },
+  copierLienTh: async () => {
+    const n = adm.lienNeuf; if (!n) return;
+    try { await navigator.clipboard.writeText(lienThUrl(n.code)); toast('Lien copié'); }
+    catch { window.prompt('Copiez ce lien :', lienThUrl(n.code)); }
+  },
+  retirerLienTh: async t => {
+    const id = +t.dataset.id;
+    if (!await confirmerAction({titre:'Retirer ce lien ?', texte:'Il ne permettra plus de créer un compte thérapeute. Un compte déjà créé avec lui n’est pas concerné.', bouton:'Retirer'})) return;
+    try { await API.rpc('admin_annuler_lien_therapeute', {p_id:id}); if (adm.lienNeuf?.id === id) adm.lienNeuf = null; toast('Lien retiré'); }
+    catch (x) { toast(x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Action impossible'); }
+    await loadLiensTh();
+  },
   admSuppr: t => admAction(t.dataset.id,
     u => ({titre:`Supprimer le compte de ${who(u)} ?`, texte:'La suppression est définitive. Son journal reste sur son téléphone, mais cette personne ne pourra plus se connecter.', bouton:'Supprimer'}),
     u => API.rpc('admin_supprimer', {p_id:u.id})),

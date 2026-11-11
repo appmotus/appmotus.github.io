@@ -51,7 +51,7 @@ function corpsJour() {
     const cs = cartesDe(e), duo = cs.length > 1, tag = ro ? 'div' : 'button', coul = couleursCartes(e);
     const attrs = v => ro ? '' : ` type="button" data-type="emo" data-id="${e.id}" data-v="${v}"`;
     const quand = `${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`;
-    const txt = {e:() => sentenceHtml(e, true), b:() => besoinHtml(e), a:() => actionHtml(e, cur, !ro)};
+    const txt = {e:() => sentenceHtml(e, true), b:() => besoinHtml(e, true), a:() => actionHtml(e, cur, !ro)};
     return `
       <li${duo ? ' class="duo"' : ''}>${cs.map((c, i) => `<${tag} class="entry face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--fc:${coul[c]};--i:${i}"${attrs(c)}>
         <span class="edot">${ico(ICO_CARTE[c], '')}</span><span class="etxt">

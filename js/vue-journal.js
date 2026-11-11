@@ -10,7 +10,7 @@ const ficheOcc = (k, type, id = '') => `type="button" data-k="${k}" data-type="$
 function occEmotion(k, e, txt, debut = '') {
   const quand = `${debut}${esc(e.time)}${where(e) ? ' · ' + esc(where(e)) : ''}`, f = ficheOcc(k, 'emo', e.id), cs = cartesDe(e);
   if (cs.length < 2) return `<button class="occ" ${f}><div class="meta">${pastillesCartes(e, 'e')}${quand}</div><div class="txt">${txt}</div></button>`;
-  const t = {e:txt, b:besoinHtml(e), a:actionHtml(e, k, !src)};
+  const t = {e:txt, b:besoinHtml(e, true), a:actionHtml(e, k, !src)};
   return `<div class="occ-duo duo">${cs.map((c, i) => `
     <button class="occ face face-${c}${i ? '' : ' on'}"${i ? ' inert' : ''} style="--i:${i}" ${f}><div class="meta">${pastillesCartes(e, c)}${quand}</div><div class="txt">${t[c]}</div></button>`).join('')}
   </div>`;
@@ -50,7 +50,7 @@ function vCal() {
       nEntries++;
       e.emos.forEach(x => { words[x.w] = (words[x.w]||0) + 1; fams[x.f] = (fams[x.f]||0) + 1; wFam[x.w] ||= x.f; if (x.f === calF) fWords[x.w] = (fWords[x.w]||0) + 1; });
       besoinsDe(e).forEach(x => { const k = `${x.b}|${x.w}`; bWords[k] = (bWords[k]||0) + 1; bFams[x.b] = (bFams[x.b]||0) + 1; });
-      const ok = cOk(e.car, e.ville, e.lieu), hit = fam && ok ? e.emos.filter(x => x.f === calF && (!calW || x.w === calW)) : [];
+      const ok = cOk(texteEmotion(e), e.ville, e.lieu), hit = fam && ok ? e.emos.filter(x => x.f === calF && (!calW || x.w === calW)) : [];
       if (hit.length) { occ.push({k, e}); maxI = Math.max(maxI, ...hit.map(x => INT.findIndex(([c]) => c === x.i))); }
       if (tout && ok) occT.push({k, time:e.time, e});
     });
@@ -134,7 +134,7 @@ function vCal() {
     for (let i = new Date(y, m + 1, 0).getDate(); i >= 1; i--) {
       const k = ymd(new Date(y, m, i)), d = D().days[k];
       if (!d || k > t) continue;
-      const ents = (d.entries || []).filter(e => (!fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW))) && connOk(clesDe(e.car, e.ville, e.lieu)));
+      const ents = (d.entries || []).filter(e => (!fam || e.emos.some(x => x.f === calF && (!calW || x.w === calW))) && connOk(clesDe(texteEmotion(e), e.ville, e.lieu)));
       const lignes = [
         ...(notesOnly || synthOnly ? [] : ents.map(e => ({time:e.time, ligne:occEmotion(k, e, sentenceHtml(e, true))}))),
         ...(fam || synthOnly ? [] : dayNotes(d).filter(n => connOk(clesDe(n.text, n.ville, n.lieu))).map(n => ({time:n.time, ligne:noteOcc(k, n, '', true)}))),
@@ -214,7 +214,7 @@ function vCal() {
   ${srcCard()}`;
 }
 
-/* Recherche par mot, dans tous les mois : émotions, raisons, lieux, notes personnelles et synthèses, sans tenir compte des accents ni des majuscules */
+/* Recherche par mot, dans tous les mois : émotions, raisons, besoins en détail et actions, notes personnelles et synthèses, sans tenir compte des accents ni des majuscules */
 const sansAccent = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function resultatsRecherche(q) {
   const m = sansAccent(q.trim()), contient = s => sansAccent(s).includes(m), t = today();
@@ -224,7 +224,7 @@ function resultatsRecherche(q) {
     // seul le texte compte : les émotions choisies et ce qu'on a écrit, jamais l'heure, le lieu ou les mentions de l'app
     // (« Je me sens », « Note personnelle »). Le texte tel qu'il est écrit (« @un-ami ») et tel qu'il s'affiche (« un ami »).
     const lignes = [
-      ...(d.entries || []).filter(e => e.emos.some(x => contient(lc(x.w))) || contient(cleanCar(e)) || contient(sansArobase(cleanCar(e))))
+      ...(d.entries || []).filter(e => e.emos.some(x => contient(lc(x.w))) || contient(texteEmotion(e)) || contient(sansArobase(texteEmotion(e))))
         .map(e => ({time:e.time, ligne:occEmotion(k, e, phraseRecherche(e))})),
       ...(src ? [] : dayNotes(d).filter(x => contient(x.text) || contient(sansArobase(x.text)))
         .map(x => ({time:x.time, ligne:`<button class="occ" ${ficheOcc(k, 'note', x.id)}><div class="meta">${esc(x.time)}${where(x) ? ' · ' + esc(where(x)) : ''} · Note personnelle</div><div class="txt note-txt rq">${avecConnecteurs(x.text, true)}</div></button>`}))),
