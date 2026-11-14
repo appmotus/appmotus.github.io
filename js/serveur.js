@@ -10,6 +10,14 @@ const ID_RE = /^[a-z0-9][a-z0-9._-]{2,29}$/;
 const DEMO = !SERVER.url;
 let session = null;   // connexion au serveur, en mémoire uniquement
 let profil = null;    // profil renvoyé par le serveur : numéro, type de compte, administrateur…
+/* Compte désactivé par l'administrateur (v47) : la connexion reste possible, les notes restent lisibles et exportables, mais plus rien
+   ne s'écrit (émotions, notes personnelles, synthèse, couleur, actions cochées, imports, restauration). L'état vient du serveur à
+   chaque ouverture et au retour de l'app au premier plan ; il est gardé dans le journal chiffré (data.account.lecture) pour tenir
+   hors connexion. Effacer ses données et supprimer son compte restent possibles. */
+const lectureSeule = () => profil ? profil.actif === false : !!data?.account?.lecture;
+const MSG_LECTURE = 'Compte désactivé : vos notes sont en lecture seule. Contactez l’administrateur.';
+const ECRITURES = new Set(['newEntry', 'editEntry', 'newNote', 'editNote', 'saveNote', 'delNote', 'saveEntry', 'delEntry', 'setColor', 'cocher', 'cocherLigne',
+  'choisirTxt', 'analyserCollage', 'restore', 'importerLot', 'importEnvoi', 'newClient', 'editClient', 'saveClient', 'accepterClient']);
 const apiErr = (code, msg) => Object.assign(new Error(msg || code), {code});
 
 function supabaseApi() {
@@ -74,9 +82,13 @@ function demoApi() {
   const admin = x => { if (!moi(x)?.est_admin) throw apiErr('serveur', 'Réservé à l’administrateur'); };
   const pasMoi = id => { if (id === session.id) throw apiErr('serveur', 'Impossible sur votre propre compte'); };
   const RPC = {
-    ouvrir_session(x) { const p = moi(x); if (!p.actif) return {actif:false}; p.derniere_connexion = new Date().toISOString(); p.nb_connexions++; bump(x, p.id, 'connexions', 1); return p; },
+    // v47 : un compte désactivé reçoit son profil (actif:false) ; les connexions sont comptées par l'app (compter)
+    ouvrir_session(x) { const p = moi(x); p.derniere_connexion = new Date().toISOString(); return p; },
     maj_profil(x, {p}) { const m = moi(x); for (const k of ['nom', 'prenom', 'therapie', 'telephone', 'email_contact', 'adresse']) if (k in p) m[k] = p[k]; },
-    compter(x, {p_notes = 0, p_envois = 0}) { bump(x, session.id, 'notes', p_notes); bump(x, session.id, 'envois', p_envois); },
+    compter(x, {p_notes = 0, p_envois = 0, p_connexions = 0}) {
+      const p = moi(x); if (!p.actif) return;   // comme le serveur : un compte désactivé ne compte plus
+      bump(x, session.id, 'notes', p_notes); bump(x, session.id, 'envois', p_envois); bump(x, session.id, 'connexions', p_connexions); p.nb_connexions += p_connexions;
+    },
     ma_cle_secours(x) { return x.recup?.[session.id]?.cle ?? null; },
     ma_recuperation_etat(x) { const l = x.recup?.[session.id]; return {confirmee:!!l?.email, attente:!!l?.attente}; },
     retirer_recuperation(x) { if (x.recup) delete x.recup[session.id]; },
@@ -129,6 +141,11 @@ function demoApi() {
         actifs_7j:P.filter(p => recent(p.derniere_connexion, 7)).length, actifs_30j:P.filter(p => recent(p.derniere_connexion, 30)).length,
         activite:{connexions:act('connexions'), notes:act('notes'), envois:act('envois')},
         semaines:Object.values(sem).sort((a, b) => a.semaine.localeCompare(b.semaine))};
+    },
+    admin_activite(x) {   // somme des compteurs de chaque compte (serveur/activite-utilisateurs.sql)
+      admin(x); const m = {};
+      for (const u of Object.values(x.usage)) { const a = m[u.id] ||= {id:u.id, connexions:0, notes:0, envois:0}; a.connexions += u.connexions; a.notes += u.notes; a.envois += u.envois; }
+      return Object.values(m);
     },
     admin_activer(x, {p_id, p_actif}) { admin(x); pasMoi(p_id); x.comptes[p_id].profil.actif = p_actif; },
     admin_type(x, {p_id, p_role}) { admin(x); const p = x.comptes[p_id].profil; if (p.role !== p_role) { p.role = p_role; p.numero = numero(x, p_role); } },
@@ -242,11 +259,14 @@ function pushProfile() {
 function countStat(champ) { data.pending[champ]++; save(); flushStats(); }
 async function flushStats() {
   if (!session || !data) return;
-  const {notes, envois} = data.pending;
-  if (!notes && !envois) return;
-  data.pending = {notes:0, envois:0};
-  try { await API.rpc('compter', {p_notes:notes, p_envois:envois}); }
-  catch { data.pending.notes += notes; data.pending.envois += envois; }
+  const {notes, envois, connexions = 0} = data.pending;
+  if (!notes && !envois && !connexions) return;
+  data.pending = {notes:0, envois:0, connexions:0};
+  try {
+    try { await API.rpc('compter', {p_notes:notes, p_envois:envois, p_connexions:connexions}); }
+    // serveur/compte-desactive.sql pas encore exécuté : l'ancienne fonction ne connaît pas les connexions ; elles attendent
+    catch (x) { if (x.code === 'reseau' || !connexions) throw x; await API.rpc('compter', {p_notes:notes, p_envois:envois}); data.pending.connexions += connexions; }
+  } catch { data.pending.notes += notes; data.pending.envois += envois; data.pending.connexions += connexions; }
   save();
 }
 

@@ -43,7 +43,7 @@ function corpsJour() {
   const d = getDay(cur), isT = cur === today();
   const ents = [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
   const ns = [...dayNotes(d)].sort((a,b) => a.time.localeCompare(b.time));
-  const fs = famSummary(ents), fb = besSummary(ents), ro = !!src;
+  const fs = famSummary(ents), fb = besSummary(ents), ro = !!src || lectureSeule();   // fiche d'un client, ou compte désactivé (v47)
   /* Une émotion et ses cartes : l'émotion d'abord, puis la carte Besoin et la carte Action quand elles existent. On passe d'une
      carte à l'autre par les pastilles ou par un balayage (v42). Toucher une carte ne fait rien, sauf sur un connecteur ; un appui
      long propose de la modifier (sur la carte affichée) ou de la supprimer. */
@@ -67,9 +67,9 @@ function corpsJour() {
     ({k, nom, coul:'var(--accent)', etat:k === on ? 'on' : facesS.includes(k) ? 'lien' : 'vide', attrs:`data-act="voirFace" data-k="${facesS.indexOf(k)}"`})));
   return `<div id="jourCorps">
   <section class="card">
-    <div class="card-h"><h2>${ro ? 'Émotions' : 'Mes émotions'}</h2><span class="count">${ents.length}</span></div>
+    <div class="card-h"><h2>${src ? 'Émotions' : 'Mes émotions'}</h2><span class="count">${ents.length}</span></div>
     ${ents.length ? `<ul class="entries${ro ? '' : ' tenir'}">${ents.map(ligneEmo).join('')}</ul>`
-    : ro ? '<p class="empty">Aucune émotion notée ce jour-là.</p>'
+    : ro ? `<p class="empty">Aucune émotion notée ${isT ? 'ce jour' : 'ce jour-là'}.</p>`
     : `<p class="empty">Rien de noté ${isT ? 'pour l’instant' : 'ce jour-là'}. Prenez un instant : où êtes-vous, que ressentez-vous ?</p>`}
     ${ro ? '' : '<button class="btn primary block" data-act="newEntry">+ Noter une émotion</button>'}
   </section>

@@ -97,6 +97,7 @@ function lieuFields(time, ville, lieu) {
    Un balayage vers la gauche passe à la carte suivante, vers la droite revient à la précédente ; « Enregistrer » valide les trois. */
 const VOLETS = 'eba';   // ordre des cartes : émotion, besoin, action
 function openEntry(id, volet = 'e') {
+  if (lectureSeule()) return toast(MSG_LECTURE);
   const e = id ? getDay(cur).entries.find(x => x.id === id) : null;
   ed = e ? structuredClone(e) : {id:null, time: cur === today() ? nowTime() : '12:00', ville: villeParDefaut(), lieu:'', emos:[], car:''};
   ed.fam = ed.emos[0]?.f || 'peur';
@@ -207,6 +208,7 @@ function hauteurVolets() {
 /* Note personnelle : texte libre, sur le même dialogue que la saisie d'une émotion */
 let noteId = null;
 function openNote(id) {
+  if (lectureSeule()) return toast(MSG_LECTURE);
   const n = id ? dayNotes(getDay(cur)).find(x => x.id === id) : null;
   noteId = n?.id || null;
   ed = {};   // suit la ville pendant la recherche GPS, comme pour une émotion

@@ -171,6 +171,14 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 12. Journal de connexion gardé 6 mois (recommandation de la CNIL) : dans *Authentication › Configuration › Audit Logs*, activer « Write audit logs to the database », puis exécuter `serveur/journal-connexions.sql`. Supabase note alors chaque connexion, reconnexion et déconnexion dans `auth.audit_log_entries` ; une tâche planifiée (`pg_cron`) efface chaque nuit les lignes de plus de 6 mois. La page admin ne lit pas ce journal.
 13. Comptes thérapeute sur lien de l'administrateur : exécuter `serveur/lien-therapeute.sql` (après `schema.sql`). Il remplace la
     fonction qui crée le profil à l'inscription : un compte thérapeute exige désormais un lien valable.
+14. Activité de chaque compte dans la page Admin (notes saisies, envois) : exécuter `serveur/activite-utilisateurs.sql`. Facultatif :
+    sans lui, ces deux lignes n'apparaissent pas dans le détail d'un compte.
+15. Compte désactivé en lecture seule, et connexions comptées par l'app (même sans internet) : exécuter `serveur/compte-desactive.sql`
+    **avant** de publier la version 47. Il remplace `ouvrir_session` (un compte désactivé reçoit son profil au lieu d'être refusé) et
+    `compter` (nouveau paramètre `p_connexions`). Tant qu'il n'est pas exécuté, l'app refuse un compte désactivé comme avant.
+    Règle : un compte désactivé se connecte, lit et exporte ses notes, mais plus rien ne s'écrit (`lectureSeule`, `ECRITURES` dans
+    `serveur.js`). L'état est relu à chaque ouverture et au retour de l'app au premier plan (`verifierCompte`), puis gardé dans le
+    journal chiffré (`data.account.lecture`) pour tenir hors connexion. Tout nouveau bouton qui écrit une note doit rejoindre `ECRITURES`.
 
 ## Lien entre un client et son thérapeute
 

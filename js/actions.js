@@ -279,7 +279,7 @@ const ACT = {
     if (!text) return $('#nErr').textContent = 'Écrivez quelque chose avant d’enregistrer.';
     const d = ensureDay(cur); d.notes ||= [];
     const n = d.notes.find(x => x.id === noteId);
-    if (n) Object.assign(n, champs); else d.notes.push({id:uid(), ...champs});
+    if (n) Object.assign(n, champs); else { d.notes.push({id:uid(), ...champs}); countStat('notes'); }   // v47 : « notes saisies » = émotions + notes personnelles
     save(); $('#entryDlg').close(); render(); toast('Note enregistrée');
   },
   delNote: () => {
@@ -415,8 +415,8 @@ const ACT = {
   admFiltre: t => { adm.filtre = t.dataset.f; render(true); },
   admOpen: t => { adm.ouvert = adm.ouvert === t.dataset.id ? null : t.dataset.id; render(true); },
   admActif: t => admAction(t.dataset.id,
-    u => u.actif ? {titre:`Désactiver le compte de ${who(u)} ?`, texte:'Cette personne ne pourra plus se connecter, jusqu’à ce que vous réactiviez son compte.', bouton:'Désactiver'}
-      : {titre:`Réactiver le compte de ${who(u)} ?`, texte:'Cette personne pourra de nouveau se connecter.', bouton:'Réactiver'},
+    u => u.actif ? {titre:`Désactiver le compte de ${who(u)} ?`, texte:'Cette personne pourra toujours se connecter, lire et exporter ses notes, mais plus en saisir (lecture seule). Cela s’applique à sa prochaine ouverture de l’app, ou dès son retour dans l’app si elle est ouverte. Vous pouvez réactiver son compte à tout moment.', bouton:'Désactiver'}
+      : {titre:`Réactiver le compte de ${who(u)} ?`, texte:'Cette personne pourra de nouveau saisir ses notes.', bouton:'Réactiver'},
     u => API.rpc('admin_activer', {p_id:u.id, p_actif:!u.actif})),
   admType: t => admAction(t.dataset.id,
     u => ({titre:`Passer ${who(u)} en ${u.role === 'client' ? 'thérapeute' : 'utilisateur'} ?`, texte:'Un nouveau code utilisateur lui sera attribué ; l’ancien ne sera pas réutilisé.', bouton:'Changer le type'}),

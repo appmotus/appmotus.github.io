@@ -226,8 +226,9 @@ async function menuAppui(el) {
   const quand = [jour, o?.time, o && where(o)].filter(Boolean).join(' · ');
   const txt = sansArobase(e ? sentence(e) : n ? n.text : d.synth).trim();
   const resume = `${quand ? esc(quand) + '<br>' : ''}« ${esc(txt.length > 140 ? txt.slice(0, 140) + '…' : txt)} »`;
+  if (lectureSeule() && !journal) return;   // compte désactivé : rien à modifier ni supprimer (v47)
   const choix = journal ? [{k:'afficher', t:'Afficher dans Quotidien', style:'primary'}] : [{k:'modifier', t:'Modifier', style:'primary'}];
-  if (!src) choix.push({k:'supprimer', t:'Supprimer', style:'danger'});
+  if (!src && !lectureSeule()) choix.push({k:'supprimer', t:'Supprimer', style:'danger'});
   const r = await choisirAction({titre:NOM_FICHE[type], texte:resume, choix});
   if (r === 'modifier') return e ? openEntry(id, b.dataset.v || 'e') : openNote(id);
   if (r === 'afficher') {   // le jour s'ouvre, la note visée au milieu de l'écran

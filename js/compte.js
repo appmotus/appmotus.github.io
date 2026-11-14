@@ -63,6 +63,7 @@ async function openJournal(id, pw, init) {
   if (data.role === 'therapeute') await ensureKeys(); else await saveNow();
   navigator.storage?.persist?.();
   showApp();
+  countStat('connexions');   // une ouverture de l'app, comptée même sans internet
   if (!await exigerRgpd() || !await exigerEssai()) return;
   pushProfile(); flushStats(); assurerLienCourt(); synchroCanaux(true); ensureSecours(pw).then(ok => ok && exigerMail());
 }
@@ -70,7 +71,8 @@ async function openJournal(id, pw, init) {
 function applyProfil() {
   if (!profil) return;
   data.role = profil.role;
-  data.account = {identifiant:profil.identifiant, numero:codeU(profil.numero), est_admin:!!profil.est_admin, recup:!!data.account?.recup, cree_le:profil.cree_le || data.account?.cree_le};
+  data.account = {identifiant:profil.identifiant, numero:codeU(profil.numero), est_admin:!!profil.est_admin, recup:!!data.account?.recup, cree_le:profil.cree_le || data.account?.cree_le,
+    lecture:profil.actif === false};   // v47 : compte désactivé = lecture seule, aussi hors connexion
   if (!data.profile.nom && !data.profile.prenom) Object.assign(data.profile, {nom:profil.nom, prenom:profil.prenom});
 }
 
@@ -639,6 +641,7 @@ async function boot() {
     VKEY = vaultKey(s.id); key = s.key; salt = fromB64(v.salt); data = defaults(JSON.parse(dec.decode(pt)));
   } catch { await forgetKey(); return showLock(); }
   showApp();
+  countStat('connexions');   // une ouverture de l'app, comptée même sans internet
   if (await exigerRgpd() && await exigerEssai()) syncSession();
 }
 /* En arrière-plan : reprend la connexion au serveur. Sans internet, le journal reste simplement ouvert. */
@@ -648,12 +651,13 @@ async function syncSession() {
     await API.resume(data.resume);
     profil = await API.rpc('ouvrir_session');
     if (!data) return;
-    if (!profil?.actif) return lock(LOGIN_ERR.desactive);
-    const role = data.role, ici = VKEY.slice(vaultKey('').length);
+    if (!profil?.id) return lock(LOGIN_ERR.desactive);   // ancien serveur (serveur/compte-desactive.sql pas exécuté) : un compte désactivé est refusé
+    const role = data.role, ici = VKEY.slice(vaultKey('').length), lecture = !!data.account?.lecture;
     applyProfil(); rememberSession();
     if (data.account.identifiant !== ici) await renommerStockage(ici, data.account.identifiant).catch(console.error);   // identifiant changé ailleurs
     if (data.role !== role) showApp();
     else {
+      if (lecture !== !!data.account.lecture) render(true);   // compte désactivé ou réactivé depuis la dernière ouverture
       renderNav(); markTabs();
       // journal rouvert avant la reprise de la connexion : le rappel n'a pas encore pu s'afficher
       const rappel = !src && (view === 'day' || view === 'clients') && !$('.admin-rappel') ? adminReminder() : '';
@@ -758,7 +762,25 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); if (key) saveNow(); return; }
   swReg?.update().catch(() => {});   // l'app revient au premier plan : y a-t-il une nouvelle version ?
   if (key && !busy && data.settings.autolock >= 0 && Date.now() - hiddenAt >= data.settings.autolock * 60000) lock();
-  else if (key && !doitInstaller()) synchroCanaux();   // coordonnées et ruptures, au plus une fois par minute
+  else if (key && !doitInstaller()) {
+    synchroCanaux();   // coordonnées et ruptures, au plus une fois par minute
+    if (Date.now() - hiddenAt >= 5 * 60000) countStat('connexions');   // retour dans l'app après une vraie pause : une nouvelle ouverture
+    verifierCompte();
+  }
 });
+/* Retour au premier plan : le compte a-t-il été désactivé ou réactivé depuis ? (au plus une fois par minute). Sans cela, une app
+   restée ouverte sur le téléphone ne l'apprendrait qu'à sa prochaine ouverture complète. */
+let verifieA = 0;
+async function verifierCompte() {
+  if (!session || !data || Date.now() - verifieA < 60000) return;
+  verifieA = Date.now();
+  try {
+    const p = await API.rpc('ouvrir_session');
+    if (!data || !p?.id) return;
+    const avant = !!data.account?.lecture, role = data.role;
+    profil = p; applyProfil(); save();
+    if (data.role !== role) showApp(); else if (avant !== !!data.account.lecture) render(true);
+  } catch {}
+}
 window.addEventListener('pagehide', () => { if (key) saveNow(); });
 

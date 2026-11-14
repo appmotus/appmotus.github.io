@@ -273,5 +273,9 @@ function majEnteteListe() {
 addEventListener('scroll', () => { marquerEntete(); entetesJournal(); majEnteteListe(); barreRepertoire(); barreQuotidien(); }, {passive:true});
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]');
-  if (t && ACT[t.dataset.act] && !t.disabled) { e.preventDefault(); ACT[t.dataset.act](t, e); }
+  if (t && ACT[t.dataset.act] && !t.disabled) {
+    e.preventDefault();
+    if (ECRITURES.has(t.dataset.act) && lectureSeule()) return toast(MSG_LECTURE);   // compte désactivé : lecture seule (v47)
+    ACT[t.dataset.act](t, e);
+  }
 });

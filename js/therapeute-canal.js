@@ -234,17 +234,18 @@ function consentirLien(o, ancien) {
 /* Choix des données (v42) : deux listes de mêmes cases, l'une pour les envois au thérapeute (settings.partage), l'autre pour les
    exports de l'utilisateur, Excel et .txt (settings.exportChoix). Les besoins et les actions associés se rangent en retrait sous
    les émotions, et n'existent qu'avec elles. Au moins un choix parmi les émotions, les synthèses et les notes personnelles ;
-   les lieux en plus. Envois : la couleur de la journée est toujours transmise ; exports : elle se choisit aussi. */
+   les lieux et la couleur de la journée en plus. Les deux listes sont identiques (v47 : la couleur se choisit aussi pour les envois). */
 const PARTAGE = [['emotions', 'Les émotions, avec leur heure et leur raison'], ['synthese', 'La synthèse de la journée'], ['notes', 'Les notes personnelles']];
 const SOUS_EMOTIONS = [['besoins', 'Les besoins associés'], ['actions', 'Les actions associées']];
 const PARTAGE_N = {emotions:'émotions', besoins:'besoins', actions:'actions', synthese:'synthèses', notes:'notes', lieu:'lieux', couleur:'couleurs'};
 const partageValide = p => PARTAGE.some(([k]) => p[k]);
-function resumeChoix(p, avecCouleur = false) {
-  const t = ['emotions', ...(p.emotions ? ['besoins', 'actions'] : []), 'synthese', 'notes', 'lieu', ...(avecCouleur ? ['couleur'] : [])].filter(k => p[k]).map(k => PARTAGE_N[k]).join(', ');
+function resumeChoix(p) {
+  if (['emotions', 'besoins', 'actions', 'synthese', 'notes', 'lieu', 'couleur'].every(k => p[k])) return 'Tout';
+  const t = ['emotions', ...(p.emotions ? ['besoins', 'actions'] : []), 'synthese', 'notes', 'lieu', 'couleur'].filter(k => p[k]).map(k => PARTAGE_N[k]).join(', ');
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 const resumePartage = () => resumeChoix(data.settings.partage || {});
-const resumeExport = () => Object.values(data.settings.exportChoix).every(Boolean) ? 'Tout' : resumeChoix(data.settings.exportChoix, true);
+const resumeExport = () => resumeChoix(data.settings.exportChoix);
 /* cible : 'partage' (thérapeute) ou 'export' ; chaque case porte data-choix="<cible>.<clé>" */
 function formChoix(cible) {
   const p = cible === 'export' ? data.settings.exportChoix : data.settings.partage || {};
@@ -255,7 +256,7 @@ function formChoix(cible) {
     ${PARTAGE.slice(1).map(([k, n]) => ligne(k, n)).join('')}
     <p class="small muted" style="margin:10px 0 0">En plus, si vous le souhaitez :</p>
     ${ligne('lieu', 'Les lieux (ville et précision)')}
-    ${cible === 'export' ? ligne('couleur', 'La couleur de la journée') : '<p class="small muted" style="margin:10px 0 0">La couleur de la journée est toujours transmise.</p>'}`;
+    ${ligne('couleur', 'La couleur de la journée')}`;
 }
 /* Une case touchée : les besoins et actions associés suivent la case des émotions ; dans la fenêtre du premier envoi (#ptForm),
    le choix s'enregistre à la validation, ailleurs aussitôt */
@@ -297,14 +298,15 @@ function aTransmettre(d) {
   const p = data.settings.partage || {}, lieu = x => p.lieu ? x : {...x, ville:'', lieu:''};
   // les cartes Besoin et Action associées, chacune seulement si on la transmet
   const cartes = e => { const {bes, bdet, piste, taches, ...reste} = e; return {...reste, ...(p.besoins ? {bes, bdet} : {}), ...(p.actions ? {piste, taches} : {})}; };
-  const o = {color:d.color || null, entries:p.emotions ? (d.entries || []).map(lieu).map(cartes) : [], synth:p.synthese ? d.synth || '' : ''};
+  const o = {color:p.couleur !== false && d.color || null, entries:p.emotions ? (d.entries || []).map(lieu).map(cartes) : [], synth:p.synthese ? d.synth || '' : ''};
   if (p.notes && dayNotes(d).length) o.notes = dayNotes(d).map(lieu);
   return o;
 }
-const aEnvoyer = d => { const p = data.settings.partage || {}; return !!d && (!!d.color || (p.emotions && !!d.entries?.length) || (p.synthese && !!d.synth?.trim()) || (p.notes && dayNotes(d).length > 0)); };
+const aEnvoyer = d => { const p = data.settings.partage || {}; return !!d && ((p.couleur !== false && !!d.color) || (p.emotions && !!d.entries?.length) || (p.synthese && !!d.synth?.trim()) || (p.notes && dayNotes(d).length > 0)); };
 
 /* Thérapeute : fichiers déposés en vrac, chacun rangé dans la fiche de son client */
 async function importerFichiers(fichiers, cibleId) {
+  if (lectureSeule()) return toast(MSG_LECTURE);
   const ranges = {}, refus = [], liaisons = [];
   for (const f of fichiers) {
     let pkg, o;

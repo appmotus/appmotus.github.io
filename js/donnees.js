@@ -29,7 +29,7 @@ function defaults(d = {}) {
   d.labels = Object.assign({}, DEF_LABELS, d.labels);
   d.settings = Object.assign({autolock:1, geoloc:true}, d.settings);
   // données transmises au thérapeute ; les besoins (v39) accompagnent les émotions, sauf si on les retire
-  d.settings.partage = Object.assign({emotions:true, besoins:true, synthese:false, notes:false, lieu:false}, d.settings.partage);
+  d.settings.partage = Object.assign({emotions:true, besoins:true, synthese:false, notes:false, lieu:false, couleur:true}, d.settings.partage);   // v47 : la couleur de la journée se choisit aussi pour les envois
   d.settings.partage.actions ??= d.settings.partage.besoins;   // v42 : les actions se choisissent à part ; avant, elles suivaient les besoins
   // v42 : ce que contiennent les exports (Excel, .txt) de l'utilisateur ; par défaut, tout
   d.settings.exportChoix = Object.assign({emotions:true, besoins:true, actions:true, synthese:true, notes:true, lieu:true, couleur:true}, d.settings.exportChoix);
@@ -46,6 +46,7 @@ function defaults(d = {}) {
   d.notesAdmin = typeof d.notesAdmin === 'string' ? {maj:'', plusTard:'', libres:d.notesAdmin} : Object.assign({maj:'', plusTard:'', libres:''}, d.notesAdmin);
   d.thera = Object.assign({type:'', tel:'', email:'', adresse:''}, d.thera);
   d.pending ||= {notes:0, envois:0};   // compteurs pas encore transmis au serveur (hors connexion)
+  d.pending.connexions ||= 0;          // v47 : ouvertures de l'app, comptées sur l'appareil, même sans internet
   return d;
 }
 const getDay = k => D().days[k] || {color:null, synth:'', entries:[]};

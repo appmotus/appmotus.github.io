@@ -11,7 +11,11 @@ const nomAdmin = u => u.role === 'therapeute' ? u.nom : initiale(u.nom);   // cl
 const who = u => `${u.prenom} ${nomAdmin(u)}`.trim() || u.identifiant;
 
 async function loadAdmin() {
-  try { [adm.users, adm.stats] = await Promise.all([API.rpc('admin_utilisateurs'), API.rpc('admin_stats')]); adm.err = ''; }
+  try {
+    // v47 : l'activité de chaque compte vient de serveur/activite-utilisateurs.sql ; sans lui, la liste s'affiche sans ces deux lignes
+    [adm.users, adm.stats, adm.activite] = await Promise.all([API.rpc('admin_utilisateurs'), API.rpc('admin_stats'), API.rpc('admin_activite').catch(() => null)]);
+    adm.err = '';
+  }
   catch (x) { adm.err = x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Erreur du serveur.'; adm.users ||= []; }
   if (view === 'admin') render(true);
 }
@@ -74,7 +78,8 @@ function vAdmin() {
       <thead><tr><th></th><th title="Aujourd’hui">Auj.</th><th>7 jours</th><th>30 jours</th><th>Total</th></tr></thead>
       <tbody>${act('Connexions', a.connexions)}${act('Notes saisies', a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
     </table>
-    <p class="small muted" style="margin:8px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
+    <p class="small muted" style="margin:8px 0 0">Une connexion est une ouverture de l’app, avec ou sans internet : une même personne en fait plusieurs par jour. Une note saisie est une émotion ou une note personnelle, comptée à sa création ; les synthèses ne le sont pas. Les chiffres arrivent dès que le téléphone est de nouveau connecté.</p>
+    <p class="small muted" style="margin:6px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
   </section>` : '') + `
   <section class="card">
     <h2>Travail sur Motus</h2>
@@ -204,6 +209,7 @@ function carteLiensTh() {
 }
 function userRow(u) {
   const open = adm.ouvert === u.id, moi = u.id === profil?.id, th = u.role === 'therapeute';
+  const act = Array.isArray(adm.activite) ? adm.activite.find(a => a.id === u.id) || {notes:0, envois:0} : null;   // null : serveur/activite-utilisateurs.sql pas encore exécuté
   return `<div class="urow" data-name="${esc(`${who(u)} ${codeU(u.numero)} ${u.identifiant}`.toLowerCase())}">
     <button class="uhead" data-act="admOpen" data-id="${esc(u.id)}" aria-expanded="${open}">
       <span><b>${esc(u.prenom)}</b> ${esc(nomAdmin(u))}</span>
@@ -214,7 +220,8 @@ function userRow(u) {
       <dl>
         <dt>Identifiant</dt><dd>${esc(u.identifiant)}</dd>
         <dt>Inscription</dt><dd>${fmtDT(u.cree_le)}</dd>
-        <dt>Connexions</dt><dd>${u.nb_connexions}</dd>
+        <dt>Connexions</dt><dd>${u.nb_connexions}<span class="small muted"> ouvertures de l’app</span></dd>
+        ${act ? `<dt>Notes saisies</dt><dd>${act.notes}</dd><dt>Envois au thérapeute</dt><dd>${act.envois}</dd>` : ''}
         ${th ? `<dt>Thérapie</dt><dd>${esc(u.therapie) || '—'}</dd>
         <dt>Téléphone</dt><dd>${esc(u.telephone) || '—'}</dd>
         <dt>E-mail</dt><dd>${esc(u.email_contact) || '—'}</dd>

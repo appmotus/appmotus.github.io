@@ -77,11 +77,13 @@ function markTabs() {
   const active = src ? 'clients' : view;
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === active));
 }
+/* Compte désactivé (v47) : un bandeau en tête de chaque page rappelle la lecture seule */
+const bandeauLecture = () => `<div class="banner"><span><b>Compte désactivé.</b> Vos notes restent consultables et exportables, mais vous ne pouvez plus en saisir. Contactez l’administrateur.</span></div>`;
 function render(keepScroll) {
   connCache = null;   // les connecteurs se recalculent avec les notes du moment
   fermerBulle();      // la bulle d'un connecteur ne survit pas à la page qui l'a ouverte
   markTabs();
-  $('#view').innerHTML = ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
+  $('#view').innerHTML = (lectureSeule() && view !== 'admin' ? bandeauLecture() : '') + ({day:vDay, cal:vCal, rep:vRep, set:vSet, clients:vClients, admin:vAdmin})[view]();
   if (!keepScroll) { window.scrollTo(0, 0); entJ.cache = entR.cache = entQ.cache = Infinity; entJ.deploye = false; }
   entJ.y = entR.y = entQ.y = Math.max(0, scrollY); entetesJournal(); barreRepertoire(); barreQuotidien();
   if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();

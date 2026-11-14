@@ -35,7 +35,38 @@ const colL = i => String.fromCharCode(65 + i);
 const cS = (ref, s, t) => `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xesc(t)}</t></is></c>`;
 const cN = (ref, s, n) => `<c r="${ref}" s="${s}"><v>${n}</v></c>`;
 const cE = (ref, s) => `<c r="${ref}" s="${s}"/>`;
-const xRow = (r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"` : ''}>${cells.join('')}</row>`;
+/* Texte mis en forme dans une cellule (v47) : une liste de segments {t, b, i, u, c, sz}, comme dans l'app. Les émotions et les besoins
+   sont en gras, plus gros et dans la couleur de leur famille ; les connecteurs en italique souligné. Excel ne peut pas embarquer la
+   police de l'app (Plus Jakarta Sans) : tout est en Arial, comme le reste du tableau. */
+const ACCENT_X = 'FF4F4BC9';
+const argb = c => /^#[0-9a-f]{6}$/i.test(c) ? 'FF' + c.slice(1).toUpperCase() : ACCENT_X;
+const segTexte = segs => segs.map(s => s.t).join('');
+const runX = s => `<r><rPr>${s.b ? '<b/>' : ''}${s.i ? '<i/>' : ''}${s.u ? '<u/>' : ''}<sz val="${s.sz || 9}"/><color rgb="${s.c || 'FF333333'}"/><rFont val="Arial"/></rPr><t xml:space="preserve">${xesc(s.t)}</t></r>`;
+const cR = (ref, st, segs) => segs.some(s => s.b || s.i || s.u || s.c || s.sz)
+  ? `<c r="${ref}" s="${st}" t="inlineStr"><is>${segs.filter(s => s.t).map(runX).join('')}</is></c>` : cS(ref, st, segTexte(segs));
+const segsSep = (listes, sep) => listes.flatMap((l, i) => i ? [{t:sep}, ...l] : l);
+const segsFr = l => l.length < 2 ? segsSep(l, '') : [...segsSep(l.slice(0, -1), ', '), {t:' et '}, ...l[l.length - 1]];   // comme joinFr
+/* Un texte libre : ses connecteurs en italique souligné, sans leur @ (comme sansArobase) */
+function segsConn(s, extra = {}) {
+  s = String(s ?? ''); const out = []; let i = 0;
+  for (const x of s.matchAll(RE_CONN)) {
+    const debut = x.index + x[1].length;
+    if (debut > i) out.push({...extra, t:s.slice(i, debut)});
+    out.push({...extra, t:nomConn(x[2]), i:true, u:true, c:ACCENT_X});
+    i = debut + 1 + x[2].length;
+  }
+  if (i < s.length) out.push({...extra, t:s.slice(i)});
+  return out;
+}
+const motEmo = x => ({t:lc(x.w), b:true, sz:11, c:argb(FAMK[x.f].c)});
+const mot = (t, c) => ({t, b:true, sz:11, c:argb(c)});
+const segsPhrase = e => { const car = cleanCar(e); return [{t:'Je me sens '}, ...segsFr(e.emos.map(x => [motEmo(x)])), ...(car ? [{t:' car '}, ...segsConn(car)] : []), {t:'.'}]; };   // comme sentence(e)
+const segsBesoin = e => {   // comme besoinTexte(e)
+  const bs = besoinsDe(e), d = detailDe(e);
+  return [...(bs.length ? [{t:'J’ai besoin '}, ...segsFr(bs.map(x => [{t:deMot(x.w)}, mot(lc(x.w), coulB(x.b))])), {t:'.'}] : []),
+    ...(d ? [...(bs.length ? [{t:' '}] : []), ...segsConn(finPhrase(d))] : [])];
+};
+const xRow =(r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"` : ''}>${cells.join('')}</row>`;
 function sheet({cols, rows, merges = [], landscape}) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`
   + `<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>`
@@ -121,7 +152,9 @@ function choixExport() {
 function buildXlsx(from, to) {
   const L = D().labels, p = D().profile, ch = choixExport();
   const ou = o => ch.lieu ? where(o) : '', couleur = d => ch.couleur && d?.color || null;
-  const cartesE = e => sansArobase([ch.besoins ? besoinTexte(e) : '', ...(ch.actions ? tachesTexte(e) : []), ch.actions && pisteDe(e) ? `Je pourrais ${pisteDe(e)}.` : ''].filter(Boolean).join(' '));
+  // les cartes Besoin et Action d'une émotion, mises en forme (segments), séparées par une espace
+  const cartesE = e => segsSep([ch.besoins ? segsBesoin(e) : [], ...(ch.actions ? tachesDe(e).map(x => segsConn(`${x.ok ? '☑' : '☐'} ${x.t.trim()}`)) : []),
+    ch.actions && pisteDe(e) ? [{t:'Je pourrais '}, ...segsConn(pisteDe(e)), {t:'.'}] : []].filter(l => l.length), ' ');
   const rempli = d => !!d && !!((ch.emotions && d.entries?.length) || (ch.synthese && d.synth?.trim()) || (ch.notes && dayNotes(d).length) || couleur(d));
   const keys = []; for (let k = from; k <= to; k = addDays(k, 1)) keys.push(k);
   const byTime = d => [...d.entries].sort((a,b) => a.time.localeCompare(b.time));
@@ -152,16 +185,17 @@ function buildXlsx(from, to) {
       const k = addDays(mon, i), ref = H[i+1] + r, d = D().days[k];
       if (k < from || k > to) { cells.push(cE(ref, S.off)); continue; }
       if (!rempli(d)) { cells.push(cS(ref, S.cell, fmtFR(k).slice(0, 5))); continue; }
-      let t = fmtFR(k).slice(0, 5) + (couleur(d) ? ' — ' + L[d.color] : '');
+      const sg = [{t:fmtFR(k).slice(0, 5) + (couleur(d) ? ' — ' + L[d.color] : '')}];
       // dans l'ordre de la journée (sa demande, v42) : émotions et notes personnelles mêlées selon leur heure, puis la synthèse du soir
-      const notes = [...(ch.emotions ? d.entries.map(e => [e.time, `${e.time}${ou(e) ? ' · ' + ou(e) : ''}\n${sansArobase(sentence(e))}${cartesE(e) ? '\n' + cartesE(e) : ''}`]) : []),
-        ...(ch.notes ? dayNotes(d).map(n => [n.time, `NOTE PERSONNELLE ${n.time}${ou(n) ? ' · ' + ou(n) : ''} :\n${sansArobase(n.text)}`]) : [])];
-      notes.sort((a, b) => a[0].localeCompare(b[0])).forEach(([, x]) => t += `\n\n${x}`);
-      if (ch.synthese && d.synth?.trim()) t += `\n\nSYNTHÈSE : ${sansArobase(d.synth.trim())}`;
-      lines = Math.max(lines, estLines(t, 34));
-      cells.push(cS(ref, cellStyle(couleur(d)), t));
+      // (v47 : émotions, besoins et connecteurs mis en forme comme dans l'app)
+      const notes = [...(ch.emotions ? d.entries.map(e => { const c = cartesE(e); return [e.time, [{t:`${e.time}${ou(e) ? ' · ' + ou(e) : ''}\n`}, ...segsPhrase(e), ...(c.length ? [{t:'\n'}, ...c] : [])]]; }) : []),
+        ...(ch.notes ? dayNotes(d).map(n => [n.time, [{t:`NOTE PERSONNELLE ${n.time}${ou(n) ? ' · ' + ou(n) : ''} :\n`}, ...segsConn(n.text)]]) : [])];
+      notes.sort((a, b) => a[0].localeCompare(b[0])).forEach(([, x]) => sg.push({t:'\n\n'}, ...x));
+      if (ch.synthese && d.synth?.trim()) sg.push({t:'\n\nSYNTHÈSE : '}, ...segsConn(d.synth.trim()));
+      lines = Math.max(lines, estLines(segTexte(sg), 34));
+      cells.push(cR(ref, cellStyle(couleur(d)), sg));
     }
-    r1.push(xRow(r, cells, Math.min(409, Math.max(60, lines * 11.5 + 8))));
+    r1.push(xRow(r, cells, Math.min(409, Math.max(60, lines * 12.5 + 8))));   // les mots en gras et plus gros demandent un peu plus de place
   }
   const feuilles = [['Tableau d’observation', sheet({cols:[16,30,30,30,30,30,30,30], rows:r1, merges:['A1:H1','A2:H2','B4:C4','E4:F4','A6:H6','A8:H8','A9:H9','A10:H10'], landscape:true})]];
 
@@ -170,19 +204,25 @@ function buildXlsx(from, to) {
     const C2 = [
       ['Date', 11, (e, k) => fmtFR(k)], ['Jour', 10, (e, k) => JOURS[parse(k).getDay()]], ['Heure', 7, e => e.time],
       ...(ch.lieu ? [['Ville', 16, e => e.ville || ''], ['Lieu', 16, e => e.lieu || '']] : []),
-      ['Émotion', 14, e => [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', ')],
+      // 4e élément (v47) : le même texte mis en forme, en segments, comme dans l'app
+      ['Émotion', 14, e => [...new Set(e.emos.map(x => FAMK[x.f].n))].join(', '),
+        e => segsSep([...new Map(e.emos.map(x => [x.f, x])).values()].map(x => [mot(FAMK[x.f].n, FAMK[x.f].c)]), ', ')],
       ['Intensité', 11, e => [...new Set(e.emos.map(x => INTN[x.i]))].join(', ')],
-      ['Je me sens…', 30, e => joinFr(e.emos.map(x => lc(x.w)))],
-      ['… car', 55, e => sansArobase((e.car || '').trim())],
-      ...(ch.besoins ? [['Besoin', 18, e => [...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', ')], ['J’ai besoin de…', 30, e => joinFr(besoinsDe(e).map(x => lc(x.w)))], ['Plus précisément', 40, e => sansArobase(detailDe(e))]] : []),
-      ...(ch.actions ? [['Actions', 40, e => sansArobase(tachesTexte(e).join('\n'))], ['Je pourrais…', 40, e => sansArobase(pisteDe(e))]] : []),
+      ['Je me sens…', 30, e => joinFr(e.emos.map(x => lc(x.w))), e => segsFr(e.emos.map(x => [motEmo(x)]))],
+      ['… car', 55, e => sansArobase((e.car || '').trim()), e => segsConn((e.car || '').trim())],
+      ...(ch.besoins ? [
+        ['Besoin', 18, e => [...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '),
+          e => segsSep([...new Map(besoinsDe(e).map(x => [x.b, x])).values()].map(x => [mot(BESK[x.b].n, coulB(x.b))]), ', ')],
+        ['J’ai besoin de…', 30, e => joinFr(besoinsDe(e).map(x => lc(x.w))), e => segsFr(besoinsDe(e).map(x => [mot(lc(x.w), coulB(x.b))]))],
+        ['Plus précisément', 40, e => sansArobase(detailDe(e)), e => segsConn(detailDe(e))]] : []),
+      ...(ch.actions ? [['Actions', 40, e => sansArobase(tachesTexte(e).join('\n')), e => segsConn(tachesTexte(e).join('\n'))], ['Je pourrais…', 40, e => sansArobase(pisteDe(e)), e => segsConn(pisteDe(e))]] : []),
     ];
     const r2 = [xRow(1, [...C2.map(([h], i) => cS(colL(i) + 1, S.head, h)), ...(ch.couleur ? [cS(colL(C2.length) + 1, S.head, 'Couleur du jour')] : [])], 26)];
     let n2 = 2;
     for (const k of keys) {
       const d = D().days[k]; if (!d?.entries?.length) continue;
       for (const e of byTime(d)) {
-        const vals = C2.map(([, , f]) => f(e, k, d)), row = vals.map((v, i) => cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
+        const vals = C2.map(([, , f]) => f(e, k, d)), row = vals.map((v, i) => C2[i][3] ? cR(colL(i) + n2, S.cell, C2[i][3](e, k, d)) : cS(colL(i) + n2, S.cell, v)), cc = colL(vals.length) + n2;
         if (ch.couleur) row.push(couleur(d) ? cS(cc, cellStyle(d.color), L[d.color]) : cE(cc, S.cell));
         const haut = Math.max(estLines(e.car || '', 60), estLines(joinFr(e.emos.map(x => x.w)), 34), ...C2.map(([, w], i) => estLines(vals[i], w + 4)));
         r2.push(xRow(n2, row, Math.min(409, Math.max(15, haut * 12 + 4))));
@@ -203,7 +243,7 @@ function buildXlsx(from, to) {
       const st = cellStyle(couleur(d)), c = [cS('A' + n3, st, fmtFR(k)), cS('B' + n3, st, JOURS[parse(k).getDay()])];
       if (ch.couleur) c.push(couleur(d) ? cS(colL(c.length) + n3, st, L[d.color]) : cE(colL(c.length) + n3, st));
       if (ch.emotions) c.push(cN(colL(c.length) + n3, st, d.entries.length));
-      if (ch.synthese) c.push(cS(colL(c.length) + n3, st, sansArobase((d.synth || '').trim())));
+      if (ch.synthese) c.push(cR(colL(c.length) + n3, st, segsConn((d.synth || '').trim())));
       r3.push(xRow(n3, c, Math.min(409, Math.max(15, (ch.synthese ? estLines(d.synth || '', 85) : 1) * 12 + 4))));
       n3++;
     }
@@ -217,7 +257,7 @@ function buildXlsx(from, to) {
     let n4 = 2;
     for (const k of keys) for (const n of [...dayNotes(D().days[k])].sort((a, b) => a.time.localeCompare(b.time))) {
       const vals = [fmtFR(k), JOURS[parse(k).getDay()], n.time, ...(ch.lieu ? [n.ville || '', n.lieu || ''] : []), sansArobase(n.text)];
-      r4.push(xRow(n4, vals.map((v, i) => cS(colL(i) + n4, S.cell, v)), Math.min(409, Math.max(15, estLines(n.text, 85) * 12 + 4))));
+      r4.push(xRow(n4, vals.map((v, i) => i === vals.length - 1 ? cR(colL(i) + n4, S.cell, segsConn(n.text)) : cS(colL(i) + n4, S.cell, v)), Math.min(409, Math.max(15, estLines(n.text, 85) * 12 + 4))));
       n4++;
     }
     if (n4 > 2) feuilles.push(['Notes personnelles', sheet({cols:[11, 10, 7, ...(ch.lieu ? [16, 16] : []), 80], rows:r4})]);

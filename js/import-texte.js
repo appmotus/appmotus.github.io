@@ -81,6 +81,7 @@ function lireNotesTexte(texte, estVille) {
   return {notes, ignore, sansHeure};
 }
 async function analyserTexte(texte) {
+  if (lectureSeule()) return toast(MSG_LECTURE);
   if (!String(texte).trim()) return toast('Le texte est vide.');
   let villes = null;
   try { const C = await loadCommunes(); villes = new Set(C.n.map(x => sansAccent(x))); } catch {}

@@ -66,6 +66,7 @@ $('#entryDlg').addEventListener('click', e => { if (e.target === e.currentTarget
 
 $('#restoreFile').addEventListener('change', async e => {
   const f = e.target.files[0]; busy = false; if (!f) return;
+  if (lectureSeule()) return toast(MSG_LECTURE);
   let v;
   try { v = JSON.parse(await f.text()); if (v.app !== 'journal-emotions' || !v.ct || v.type) throw 0; }
   catch { return toast(v?.type === 'envoi' ? 'Ce fichier est un envoi pour un thérapeute, pas une sauvegarde.' : 'Ce fichier n’est pas une sauvegarde du journal.'); }

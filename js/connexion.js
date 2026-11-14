@@ -286,7 +286,8 @@ async function onLogin(e) {
   try {
     await API.signIn(id, pw);
     profil = await API.rpc('ouvrir_session');
-    if (!profil?.actif) { API.signOut(); profil = null; return fail(LOGIN_ERR.desactive); }
+    // v47 : un compte désactivé se connecte, en lecture seule (profil.actif === false). Sans profil : ancien serveur, on le refuse comme avant.
+    if (!profil?.id) { API.signOut(); profil = null; return fail(LOGIN_ERR.desactive); }
   } catch (x) {
     // hors connexion : le journal déjà présent sur cet appareil s'ouvre avec le mot de passe
     if (x.code === 'reseau' && localStorage.getItem(vaultKey(id))) { session = null; profil = null; }
