@@ -11,6 +11,12 @@ const PAGES_REGLAGES = {
   apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos], contact:['Nous contacter', pageContact], importer:['Importer des notes', pageImporter],
   connecteurs:['Connecteurs', pageConnecteurs], guide:['Guide d’utilisation', pageGuide],
 };
+/* Pages de l'onglet Admin (v49) : [titre (ou fonction qui le donne), page, vrai si la page montre des données du serveur : elle se réaffiche quand elles arrivent] */
+const PAGES_ADMIN = {
+  comptes:['Comptes', pageComptes, true], activite:['Activité', pageActivite, true], liste:['Liste des comptes', pageListeComptes, true], liens:['Comptes thérapeute', pageLiens],
+  limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin],
+  quest:['Questionnaires', pageQuestionnaires], bilans:[() => QUESTIONNAIRES[admQ].court, pageBilans], bilan:[titreBilan, pageBilan], compare:['Comparer deux bilans', pageCompare],
+};
 
 let installEvt = null;
 /* Le navigateur propose l'installation en un appui (Android) : la page affichée se met à jour */
@@ -20,7 +26,7 @@ window.addEventListener('appinstalled', () => toast('Motus est installé : ouvre
 
 const ACT = {
   tab: t => {
-    view = t.dataset.v; src = null; setPage = null; admPage = null;
+    view = t.dataset.v; src = null; setPage = null; admPage = null; purgerBilansVides();
     if (view === 'clients') synchroCanaux();
     if (view === 'day') cur = today();
     render();
@@ -118,8 +124,6 @@ const ACT = {
     const a = data.account || {};
     location.href = lienMail(CONTACT_MAIL, {objet:`Motus — ${$('#ctSujet').value}`, corps:`${msg}\n\n—\n${ROLE_N[data.role]} ${a.numero || ''} · Motus version ${APP_VERSION}`});
   },
-  admNotes: () => { admScroll = scrollY; admPage = 'notes'; render(); },
-  admRetour: () => { admPage = null; render(true); window.scrollTo(0, admScroll); },
   // le mot de passe confirme la modification ; un nouvel identifiant est en plus vérifié et enregistré par le serveur
   modifierIdentite: async () => {
     const a = data.account;
@@ -248,8 +252,8 @@ const ACT = {
     const d = ensureDay(cur), c = t.dataset.c;
     d.color = d.color === c ? null : c;
     document.querySelectorAll('.colbtn').forEach(b => { const on = b.dataset.c === d.color; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-    const w = $(`#view .week .w[data-k="${cur}"]`);   // la frise de la semaine prend aussitôt la nouvelle couleur
-    if (w) { w.classList.remove(...COL); if (d.color) w.classList.add(d.color); }
+    // la frise de la semaine prend aussitôt la nouvelle couleur : la vraie et sa copie collée sous la date (v49 : seule la copie changeait)
+    document.querySelectorAll(`#view .week .w[data-k="${cur}"]`).forEach(w => { w.classList.remove(...COL); if (d.color) w.classList.add(d.color); });
     save();
   },
   choisirJour: () => choisirMois(true),
@@ -410,7 +414,7 @@ const ACT = {
   reessayerLienTh: () => { lienThMsg = ''; showLock('signup'); },
   forgot: () => showLock('forgot'),
   /* administration */
-  goAdmin: () => { src = null; view = 'admin'; render(); },
+  goAdmin: () => { src = null; view = 'admin'; admPage = 'limites'; render(); },
   admReload: () => { adm = {...admInit(), lienNeuf:adm.lienNeuf}; render(true); },
   admFiltre: t => { adm.filtre = t.dataset.f; render(true); },
   admOpen: t => { adm.ouvert = adm.ouvert === t.dataset.id ? null : t.dataset.id; render(true); },
@@ -466,4 +470,5 @@ function ajouterOeil() {
     maj();
   });
 }
+Object.assign(ACT, ACT_BILANS);   // actions de l'onglet Admin : questionnaires (admin-bilans.js) et navigation
 new MutationObserver(ajouterOeil).observe(document.body, {childList:true, subtree:true});

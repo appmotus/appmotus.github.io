@@ -44,6 +44,8 @@ function defaults(d = {}) {
   if (d.account?.numero) d.account.numero = codeU(d.account.numero);
   // admin : notes en trois catégories ; celles de la version 27, d'un seul bloc, deviennent des notes libres
   d.notesAdmin = typeof d.notesAdmin === 'string' ? {maj:'', plusTard:'', libres:d.notesAdmin} : Object.assign({maj:'', plusTard:'', libres:''}, d.notesAdmin);
+  // v49 : bilans des questionnaires de l'administrateur (admin-bilans.js), gardés avec les réglages, hors du journal
+  d.bilans = (Array.isArray(d.bilans) ? d.bilans : []).map(b => ({periode:'', cree:'', ...b, notes:{...b.notes}, constats:{...b.constats}, priorites:[0, 1].map(i => ({dom:'', action:'', ...b.priorites?.[i]}))}));
   d.thera = Object.assign({type:'', tel:'', email:'', adresse:''}, d.thera);
   d.pending ||= {notes:0, envois:0};   // compteurs pas encore transmis au serveur (hors connexion)
   d.pending.connexions ||= 0;          // v47 : ouvertures de l'app, comptées sur l'appareil, même sans internet

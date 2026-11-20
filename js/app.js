@@ -61,6 +61,9 @@ const ICO = {
   filtre:'<circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/><path d="M8 9h5M8 12h3"/>',
   oeilBarre:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   thera:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1.2-3.6 3.6-5.5 6.5-5.5s5.3 1.9 6.5 5.5"/><path d="M14.5 4.5h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18l-2 2v-2h-1.5A1.5 1.5 0 0 1 13 9V6a1.5 1.5 0 0 1 1.5-1.5Z"/>',
+  courbe:'<path d="M3.5 20.5h17"/><path d="M5 16l4.5-5 3.5 3L19 6.5"/>', groupe:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  serveur:'<rect x="3.5" y="4" width="17" height="6.5" rx="2"/><rect x="3.5" y="13.5" width="17" height="6.5" rx="2"/><path d="M7.5 7.25h.01M7.5 16.75h.01"/>',
+  questionnaire:'<path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="m3.5 6.5 1 1 2-2M3.5 12l1 1 2-2M3.5 17.5l1 1 2-2"/>',
   croix:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>', coche:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
 };
 const ico = (n, cl = 'ri') => `<svg class="${cl}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
@@ -88,7 +91,7 @@ function render(keepScroll) {
   entJ.y = entR.y = entQ.y = Math.max(0, scrollY); entetesJournal(); barreRepertoire(); barreQuotidien();
   if (view === 'cal' && calMode === 'list' && !calQ.trim() && (listeAPlacer || !keepScroll)) allerAuMois();
   listeAPlacer = false;
-  document.querySelectorAll('#view textarea[data-notes-admin]').forEach(ajusterHauteur);
+  document.querySelectorAll('#view textarea[data-notes-admin], #view textarea[data-auto]').forEach(ajusterHauteur);
   marquerEntete();
   surlignerChamps();   // la synthèse du jour
   montrerAvis();   // une fin de suivi ou une acceptation reçue s'affiche quelle que soit la page

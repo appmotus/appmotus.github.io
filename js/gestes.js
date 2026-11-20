@@ -43,7 +43,7 @@ function glissePossible(g, dx) {
 function voisineHtml(g, cote) {
   if (view === 'day') { const c = cur; cur = jourVoisin(g, cote); try { return g.semaine ? weekStrip() : corpsJour(); } finally { cur = c; } }
   if (view === 'set') { const p = setPage; setPage = pageRetour()?.de || null; try { return `<div>${vSet()}</div>`; } finally { setPage = p; } }
-  if (view === 'admin') { const p = admPage; admPage = null; try { return `<div>${vAdmin()}</div>`; } finally { admPage = p; } }
+  if (view === 'admin') { const p = admPage; admPage = parentAdm(admPage); try { return `<div>${vAdmin()}</div>`; } finally { admPage = p; } }
   if (calMode === 'list') {   // la liste contient déjà tous les mois affichés
     const v = moisListe(cote < 0 ? 1 : -1);
     return v ? $(`#listeNotes .mois-bloc[data-mois="${v[0]}-${v[1]}"]`)?.outerHTML || '' : '';

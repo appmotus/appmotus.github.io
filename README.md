@@ -42,7 +42,8 @@ Depuis la version 39, le code est réparti en fichiers de `js/`, chargés par `i
 | `import-texte.js`, `page-connecteurs.js` | Pages Importer des notes et Connecteurs |
 | `guide.js` | Page Guide d'utilisation : met en page le texte de `guide/guide.md` |
 | `therapeute-lien.js`, `therapeute-canal.js`, `vue-clients.js` | Lien client-thérapeute, envois, fiches clients |
-| `admin.js` | Administration (`LIMITES`) |
+| `admin.js` | Onglet Admin : menu et pages (comptes, activité, services et limites, notes ; `LIMITES`) |
+| `admin-bilans.js` | Questionnaires de l'administrateur : registre `QUESTIONNAIRES`, saisie, comparaison, graphiques, lecture à la lumière du journal |
 | `saisie.js` | Ville automatique, fenêtre d'une émotion (volets émotions et besoins), note personnelle |
 | `export-excel.js` | Exports Excel et texte (.txt), selon le choix des données |
 | `dialogue-code.js` | Fenêtre de saisie d'un mot de passe ou d'un code |
@@ -152,7 +153,7 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 
 - Le **serveur** (Supabase, hébergé en Europe) ne connaît que les comptes : identifiant, prénom, nom de famille (uniquement l'initiale pour un utilisateur ; le nom complet reste sur son appareil et dans ses envois au thérapeute), code utilisateur (`U-0001` pour un utilisateur, `C-0001` avant novembre 2026 ; `T-0001` pour un thérapeute), type de compte, coordonnées des thérapeutes, date et nombre de connexions, et des **compteurs** (notes saisies, envois au thérapeute). Jamais le contenu des notes.
 - Le **journal** reste chiffré sur l'appareil, avec le mot de passe du compte. Hors connexion, le journal déjà présent sur l'appareil s'ouvre quand même.
-- L'**administrateur** (un seul compte) a un onglet « Admin » : statistiques d'utilisation, liste des utilisateurs, désactivation, suppression et changement de type de compte.
+- L'**administrateur** (un seul compte) a un onglet « Admin », organisé comme les Paramètres (un menu, puis une page par sujet ; registre `PAGES_ADMIN` dans `actions.js`) : comptes, activité, liste des utilisateurs (désactivation, suppression, changement de type), comptes thérapeute, services et limites, travail sur Motus, et les outils réservés à l'administrateur : **questionnaires** (v49 : fiche « hygiène de vie », un bilan par date, comparaison entre bilans et avec le journal ; données dans `data.bilans`, chiffrées sur l'appareil, jamais envoyées, comprises dans les sauvegardes) et notes. Le rappel de la clé Brevo se remet à zéro à l'ouverture de « Services et limites ». Le nombre de notes de chaque utilisateur n'est plus montré : seule l'activité compte les « notes saisies (hors admin) ».
 - Tant que `SERVER.url` est vide dans `js/serveur.js`, l'app fonctionne en **mode démonstration** : les comptes sont simulés dans le navigateur, et le premier compte créé est administrateur.
 
 ### Mise en place du serveur
@@ -171,14 +172,17 @@ L'app s'ouvre sur un écran de **connexion** (identifiant + mot de passe), avec 
 12. Journal de connexion gardé 6 mois (recommandation de la CNIL) : dans *Authentication › Configuration › Audit Logs*, activer « Write audit logs to the database », puis exécuter `serveur/journal-connexions.sql`. Supabase note alors chaque connexion, reconnexion et déconnexion dans `auth.audit_log_entries` ; une tâche planifiée (`pg_cron`) efface chaque nuit les lignes de plus de 6 mois. La page admin ne lit pas ce journal.
 13. Comptes thérapeute sur lien de l'administrateur : exécuter `serveur/lien-therapeute.sql` (après `schema.sql`). Il remplace la
     fonction qui crée le profil à l'inscription : un compte thérapeute exige désormais un lien valable.
-14. Activité de chaque compte dans la page Admin (notes saisies, envois) : exécuter `serveur/activite-utilisateurs.sql`. Facultatif :
-    sans lui, ces deux lignes n'apparaissent pas dans le détail d'un compte.
+14. Activité de chaque compte dans la page Admin (connexions, envois) : exécuter `serveur/activite-utilisateurs.sql`. Facultatif :
+    sans lui, ces lignes n'apparaissent pas dans le détail d'un compte.
 15. Compte désactivé en lecture seule, et connexions comptées par l'app (même sans internet) : exécuter `serveur/compte-desactive.sql`
     **avant** de publier la version 47. Il remplace `ouvrir_session` (un compte désactivé reçoit son profil au lieu d'être refusé) et
     `compter` (nouveau paramètre `p_connexions`). Tant qu'il n'est pas exécuté, l'app refuse un compte désactivé comme avant.
     Règle : un compte désactivé se connecte, lit et exporte ses notes, mais plus rien ne s'écrit (`lectureSeule`, `ECRITURES` dans
     `serveur.js`). L'état est relu à chaque ouverture et au retour de l'app au premier plan (`verifierCompte`), puis gardé dans le
     journal chiffré (`data.account.lecture`) pour tenir hors connexion. Tout nouveau bouton qui écrit une note doit rejoindre `ECRITURES`.
+16. Version 49 : exécuter `serveur/notes-hors-admin.sql` (après `compteur-du-jour.sql` et `activite-utilisateurs.sql`). La ligne « Notes saisies » de
+    Admin › Activité ne compte plus les notes du compte administrateur, et `admin_activite` ne rend plus le nombre de notes de chaque compte.
+    Facultatif : sans lui, l'app affiche « Notes saisies (admin compris) ».
 
 ## Lien entre un client et son thérapeute
 

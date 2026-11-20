@@ -5,19 +5,28 @@
    Données venant du serveur : comptes et compteurs, jamais le contenu des journaux. */
 const admInit = () => ({users:null, stats:null, err:'', filtre:'tous', ouvert:null});
 let adm = admInit();
+/* v49 : l'onglet Admin est organisé comme les Paramètres : un menu, puis une page par sujet (registre PAGES_ADMIN dans actions.js).
+   admPage : la page ouverte (null : le menu) ; ADM_PARENT : la page où ramène le retour, quand ce n'est pas le menu. */
+const ADM_PARENT = {bilans:'quest', bilan:'bilans', compare:'bilans'};
+const parentAdm = p => ADM_PARENT[p] || null;
+const admPos = {};   // position de défilement du parent, retrouvée au retour
 const ROLE_N = {client:'Utilisateur', therapeute:'Thérapeute'};   // le rôle interne reste « client » ; seul l'affichage change
 const fmtDT = iso => { if (!iso) return 'jamais'; const d = new Date(iso); return `${fmtFR(ymd(d))} à ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const nomAdmin = u => u.role === 'therapeute' ? u.nom : initiale(u.nom);   // client : initiale seulement
 const who = u => `${u.prenom} ${nomAdmin(u)}`.trim() || u.identifiant;
 
 async function loadAdmin() {
+  if (adm.charge) return;
+  const moi = adm; adm.charge = true;
   try {
     // v47 : l'activité de chaque compte vient de serveur/activite-utilisateurs.sql ; sans lui, la liste s'affiche sans ces deux lignes
     [adm.users, adm.stats, adm.activite] = await Promise.all([API.rpc('admin_utilisateurs'), API.rpc('admin_stats'), API.rpc('admin_activite').catch(() => null)]);
     adm.err = '';
   }
   catch (x) { adm.err = x.code === 'reseau' ? 'Pas de connexion internet.' : x.message || 'Erreur du serveur.'; adm.users ||= []; }
-  if (view === 'admin') render(true);
+  moi.charge = false;
+  // seules les pages qui montrent ces données se réaffichent : un questionnaire en cours de saisie ne doit pas être touché
+  if (adm === moi && view === 'admin' && (!admPage || PAGES_ADMIN[admPage]?.[2])) render(true);
 }
 /* Un cadre de saisie aussi haut que son texte : jamais de barre de défilement à l'intérieur */
 /* Le cadre est d'abord remis à sa hauteur minimale pour mesurer le texte : la page raccourcit un instant et le navigateur la faisait
@@ -32,37 +41,55 @@ function sansSaut(el, fn) {
 }
 function ajusterHauteur(t) { sansSaut(t, () => { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 2}px`; }); }
 /* Mes notes : le bloc-notes de l'administrateur, en trois catégories, chiffré avec son journal sur cet appareil */
-let admPage = null, admScroll = 0;
+let admPage = null;
 const NOTES_ADMIN = [['maj', 'À travailler pour la prochaine mise à jour', 'Corrections et demandes à traiter…'], ['plusTard', 'Travaux ultérieurs', 'Idées et chantiers pour plus tard…'], ['libres', 'Notes libres', 'Tout le reste…']];
 function pageNotesAdmin() {
   const n = data.notesAdmin;
-  return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour au tableau de bord">‹</button><h1>Mes notes</h1></div>
-  <p class="small muted" style="margin:0 2px 12px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes. Elles s’enregistrent au fil de la frappe.</p>
+  return `<p class="small muted" style="margin:0 2px 12px">Pour vous seul(e) : ces notes restent chiffrées sur cet appareil, avec votre journal, et font partie de vos sauvegardes. Elles s’enregistrent au fil de la frappe.</p>
   ${NOTES_ADMIN.map(([k, titre, aide]) => `<section class="card">
     <div class="card-h" style="margin-bottom:0"><h2>${titre}</h2><span class="card-btns"><button type="button" class="icon-btn copier" data-act="viderNoteAdmin" data-k="${k}" aria-label="Effacer tout le texte de « ${titre} »">${ico('gomme', '')}</button><button type="button" class="icon-btn copier" data-act="copierNoteAdmin" data-k="${k}" aria-label="Copier tout le texte de « ${titre} »">${ico('copie', '')}</button></span></div>
     <textarea data-notes-admin="${k}" rows="3" autocapitalize="sentences" placeholder="${aide}" style="margin-top:10px">${esc(n[k])}</textarea>
     <div class="small muted" data-etat="${k}" style="margin-top:6px;text-align:right">${n[k] ? 'Enregistré ✓' : ''}</div>
   </section>`).join('')}`;
 }
+/* Le menu de l'onglet Admin : trois groupes, une ligne par page (même présentation que les Paramètres) */
+function vAdminMenu() {
+  if (session && !adm.users) loadAdmin();   // les nombres du menu viennent du serveur
+  const s = adm.stats, qs = Object.keys(QUESTIONNAIRES).reduce((n, q) => n + bilansDe(q).length, 0);
+  return `
+  <div class="sethead"><div><div class="eyebrow">Administrateur</div><h1>Administration</h1></div></div>
+  ${groupeMenu('Utilisation de l’app', [
+    ligneMenu('user', 'Comptes', {val:s ? String(s.comptes) : '', page:'comptes', act:'admOuvrir'}),
+    ligneMenu('courbe', 'Activité', {page:'activite', act:'admOuvrir'}),
+    ligneMenu('groupe', 'Liste des comptes', {val:adm.users?.length ? String(adm.users.length) : '', page:'liste', act:'admOuvrir'}),
+    ligneMenu('thera', 'Comptes thérapeute', {val:Array.isArray(adm.liensTh) && adm.liensTh.length ? `${adm.liensTh.length} en attente` : '', page:'liens', act:'admOuvrir'}),
+  ])}
+  ${groupeMenu('Services', [
+    ligneMenu('serveur', 'Services et limites', {page:'limites', act:'admOuvrir'}),
+    ligneMenu('sablier', 'Travail sur Motus', {val:`≈ ${HEURES_TRAVAIL} h`, page:'travail', act:'admOuvrir'}),
+  ])}
+  ${groupeMenu('Mes outils (réservés à l’administrateur)', [
+    ligneMenu('questionnaire', 'Questionnaires', {val:qs ? String(qs) : '', page:'quest', act:'admOuvrir'}),
+    ligneMenu('importer', 'Mes notes', {page:'notes', act:'admOuvrir'}),
+  ])}`;
+}
 function vAdmin() {
-  if (admPage === 'notes') return pageNotesAdmin();
-  const head = `<div class="sethead" style="margin:4px 0 16px"><div><div class="eyebrow">Administration</div><h1>Tableau de bord</h1></div><button class="btn" data-act="admNotes">Mes notes</button></div>`;
-  if (!session) return head + '<section class="card"><p class="empty">Hors connexion : l’administration nécessite internet.</p></section>';
-  if (!adm.users) { loadAdmin(); return head + '<section class="card"><p class="empty">Chargement…</p></section>'; }
-  if (!adm.limites && !adm.limEnCours) loadLimites();
-  if (adm.liensTh === undefined && !adm.liensEnCours) loadLiensTh();
-  data.adminVu = new Date().toISOString(); save();
-  const s = adm.stats, a = s?.activite;
-  const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
-  const j1 = n => n ?? '—';   // « aujourd'hui » : absent tant que serveur/compteur-du-jour.sql n'est pas exécuté
-  const act = (l, o) => `<tr><th scope="row">${l}</th><td>${j1(o.j1)}</td><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
-  const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
-    .sort((x, y) => who(x).localeCompare(who(y), 'fr', {sensitivity:'base'}));
-  return head
-  + (adm.err ? `<div class="banner"><span>${esc(adm.err)}</span><button class="btn" data-act="admReload">Réessayer</button></div>` : '')
-  + (s ? `
-  <section class="card">
-    <h2>Comptes</h2>
+  const page = admPage && PAGES_ADMIN[admPage];
+  if (!page) return vAdminMenu();
+  const titre = typeof page[0] === 'function' ? page[0]() : page[0];
+  return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour">‹</button><h1>${titre}</h1></div>${page[1]()}`;
+}
+/* Une page qui montre des données du serveur : elle attend qu'elles soient là (le troisième élément du registre est vrai) */
+function avecServeur(corps) {
+  if (!session) return '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
+  if (!adm.users) { loadAdmin(); return '<section class="card"><p class="empty">Chargement…</p></section>'; }
+  return (adm.err ? `<div class="banner"><span>${esc(adm.err)}</span><button class="btn" data-act="admReload">Réessayer</button></div>` : '') + corps();
+}
+function pageComptes() {
+  return avecServeur(() => {
+    const s = adm.stats, j1 = n => n ?? '—';   // « aujourd'hui » : absent tant que serveur/compteur-du-jour.sql n'est pas exécuté
+    const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
+    return s ? `<section class="card">
     <div class="tiles">${tile(s.comptes, 'au total')}${tile(s.clients, 'utilisateurs')}${tile(s.therapeutes, 'thérapeutes')}${tile(s.desactives, 'désactivés')}</div>
     <table class="stats">
       <thead><tr><th></th><th>Aujourd’hui</th><th>7 jours</th><th>30 jours</th></tr></thead>
@@ -71,30 +98,58 @@ function vAdmin() {
         <tr><th scope="row">Comptes actifs</th><td>${j1(s.actifs_1j)}</td><td>${s.actifs_7j}</td><td>${s.actifs_30j}</td></tr>
       </tbody>
     </table>
-  </section>
-  <section class="card">
-    <h2>Activité</h2>
+  </section>` : '<section class="card"><p class="empty">Statistiques indisponibles.</p></section>';
+  });
+}
+function pageActivite() {
+  return avecServeur(() => {
+    const a = adm.stats?.activite;
+    if (!a) return '<section class="card"><p class="empty">Statistiques indisponibles.</p></section>';
+    const j1 = n => n ?? '—';
+    const act = (l, o) => `<tr><th scope="row">${l}</th><td>${j1(o.j1)}</td><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
+    // v49 : les notes de l'administrateur ne sont pas comptées (serveur/notes-hors-admin.sql) ; sans ce fichier, le total les contient encore
+    const hors = a.notes_hors_admin;
+    return `<section class="card">
     <table class="stats">
       <thead><tr><th></th><th title="Aujourd’hui">Auj.</th><th>7 jours</th><th>30 jours</th><th>Total</th></tr></thead>
-      <tbody>${act('Connexions', a.connexions)}${act('Notes saisies', a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
+      <tbody>${act('Connexions', a.connexions)}${act(hors ? 'Notes saisies (hors admin)' : 'Notes saisies (admin compris)', hors || a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
     </table>
+    ${hors ? '' : '<p class="small muted" style="margin:8px 0 0">Pour ne plus compter vos propres notes, exécutez serveur/notes-hors-admin.sql dans Supabase (SQL Editor).</p>'}
     <p class="small muted" style="margin:8px 0 0">Une connexion est une ouverture de l’app, avec ou sans internet : une même personne en fait plusieurs par jour. Une note saisie est une émotion ou une note personnelle, comptée à sa création ; les synthèses ne le sont pas. Les chiffres arrivent dès que le téléphone est de nouveau connecté.</p>
     <p class="small muted" style="margin:6px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
-  </section>` : '') + `
-  <section class="card">
-    <h2>Travail sur Motus</h2>
+  </section>`;
+  });
+}
+function pageListeComptes() {
+  return avecServeur(() => {
+    const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
+      .sort((x, y) => who(x).localeCompare(who(y), 'fr', {sensitivity:'base'}));
+    return `<section class="card">
+    <div class="card-h"><h2>${list.length} compte${list.length > 1 ? 's' : ''}</h2></div>
+    <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Utilisateurs'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
+      `<button class="chip neutre ${adm.filtre === k ? 'on' : ''}" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
+    ${champRecherche('admSearch', '', 'Rechercher : nom, code, identifiant', 'margin-bottom:10px')}
+    ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
+  </section>`;
+  });
+}
+function pageLiens() {
+  if (!session) return '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
+  if (adm.liensTh === undefined && !adm.liensEnCours) loadLiensTh();
+  return carteLiensTh();
+}
+function pageLimites() {
+  if (!session) return '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
+  if (!adm.limites && !adm.limEnCours) loadLimites();
+  return limitsCard();
+}
+function pageTravail() {
+  return `<section class="card">
     <div class="heures"><b>≈ ${HEURES_TRAVAIL} h</b><span class="small muted">de travail</span></div>
     <p class="small muted" style="margin:6px 0 0">Estimation à partir des échanges avec Claude, sans les pauses de plus de 30 minutes.</p>
     <div class="heures" style="margin-top:14px"><b>≈ ${JETONS_CONSOMMES.total.toLocaleString('fr-FR')} M</b><span class="small muted">de jetons consommés par Claude</span></div>
     <p class="small muted" style="margin:6px 0 0">Dont ${mio(JETONS_CONSOMMES.cache)} relus depuis le cache, ${mio(JETONS_CONSOMMES.envoyes)} envoyés à Claude et ${mio(JETONS_CONSOMMES.ecrits)} écrits par Claude.</p>
     <p class="small muted" style="margin:10px 0 0">Jusqu’à la version ${APP_VERSION}, mis à jour à chaque version.</p>
-  </section>` + limitsCard() + carteLiensTh() + `
-  <section class="card">
-    <div class="card-h"><h2>Liste des comptes</h2><span class="count">${list.length}</span></div>
-    <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Utilisateurs'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
-      `<button class="chip neutre ${adm.filtre === k ? 'on' : ''}" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
-    ${champRecherche('admSearch', '', 'Rechercher : nom, code, identifiant', 'margin-bottom:10px')}
-    ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
   </section>`;
 }
 /* Limites des offres gratuites, relevées sur les pages officielles le 31/10/2026.
@@ -114,7 +169,7 @@ function adminReminder() {
   if (!data.adminVu) { data.adminVu = new Date().toISOString(); save(); return ''; }
   const j = Math.floor((Date.now() - new Date(data.adminVu)) / 864e5);
   if (j <= ADMIN_RAPPEL_JOURS) return '';
-  return `<div class="banner admin-rappel"><span>Vous n’avez pas ouvert l’onglet Admin depuis ${j} jours. Ouvrez-le pour vérifier les services et garder active la clé d’envoi des e-mails, qui expire après 90 jours sans utilisation.</span>
+  return `<div class="banner admin-rappel"><span>Vous n’avez pas ouvert « Services et limites » (onglet Admin) depuis ${j} jours. Ouvrez cette page pour vérifier les services et garder active la clé d’envoi des e-mails, qui expire après 90 jours sans utilisation.</span>
     <button class="btn primary" data-act="goAdmin">Ouvrir</button></div>`;
 }
 async function loadLimites() {
@@ -129,6 +184,7 @@ async function loadLimites() {
   const val = p => p.status === 'fulfilled' ? p.value : null;
   adm.limites = {res:val(r), depotKo:val(g)?.size ?? null, envoi:val(b)};
   adm.limEnCours = false;
+  data.adminVu = new Date().toISOString(); save();   // la clé Brevo vient d'être utilisée : le rappel repart de zéro (v49 : à l'ouverture de cette page)
   const c = $('#limCard');
   if (c) c.outerHTML = limitsCard();
 }
@@ -146,14 +202,12 @@ const limInfo = (label, limite, note = '') => `<div class="lim"><div class="lim-
 const limLien = (url, txt) => `<a class="small" href="${url}" target="_blank" rel="noopener noreferrer">${txt}</a>`;
 
 function limitsCard() {
-  const head = '<h2>Services et limites</h2>';
-  if (!adm.limites) return `<section class="card" id="limCard">${head}<p class="empty">Chargement…</p></section>`;
+  if (!adm.limites) return `<section class="card" id="limCard"><p class="empty">Chargement…</p></section>`;
   const {res, depotKo, envoi} = adm.limites;
   const local = Object.keys(localStorage).filter(k => k.startsWith('journal-emotions')).reduce((n, k) => n + k.length + localStorage.getItem(k).length, 0);
   const restants = envoi?.type === 'free' && envoi.credits != null ? Math.max(LIMITES.envois - envoi.credits, 0) : null;
   return `<section class="card" id="limCard">
-    ${head}
-    <p class="small muted" style="margin:6px 0 0">Offres gratuites ; limites relevées le ${LIMITES_DATE}, elles peuvent changer.</p>
+    <p class="small muted" style="margin:0">Offres gratuites ; limites relevées le ${LIMITES_DATE}, elles peuvent changer.</p>
 
     <div class="lim-g"><h3>Supabase (comptes et serveur)</h3>${limLien('https://supabase.com/dashboard/org/_/usage', 'Voir la consommation ↗')}</div>
     ${jauge('Base de données', res?.base_octets ?? null, LIMITES.base, fmtOctets)}
@@ -202,14 +256,13 @@ function carteLiensTh() {
       ${L.length ? `<p class="label">En attente d’utilisation</p>
       ${L.map(l => `<div class="stat"><span>Créé le ${jour(l.cree_le)}<br><span class="small muted">valable jusqu’au ${jour(l.expire_le)}</span></span><button class="btn" data-act="retirerLienTh" data-id="${esc(String(l.id))}">Retirer</button></div>`).join('')}` : ''}`;
   return `<section class="card" id="carteLiensTh">
-    <div class="card-h"><h2>Comptes thérapeute</h2>${Array.isArray(L) && L.length ? `<span class="count">${L.length}</span>` : ''}</div>
     <p class="small muted" style="margin:0">Un thérapeute crée son compte avec un lien que vous lui envoyez, à sa demande. Chaque lien sert une seule fois et reste valable 30 jours. L’inscription ordinaire crée un compte utilisateur.</p>
     ${corps}
   </section>`;
 }
 function userRow(u) {
   const open = adm.ouvert === u.id, moi = u.id === profil?.id, th = u.role === 'therapeute';
-  const act = Array.isArray(adm.activite) ? adm.activite.find(a => a.id === u.id) || {notes:0, envois:0} : null;   // null : serveur/activite-utilisateurs.sql pas encore exécuté
+  const act = Array.isArray(adm.activite) ? adm.activite.find(a => a.id === u.id) || {envois:0} : null;   // null : serveur/activite-utilisateurs.sql pas encore exécuté
   return `<div class="urow" data-name="${esc(`${who(u)} ${codeU(u.numero)} ${u.identifiant}`.toLowerCase())}">
     <button class="uhead" data-act="admOpen" data-id="${esc(u.id)}" aria-expanded="${open}">
       <span><b>${esc(u.prenom)}</b> ${esc(nomAdmin(u))}</span>
@@ -221,7 +274,7 @@ function userRow(u) {
         <dt>Identifiant</dt><dd>${esc(u.identifiant)}</dd>
         <dt>Inscription</dt><dd>${fmtDT(u.cree_le)}</dd>
         <dt>Connexions</dt><dd>${u.nb_connexions}<span class="small muted"> ouvertures de l’app</span></dd>
-        ${act ? `<dt>Notes saisies</dt><dd>${act.notes}</dd><dt>Envois au thérapeute</dt><dd>${act.envois}</dd>` : ''}
+        ${act ? `<dt>Envois au thérapeute</dt><dd>${act.envois}</dd>` : ''}
         ${th ? `<dt>Thérapie</dt><dd>${esc(u.therapie) || '—'}</dd>
         <dt>Téléphone</dt><dd>${esc(u.telephone) || '—'}</dd>
         <dt>E-mail</dt><dd>${esc(u.email_contact) || '—'}</dd>

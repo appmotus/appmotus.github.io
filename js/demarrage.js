@@ -14,6 +14,8 @@ document.addEventListener('input', e => {
     document.querySelectorAll('#connGestion .conn-ligne').forEach(l => l.hidden = !!q && !l.dataset.k.includes(k) && !l.dataset.t.includes(q));
   } else if (t.id === 'repQ') {
     repQ = t.value; $('#repListe').innerHTML = listeRepertoire();
+  } else if (t.dataset.bilan) {   // questionnaires de l'administrateur
+    majBilanChamp(t);
   } else if (t.dataset.notesAdmin) {
     ajusterHauteur(t);
     const k = t.dataset.notesAdmin, etat = () => $(`[data-etat="${k}"]`);
@@ -60,6 +62,7 @@ document.addEventListener('change', e => {
     Object.assign(rappelExport(), {debut:e.target.value, fait:'', plusTard:''});
     save(); render(true);
   }
+  else if (e.target.dataset.cmp) { const e1 = e.target; if (e1.dataset.cmp === 'jours') cmp.jours = +e1.value; else cmp[e1.dataset.cmp === 'cmpA' ? 'a' : 'b'] = e1.value; render(true); }   // comparaison de deux bilans
   else if (e.target.dataset.choix) changerChoix(e.target);   // Choix des données (thérapeute, exports)
 });
 $('#entryDlg').addEventListener('click', e => { if (e.target === e.currentTarget && !$('#nText')) e.currentTarget.close(); });   // une note en cours ne se perd pas d'un appui à côté

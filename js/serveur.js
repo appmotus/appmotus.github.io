@@ -128,8 +128,8 @@ function demoApi() {
       admin(x);
       const P = Object.values(x.comptes).map(c => c.profil), U = Object.values(x.usage);
       const recent = (iso, n) => !!iso && Date.now() - new Date(iso) < n * 864e5;
-      const sum = (f, n) => U.filter(u => !n || u.jour >= addDays(today(), 1 - n)).reduce((a, u) => a + u[f], 0);
-      const act = f => ({j1:sum(f, 1), j7:sum(f, 7), j30:sum(f, 30), total:sum(f)});
+      const sum = (f, n, horsAdmin) => U.filter(u => (!n || u.jour >= addDays(today(), 1 - n)) && !(horsAdmin && x.comptes[u.id]?.profil.est_admin)).reduce((a, u) => a + u[f], 0);
+      const act = (f, h) => ({j1:sum(f, 1, h), j7:sum(f, 7, h), j30:sum(f, 30, h), total:sum(f, 0, h)});
       const duJour = iso => !!iso && ymd(new Date(iso)) === today();
       const sem = {};
       U.filter(u => u.jour >= addDays(today(), -55)).forEach(u => {
@@ -139,12 +139,12 @@ function demoApi() {
       return {comptes:P.length, clients:P.filter(p => p.role === 'client').length, therapeutes:P.filter(p => p.role === 'therapeute').length,
         desactives:P.filter(p => !p.actif).length, inscrits_1j:P.filter(p => duJour(p.cree_le)).length, actifs_1j:P.filter(p => duJour(p.derniere_connexion)).length, inscrits_7j:P.filter(p => recent(p.cree_le, 7)).length, inscrits_30j:P.filter(p => recent(p.cree_le, 30)).length,
         actifs_7j:P.filter(p => recent(p.derniere_connexion, 7)).length, actifs_30j:P.filter(p => recent(p.derniere_connexion, 30)).length,
-        activite:{connexions:act('connexions'), notes:act('notes'), envois:act('envois')},
+        activite:{connexions:act('connexions'), notes:act('notes'), notes_hors_admin:act('notes', true), envois:act('envois')},   // notes_hors_admin : serveur/notes-hors-admin.sql
         semaines:Object.values(sem).sort((a, b) => a.semaine.localeCompare(b.semaine))};
     },
-    admin_activite(x) {   // somme des compteurs de chaque compte (serveur/activite-utilisateurs.sql)
+    admin_activite(x) {   // somme des compteurs de chaque compte (serveur/activite-utilisateurs.sql) ; sans les notes depuis la v49
       admin(x); const m = {};
-      for (const u of Object.values(x.usage)) { const a = m[u.id] ||= {id:u.id, connexions:0, notes:0, envois:0}; a.connexions += u.connexions; a.notes += u.notes; a.envois += u.envois; }
+      for (const u of Object.values(x.usage)) { const a = m[u.id] ||= {id:u.id, connexions:0, envois:0}; a.connexions += u.connexions; a.envois += u.envois; }
       return Object.values(m);
     },
     admin_activer(x, {p_id, p_actif}) { admin(x); pasMoi(p_id); x.comptes[p_id].profil.actif = p_actif; },
