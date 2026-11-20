@@ -13,9 +13,8 @@ const PAGES_REGLAGES = {
 };
 /* Pages de l'onglet Admin (v49) : [titre (ou fonction qui le donne), page, vrai si la page montre des données du serveur : elle se réaffiche quand elles arrivent] */
 const PAGES_ADMIN = {
-  comptes:['Comptes', pageComptes, true], activite:['Activité', pageActivite, true], liste:['Liste des comptes', pageListeComptes, true], liens:['Comptes thérapeute', pageLiens],
-  limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin],
-  quest:['Questionnaires', pageQuestionnaires], bilans:[() => QUESTIONNAIRES[admQ].court, pageBilans], bilan:[titreBilan, pageBilan], compare:['Comparer deux bilans', pageCompare],
+  usage:['Utilisation de l’app', pageUsage, true], limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin],
+  bilans:[() => QUESTIONNAIRES[admQ].court, pageBilans], bilan:[titreBilan, pageBilan], compare:['Comparer deux bilans', pageCompare],
 };
 
 let installEvt = null;

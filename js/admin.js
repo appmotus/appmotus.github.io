@@ -7,7 +7,7 @@ const admInit = () => ({users:null, stats:null, err:'', filtre:'tous', ouvert:nu
 let adm = admInit();
 /* v49 : l'onglet Admin est organisé comme les Paramètres : un menu, puis une page par sujet (registre PAGES_ADMIN dans actions.js).
    admPage : la page ouverte (null : le menu) ; ADM_PARENT : la page où ramène le retour, quand ce n'est pas le menu. */
-const ADM_PARENT = {bilans:'quest', bilan:'bilans', compare:'bilans'};
+const ADM_PARENT = {bilan:'bilans', compare:'bilans'};
 const parentAdm = p => ADM_PARENT[p] || null;
 const admPos = {};   // position de défilement du parent, retrouvée au retour
 const ROLE_N = {client:'Utilisateur', therapeute:'Thérapeute'};   // le rôle interne reste « client » ; seul l'affichage change
@@ -52,24 +52,20 @@ function pageNotesAdmin() {
     <div class="small muted" data-etat="${k}" style="margin-top:6px;text-align:right">${n[k] ? 'Enregistré ✓' : ''}</div>
   </section>`).join('')}`;
 }
-/* Le menu de l'onglet Admin : trois groupes, une ligne par page (même présentation que les Paramètres) */
+/* Le menu de l'onglet Admin : des groupes, une ligne par page (même présentation que les Paramètres) */
 function vAdminMenu() {
   if (session && !adm.users) loadAdmin();   // les nombres du menu viennent du serveur
-  const s = adm.stats, qs = Object.keys(QUESTIONNAIRES).reduce((n, q) => n + bilansDe(q).length, 0);
+  const s = adm.stats;
   return `
   <div class="sethead"><div><div class="eyebrow">Administrateur</div><h1>Administration</h1></div></div>
-  ${groupeMenu('Utilisation de l’app', [
-    ligneMenu('user', 'Comptes', {val:s ? String(s.comptes) : '', page:'comptes', act:'admOuvrir'}),
-    ligneMenu('courbe', 'Activité', {page:'activite', act:'admOuvrir'}),
-    ligneMenu('groupe', 'Liste des comptes', {val:adm.users?.length ? String(adm.users.length) : '', page:'liste', act:'admOuvrir'}),
-    ligneMenu('thera', 'Comptes thérapeute', {val:Array.isArray(adm.liensTh) && adm.liensTh.length ? `${adm.liensTh.length} en attente` : '', page:'liens', act:'admOuvrir'}),
-  ])}
-  ${groupeMenu('Services', [
+  ${groupeMenu('Application', [
+    ligneMenu('courbe', 'Utilisation de l’app', {val:s ? `${s.comptes} compte${s.comptes > 1 ? 's' : ''}` : '', page:'usage', act:'admOuvrir'}),
     ligneMenu('serveur', 'Services et limites', {page:'limites', act:'admOuvrir'}),
     ligneMenu('sablier', 'Travail sur Motus', {val:`≈ ${HEURES_TRAVAIL} h`, page:'travail', act:'admOuvrir'}),
   ])}
-  ${groupeMenu('Mes outils (réservés à l’administrateur)', [
-    ligneMenu('questionnaire', 'Questionnaires', {val:qs ? String(qs) : '', page:'quest', act:'admOuvrir'}),
+  ${groupeMenu('Mes questionnaires (réservés à l’administrateur)', Object.entries(QUESTIONNAIRES).map(([k, q]) =>
+    ligneMenu('questionnaire', q.court, {val:resumeQuestionnaire(k), page:k, act:'admQuest'})))}
+  ${groupeMenu('Mes outils', [
     ligneMenu('importer', 'Mes notes', {page:'notes', act:'admOuvrir'}),
   ])}`;
 }
@@ -79,17 +75,20 @@ function vAdmin() {
   const titre = typeof page[0] === 'function' ? page[0]() : page[0];
   return `<div class="subhead"><button class="icon-btn" data-act="admRetour" aria-label="Retour">‹</button><h1>${titre}</h1></div>${page[1]()}`;
 }
-/* Une page qui montre des données du serveur : elle attend qu'elles soient là (le troisième élément du registre est vrai) */
-function avecServeur(corps) {
-  if (!session) return '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
+const admHors = '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
+/* Utilisation de l'app (v50 : les anciennes pages Comptes, Activité, Comptes thérapeute et Liste des comptes, réunies) */
+function pageUsage() {
+  if (!session) return admHors;
   if (!adm.users) { loadAdmin(); return '<section class="card"><p class="empty">Chargement…</p></section>'; }
-  return (adm.err ? `<div class="banner"><span>${esc(adm.err)}</span><button class="btn" data-act="admReload">Réessayer</button></div>` : '') + corps();
+  if (adm.liensTh === undefined && !adm.liensEnCours) loadLiensTh();
+  return (adm.err ? `<div class="banner"><span>${esc(adm.err)}</span><button class="btn" data-act="admReload">Réessayer</button></div>` : '')
+    + `<div class="gl">Comptes</div>${carteComptes()}<div class="gl">Activité</div>${carteActivite()}<div class="gl">Comptes thérapeute</div>${carteLiensTh()}`
+    + `<div class="gl">Liste des comptes</div>${carteListeComptes()}`;
 }
-function pageComptes() {
-  return avecServeur(() => {
-    const s = adm.stats, j1 = n => n ?? '—';   // « aujourd'hui » : absent tant que serveur/compteur-du-jour.sql n'est pas exécuté
-    const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
-    return s ? `<section class="card">
+function carteComptes() {
+  const s = adm.stats, j1 = n => n ?? '—';   // « aujourd'hui » : absent tant que serveur/compteur-du-jour.sql n'est pas exécuté
+  const tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
+  return s ? `<section class="card">
     <div class="tiles">${tile(s.comptes, 'au total')}${tile(s.clients, 'utilisateurs')}${tile(s.therapeutes, 'thérapeutes')}${tile(s.desactives, 'désactivés')}</div>
     <table class="stats">
       <thead><tr><th></th><th>Aujourd’hui</th><th>7 jours</th><th>30 jours</th></tr></thead>
@@ -99,17 +98,15 @@ function pageComptes() {
       </tbody>
     </table>
   </section>` : '<section class="card"><p class="empty">Statistiques indisponibles.</p></section>';
-  });
 }
-function pageActivite() {
-  return avecServeur(() => {
-    const a = adm.stats?.activite;
-    if (!a) return '<section class="card"><p class="empty">Statistiques indisponibles.</p></section>';
-    const j1 = n => n ?? '—';
-    const act = (l, o) => `<tr><th scope="row">${l}</th><td>${j1(o.j1)}</td><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
-    // v49 : les notes de l'administrateur ne sont pas comptées (serveur/notes-hors-admin.sql) ; sans ce fichier, le total les contient encore
-    const hors = a.notes_hors_admin;
-    return `<section class="card">
+function carteActivite() {
+  const a = adm.stats?.activite;
+  if (!a) return '<section class="card"><p class="empty">Statistiques indisponibles.</p></section>';
+  const j1 = n => n ?? '—';
+  const act = (l, o) => `<tr><th scope="row">${l}</th><td>${j1(o.j1)}</td><td>${o.j7}</td><td>${o.j30}</td><td>${o.total}</td></tr>`;
+  // v49 : les notes de l'administrateur ne sont pas comptées (serveur/notes-hors-admin.sql) ; sans ce fichier, le total les contient encore
+  const hors = a.notes_hors_admin;
+  return `<section class="card">
     <table class="stats">
       <thead><tr><th></th><th title="Aujourd’hui">Auj.</th><th>7 jours</th><th>30 jours</th><th>Total</th></tr></thead>
       <tbody>${act('Connexions', a.connexions)}${act(hors ? 'Notes saisies (hors admin)' : 'Notes saisies (admin compris)', hors || a.notes)}${act('Envois au thérapeute', a.envois)}</tbody>
@@ -118,28 +115,20 @@ function pageActivite() {
     <p class="small muted" style="margin:8px 0 0">Une connexion est une ouverture de l’app, avec ou sans internet : une même personne en fait plusieurs par jour. Une note saisie est une émotion ou une note personnelle, comptée à sa création ; les synthèses ne le sont pas. Les chiffres arrivent dès que le téléphone est de nouveau connecté.</p>
     <p class="small muted" style="margin:6px 0 0">Seuls des nombres sont transmis : le contenu des notes reste sur les téléphones.</p>
   </section>`;
-  });
 }
-function pageListeComptes() {
-  return avecServeur(() => {
-    const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
-      .sort((x, y) => who(x).localeCompare(who(y), 'fr', {sensitivity:'base'}));
-    return `<section class="card">
+function carteListeComptes() {
+  const list = adm.users.filter(u => adm.filtre === 'tous' || (adm.filtre === 'off' ? !u.actif : u.role === adm.filtre))
+    .sort((x, y) => who(x).localeCompare(who(y), 'fr', {sensitivity:'base'}));
+  return `<section class="card">
     <div class="card-h"><h2>${list.length} compte${list.length > 1 ? 's' : ''}</h2></div>
     <div class="chips" style="margin-bottom:10px">${[['tous', 'Tous'], ['client', 'Utilisateurs'], ['therapeute', 'Thérapeutes'], ['off', 'Désactivés']].map(([k, n]) =>
       `<button class="chip neutre ${adm.filtre === k ? 'on' : ''}" data-act="admFiltre" data-f="${k}" aria-pressed="${adm.filtre === k}">${n}</button>`).join('')}</div>
     ${champRecherche('admSearch', '', 'Rechercher : nom, code, identifiant', 'margin-bottom:10px')}
     ${list.length ? list.map(userRow).join('') : '<p class="empty">Aucun compte dans cette catégorie.</p>'}
   </section>`;
-  });
-}
-function pageLiens() {
-  if (!session) return '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
-  if (adm.liensTh === undefined && !adm.liensEnCours) loadLiensTh();
-  return carteLiensTh();
 }
 function pageLimites() {
-  if (!session) return '<section class="card"><p class="empty">Hors connexion : cette page nécessite internet.</p></section>';
+  if (!session) return admHors;
   if (!adm.limites && !adm.limEnCours) loadLimites();
   return limitsCard();
 }

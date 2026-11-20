@@ -619,3 +619,13 @@ table.stats.mini td.muted{text-align:left;font-weight:500}
 .cst{margin-top:12px;font-size:.9rem}
 .cst p{margin:3px 0 0;overflow-wrap:anywhere}
 .prio-l{margin-top:6px;font-size:.9rem;overflow-wrap:anywhere}
+/* v50 : questionnaires à échelle, score masqué, boutons de fin */
+.q-t{display:flex;gap:10px;font-size:.93rem;font-weight:500}
+.q-n{flex:none;min-width:24px;height:24px;border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--brand);font-size:.78rem;font-weight:700;display:inline-grid;place-items:center;padding:0 6px}
+.note-chips.deux{gap:8px}
+.note-chips.deux button{padding:13px 0;font-size:.95rem}
+.palier.neutre{background:var(--bg);color:var(--muted)}
+.score-masque{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer;border-radius:14px;margin:4px -8px 0;padding:6px 8px;outline-offset:2px}
+.score-masque:active{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.bilan-fin{margin-top:18px;gap:12px}
+.bilan-fin .btn{flex:1}

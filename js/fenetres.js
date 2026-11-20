@@ -2,13 +2,13 @@
 'use strict';
 
 /* Fenêtre Annuler / Confirmer de l'app, à la place de la boîte du navigateur */
-function confirmerAction({titre, texte = '', bouton = 'Confirmer'}) {
+function confirmerAction({titre, texte = '', bouton = 'Confirmer', non = 'Annuler'}) {
   return new Promise(resolve => {
     const D = $('#codeDlg');
     D.innerHTML = `<form method="dialog" id="caForm">
       <div class="dlg-h"><h2>${esc(titre)}</h2></div>
       ${texte ? `<div class="dlg-b"><p class="small muted" style="margin:0">${texte}</p></div>` : ''}
-      <div class="dlg-f"><button type="button" class="btn" id="caNon">Annuler</button><button class="btn danger">${bouton}</button></div>
+      <div class="dlg-f"><button type="button" class="btn" id="caNon">${non}</button><button class="btn danger">${bouton}</button></div>
     </form>`;
     let fait = false;
     const fin = ok => { if (fait) return; fait = true; D.onclose = null; if (D.open) D.close(); resolve(ok); };
