@@ -533,6 +533,8 @@ a{color:var(--accent)}
 .strip i{width:11px;height:11px;border-radius:50%;background:var(--surface2)}
 .strip i.vert{background:var(--vert)}.strip i.jaune{background:var(--jaune)}.strip i.rouge{background:var(--rouge)}
 .synth-ro{white-space:pre-wrap;margin:0}
+.synth-ro b{color:var(--fc);font-weight:700}
+[data-theme=dark] .synth-ro b{color:color-mix(in srgb,var(--fc) 45%,#fff)}
 .colors.one{grid-template-columns:1fr}
 #invField{margin-top:8px;font-size:.8rem;word-break:break-all}
 .envois{list-style:none;margin:6px 0 0;padding:0;font-size:.9rem}
@@ -627,5 +629,17 @@ table.stats.mini td.muted{text-align:left;font-weight:500}
 .palier.neutre{background:var(--bg);color:var(--muted)}
 .score-masque{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer;border-radius:14px;margin:4px -8px 0;padding:6px 8px;outline-offset:2px}
 .score-masque:active{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+/* v51 : le choix car / par / de, à droite des points de suspension, sur une seule ligne */
+.lien-ligne{display:flex;align-items:center;gap:10px;margin:13px 0 6px}
+.lien-ligne .label{margin:0}
+.seg.lien{width:172px;margin:0}
+/* v51 : la pastille « + » (mot hors répertoire) et sa ligne de saisie */
+.chip.neutre.plus{font-weight:700;padding:5px 15px;border:1.5px dashed var(--muted);background:transparent;color:var(--text)}
+.ajout-mot{display:flex;gap:8px;margin-top:8px}
+.ajout-mot input{flex:1;min-width:0}
+/* v51 : « N/A » d'un domaine de la fiche hygiène de vie, sous les notes */
+.note-chips .na-btn{color:var(--muted);font-size:.8rem}
+.note-chips .na-btn.on{color:var(--on-accent)}
+.est-na .note-chips button:not(.na-btn){opacity:.45}
 .bilan-fin{margin-top:18px;gap:12px}
 .bilan-fin .btn{flex:1}

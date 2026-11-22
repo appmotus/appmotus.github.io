@@ -79,8 +79,49 @@ function avecConnecteurs(s, actif) {
   let html = '', i = 0;
   for (const x of s.matchAll(RE_CONN)) {   // découpé avant l'échappement : une apostrophe peut faire partie du connecteur
     const debut = x.index + x[1].length;
-    html += esc(s.slice(i, debut)) + `<span class="conn"${actif ? ` data-act="voirConn" data-c="${esc(cleC(x[2]))}"` : ''}>${esc(nomConn(x[2]))}</span>`;
+    html += avecMotsRepertoire(s.slice(i, debut)) + `<span class="conn"${actif ? ` data-act="voirConn" data-c="${esc(cleC(x[2]))}"` : ''}>${esc(nomConn(x[2]))}</span>`;
     i = debut + 1 + x[2].length;
+  }
+  return html + avecMotsRepertoire(s.slice(i));
+}
+/* Les mots des répertoires (v51) : un mot du répertoire des émotions ou des besoins écrit dans un texte (… car, besoin en détail,
+   actions, note personnelle, synthèse) ressort en gras, de la couleur de sa famille, comme dans la phrase de l'émotion. Seulement
+   à l'affichage : le texte enregistré ne change pas. La comparaison ne tient compte ni des majuscules, ni des accents, ni de
+   l'apostrophe ; le féminin (« Fier(ère) », « Anxieux(se) ») et le pluriel (s) sont reconnus. Un connecteur (@mot) reste un
+   connecteur. Les émotions passent avant les besoins ; un mot présent dans deux familles prend la première. */
+const platRep = s => s.split('').map(c => c === '’' ? "'" : /[œŒ]/.test(c) ? 'o' : (c.normalize('NFD')[0].toLowerCase()[0] || c)).join('');   // une lettre pour une lettre : les positions restent celles du texte
+function formesRep(w) {   // « Fier(ère) » → fier, fière ; « Plein(e) de rancœur » → plein de rancœur, pleine de rancœur
+  const m = w.match(/^(.*?)(\p{L}+)\((\p{L}+)\)(.*)$/u);
+  if (!m) return [w];
+  const [, av, base, suf, ap] = m, fem = suf === 'se' ? base.replace(/x$/, '') + 'se' : suf === 've' ? base.replace(/f$/, '') + 've' : suf === 'ère' ? base.replace(/er$/, '') + 'ère' : base + suf;
+  return [av + base + ap, av + fem + ap];
+}
+/* Les mots courants du répertoire ne se colorent pas (sa demande du 2026-11-22) : ils reviennent dans n'importe quelle phrase
+   (« le sens de la phrase », « un jeu », « du calme »). Ils restent dans les répertoires, seule la mise en couleur les ignore.
+   Pour en ajouter ou en retirer : cette liste, écrite comme dans repertoires.js. */
+const MOTS_COURANTS = ['Seul(e)', 'Saisi(e)', 'Distant(e)', 'Sens', 'Jeu', 'Ordre', 'Calme', 'Choix', 'Limites', 'Respect', 'Santé', 'Repos', 'Joie',
+  'Plaisir', 'Fête', 'Projet', 'Équilibre', 'Présence', 'Partage', 'Accueil', 'Soutien', 'Écoute', 'Mouvement', 'Repères', 'Structure', 'Clarté',
+  'Confort physique', 'Stabilité', 'Protection', 'Sommeil', 'Détente', 'Justice', 'Création', 'Passion', 'Aventure', 'Beauté', 'Pureté',
+  'Apprentissage', 'Évolution', 'Orientation', 'Utilité', 'Contribution', 'Légèreté', 'Nutrition', 'Continuité', 'Espace personnel', 'Environnement sain'];
+let repCache = null;
+function motsRepertoire() {
+  if (repCache) return repCache;
+  const couleur = new Map(), courants = new Set(MOTS_COURANTS.flatMap(formesRep).map(f => platRep(f).replace(/\s+/g, ' ')));
+  const ajouter = (w, c) => { for (const f of formesRep(w)) { const k = platRep(f).replace(/\s+/g, ' '); if (!couleur.has(k) && !courants.has(k)) couleur.set(k, c); } };
+  for (const f of FAM) for (const w of [...f.l, ...f.m, ...f.i]) ajouter(w, f.c);
+  for (const b of BES) for (const [, ws] of b.g) for (const w of ws) ajouter(w, coulB(b.k));
+  const motif = [...couleur.keys()].sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+')).join('|');
+  // sans lookbehind (iOS plus anciens) : le caractère qui précède fait partie de la correspondance (groupe 1)
+  return repCache = {couleur, re:new RegExp(`(^|[^\\p{L}\\p{N}])(${motif})s?(?![\\p{L}\\p{N}])`, 'gu')};
+}
+function avecMotsRepertoire(s) {
+  if (!s) return '';
+  const {couleur, re} = motsRepertoire();
+  let html = '', i = 0;
+  for (const x of platRep(s).matchAll(re)) {
+    const debut = x.index + x[1].length, fin = x.index + x[0].length;
+    html += esc(s.slice(i, debut)) + `<b style="--fc:${couleur.get(x[2].replace(/\s+/g, ' '))}">${esc(s.slice(debut, fin))}</b>`;
+    i = fin;
   }
   return html + esc(s.slice(i));
 }

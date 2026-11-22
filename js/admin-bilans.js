@@ -10,7 +10,9 @@
      type 'echelle' : des questions à échelle (une réponse par question), sans constat ;
    - items [{k, n, c?, r?}] : les questions ; dimensions [{k, n, c, items:[k…], seuil?, aide?}] : les sous-scores ;
    - echelle {min, max, libelles?} ; sens 1 : plus haut = mieux ; -1 : plus haut = plus de difficulté (dépistages) ;
-   - paliers [{max, n, c (vert, jaune, rouge), d?}] : l'interprétation du score total, du plus bas au plus haut. */
+   - paliers [{max, n, c (vert, jaune, rouge), d?}] : l'interprétation du score total, du plus bas au plus haut ;
+   - na [k…] (v51) : les questions que l'on peut déclarer « N/A » (notes[k] = 'na') : elles sortent du total, et le palier se lit sur le
+     score ramené au maximum complet (eq). */
 const HYGIENE = [
   {k:'plaisir', n:'Bien-être & Plaisir', c:'Bien-être', r:'Détente, loisirs, moments de joie, ressourcement, gratitude'},
   {k:'physique', n:'Vie physique', c:'Physique', r:'Sport & mouvement, alimentation équilibrée, sommeil, soin du corps'},
@@ -29,7 +31,7 @@ const QUESTIONNAIRES = {
   hygiene:{
     type:'domaines', mot:'domaine', nom:'Fiche hygiène de vie & accomplissement', court:'Hygiène de vie', source:'Liberté pour Aimer',
     intro:'Auto-évaluation de mon équilibre personnel sur 100 points : 10 domaines de vie, notés chacun sur 10.',
-    periodeLabel:'Prénom / période (facultatif)', sens:1, echelle:{min:0, max:10},
+    periodeLabel:'Commentaire de période (facultatif)', na:['conjugale', 'sexuelle'], sens:1, echelle:{min:0, max:10},
     items:HYGIENE, dimensions:HYGIENE.map(d => ({k:d.k, n:d.n, c:d.c, items:[d.k]})),
     paliers:[{max:40, n:'Alerte / Épuisement', c:'rouge'}, {max:70, n:'Équilibre à consolider', c:'jaune'}, {max:100, n:'Bel épanouissement', c:'vert'}],
   },
@@ -146,6 +148,7 @@ const cmp = {a:null, b:null, jours:30};   // comparaison : les deux bilans, et l
 
 const qDe = b => QUESTIONNAIRES[b.q];
 const valOK = (q, v) => Number.isInteger(v) && v >= q.echelle.min && v <= q.echelle.max;
+const estNA = (q, b, k) => b.notes[k] === 'na' && !!q.na?.includes(k);
 const bilansDe = q => data.bilans.filter(b => b.q === q).sort((x, y) => x.date.localeCompare(y.date) || (x.cree || '').localeCompare(y.cree || ''));
 const bilanPar = id => data.bilans.find(b => b.id === id);
 const bilanVide = b => !Object.keys(b.notes).length && !b.periode.trim() && !Object.values(b.constats).some(t => t.trim()) && !b.priorites.some(p => p.dom || p.action.trim());
@@ -156,18 +159,21 @@ function purgerBilansVides() {
   if (data.bilans.length !== n) save();
 }
 const totalMax = q => q.items.length * q.echelle.max;
+/* eq : le total ramené sur le maximum complet du questionnaire quand des questions sont « N/A » (sinon, le total lui-même) :
+   c'est lui qui se lit sur les paliers, et qui se compare d'un bilan à l'autre */
 function scoreBilan(b) {
-  const q = qDe(b), vals = q.items.map(it => b.notes[it.k]).filter(v => valOK(q, v));
-  return {total:vals.reduce((a, v) => a + v, 0), n:vals.length, nb:q.items.length, max:totalMax(q), complet:vals.length === q.items.length};
+  const q = qDe(b), its = q.items.filter(it => !estNA(q, b, it.k)), vals = its.map(it => b.notes[it.k]).filter(v => valOK(q, v));
+  const total = vals.reduce((a, v) => a + v, 0), max = its.length * q.echelle.max;
+  return {total, n:vals.length, nb:its.length, max, complet:vals.length === its.length, na:q.items.length - its.length, eq:max ? Math.round(total * totalMax(q) / max) : 0};
 }
 /* Le sous-score d'une dimension (pour la fiche hygiène de vie : un domaine, soit une seule question) */
 function scoreAxe(q, b, a) {
-  const v = a.items.map(k => b.notes[k]).filter(x => valOK(q, x));
-  return {total:v.reduce((s, x) => s + x, 0), n:v.length, nb:a.items.length, max:a.items.length * q.echelle.max, complet:v.length === a.items.length};
+  const its = a.items.filter(k => !estNA(q, b, k)), v = its.map(k => b.notes[k]).filter(x => valOK(q, x));
+  return {total:v.reduce((s, x) => s + x, 0), n:v.length, nb:its.length, max:its.length * q.echelle.max, complet:v.length === its.length, na:!its.length};
 }
 /* Le sous-score ramené entre 0 et 1 (null tant qu'il manque des réponses) */
 function normAxe(q, b, a) {
-  const s = scoreAxe(q, b, a); if (!s.complet) return null;
+  const s = scoreAxe(q, b, a); if (s.na || !s.complet) return null;
   const min = a.items.length * q.echelle.min;
   return (s.total - min) / (s.max - min);
 }
@@ -177,9 +183,10 @@ const courtDate = d => `${d.slice(8)}/${d.slice(5, 7)}`;
 const fmtDelta = d => d == null ? '' : d === 0 ? '=' : `${d > 0 ? '+' : '−'}${Math.abs(d)}`;
 /* Vert quand cela va mieux : plus haut est mieux (sens 1) ou plus bas est mieux (sens -1) */
 const clsDelta = (d, q) => !d ? '' : d * q.sens > 0 ? 'plus' : 'moins';
-const deltaAxe = (q, A, B, a) => { const x = scoreAxe(q, A, a), y = scoreAxe(q, B, a); return x.complet && y.complet ? y.total - x.total : null; };
-const chipPalier = (q, s) => (q = typeof q === 'string' ? QUESTIONNAIRES[q] : q, s.complet) ? (p => `<span class="palier ${p.c}">${p.n}</span>`)(palierDe(q, s.total)) : `<span class="small muted">Score provisoire : ${s.n} ${q.mot}${s.n > 1 ? 's' : ''} sur ${s.nb}</span>`;
+const deltaAxe = (q, A, B, a) => { const x = scoreAxe(q, A, a), y = scoreAxe(q, B, a); return x.complet && y.complet && !x.na && !y.na ? y.total - x.total : null; };
+const chipPalier = (q, s) => (q = typeof q === 'string' ? QUESTIONNAIRES[q] : q, s.complet) ? (p => `<span class="palier ${p.c}">${p.n}</span>`)(palierDe(q, s.eq)) : `<span class="small muted">Score provisoire : ${s.n} ${q.mot}${s.n > 1 ? 's' : ''} sur ${s.nb}</span>`;
 const classeP = (q, p) => { if (p == null) return ''; if (q.sens < 0) p = 1 - p; return p <= .4 ? 'bas' : p <= .7 ? 'moy' : 'haut'; };
+const noteNA = (q, s) => `${s.na} ${q.mot}${s.na > 1 ? 's' : ''} non applicable${s.na > 1 ? 's' : ''} (N/A) : le niveau se lit sur le score ramené à ${totalMax(q)}${s.complet ? `, soit ${s.eq}` : ''}.`;
 const legendePaliers = q => { let min = q.items.length * q.echelle.min; return q.paliers.map(p => { const t = `${min} à ${p.max} : ${p.n.toLowerCase()}`; min = p.max + 1; return t; }).join(' · '); };
 const libReponse = (q, v) => !valOK(q, v) ? '–' : q.echelle.libelles ? q.echelle.libelles[v - q.echelle.min] : String(v);
 /* Dans le menu de l'onglet Admin : le nombre de bilans et le dernier score */
@@ -221,13 +228,13 @@ function courbe(q, liste) {
   const Y = v => hy + (H - hy - by) * (1 - v / M);
   let bas = 0;
   const bandes = q.paliers.map(p => { const r = `<rect x="${gx}" y="${Y(p.max).toFixed(1)}" width="${W - gx - dx}" height="${(Y(bas) - Y(p.max)).toFixed(1)}" fill="var(--${p.c})" fill-opacity=".14"/>`; bas = p.max; return r; }).join('');
-  const pts = L.map(b => `${X(b).toFixed(1)},${Y(scoreBilan(b).total).toFixed(1)}`).join(' ');
-  const lib = L.map(b => `${fmtFR(b.date)} : ${scoreBilan(b).total} sur ${M}`).join(' ; ');
+  const pts = L.map(b => `${X(b).toFixed(1)},${Y(scoreBilan(b).eq).toFixed(1)}`).join(' ');
+  const lib = L.map(b => `${fmtFR(b.date)} : ${scoreBilan(b).eq} sur ${M}`).join(' ; ');
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution du score total. ${esc(lib)}" style="width:100%;height:auto;display:block">
     ${bandes}
     ${[0, ...q.paliers.map(p => p.max)].map(v => `<text x="${gx - 5}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--muted)">${v}</text>`).join('')}
     <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    ${L.map(b => `<circle cx="${X(b).toFixed(1)}" cy="${Y(scoreBilan(b).total).toFixed(1)}" r="3.5" fill="var(--accent)"/><text x="${X(b).toFixed(1)}" y="${(Y(scoreBilan(b).total) - 8).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text)">${scoreBilan(b).total}</text>`).join('')}
+    ${L.map(b => `<circle cx="${X(b).toFixed(1)}" cy="${Y(scoreBilan(b).eq).toFixed(1)}" r="3.5" fill="var(--accent)"/><text x="${X(b).toFixed(1)}" y="${(Y(scoreBilan(b).eq) - 8).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text)">${scoreBilan(b).eq}</text>`).join('')}
     <text x="${X(L[0]).toFixed(1)}" y="${H - 8}" text-anchor="start" font-size="10" fill="var(--muted)">${courtDate(L[0].date)}/${L[0].date.slice(2, 4)}</text>
     <text x="${X(L[L.length - 1]).toFixed(1)}" y="${H - 8}" text-anchor="end" font-size="10" fill="var(--muted)">${courtDate(L[L.length - 1].date)}/${L[L.length - 1].date.slice(2, 4)}</text>
   </svg>`;
@@ -235,12 +242,12 @@ function courbe(q, liste) {
 /* Les dimensions en lignes, les derniers bilans en colonnes : chaque case prend la couleur de son niveau */
 function matrice(q, liste) {
   const L = liste.slice(-5), D = q.dimensions, dern = L[L.length - 1], av = L[L.length - 2];
-  const cel = (b, a) => { const s = scoreAxe(q, b, a); return `<td class="cel ${classeP(q, normAxe(q, b, a))}">${s.n ? s.total : '–'}</td>`; };
-  const dt = av ? scoreBilan(dern).total - scoreBilan(av).total : null;
+  const cel = (b, a) => { const s = scoreAxe(q, b, a); return `<td class="cel ${classeP(q, normAxe(q, b, a))}">${s.na ? 'N/A' : s.n ? s.total : '–'}</td>`; };
+  const dt = av ? scoreBilan(dern).eq - scoreBilan(av).eq : null;
   return `<div class="defile-x"><table class="matrice"><thead><tr><th></th>${L.map(b => `<th>${courtDate(b.date)}</th>`).join('')}${av ? '<th>Écart</th>' : ''}</tr></thead><tbody>
     ${D.map(a => { const e = av ? deltaAxe(q, av, dern, a) : null;
       return `<tr><th scope="row">${esc(a.c)}</th>${L.map(b => cel(b, a)).join('')}${av ? `<td class="delta ${clsDelta(e, q)}">${fmtDelta(e)}</td>` : ''}</tr>`; }).join('')}
-    <tr class="total"><th scope="row">Total</th>${L.map(b => `<td>${scoreBilan(b).total}</td>`).join('')}${av ? `<td class="delta ${clsDelta(dt, q)}">${fmtDelta(dt)}</td>` : ''}</tr>
+    <tr class="total"><th scope="row">Total</th>${L.map(b => `<td>${scoreBilan(b).eq}</td>`).join('')}${av ? `<td class="delta ${clsDelta(dt, q)}">${fmtDelta(dt)}</td>` : ''}</tr>
   </tbody></table></div>`;
 }
 /* Les sous-scores sous forme de jauges, avec le seuil d'alerte de la dimension quand le questionnaire en donne un */
@@ -290,13 +297,14 @@ function pageBilans() {
   const nouveau = `<button class="btn primary block" data-act="bilanNouveau"${lectureSeule() ? ' disabled' : ''}>${L.length ? 'Nouveau bilan' : 'Remplir un premier bilan'}</button>`;
   const source = `<p class="small muted" style="margin:6px 0 0">Source : ${esc(q.source)}.${q.avis ? ` ${esc(q.avis)}` : ''}</p>`;
   if (!dern) return `<section class="card"><p class="small muted" style="margin:0">${esc(q.intro)}</p>${source}${nouveau}</section>`;
-  const s = scoreBilan(dern), sp = prec && scoreBilan(prec), ecart = s.complet && sp?.complet ? s.total - sp.total : null;
-  const complets = L.filter(b => scoreBilan(b).complet), pal = s.complet ? palierDe(q, s.total) : null;
+  const s = scoreBilan(dern), sp = prec && scoreBilan(prec), ecart = s.complet && sp?.complet ? s.eq - sp.eq : null;
+  const complets = L.filter(b => scoreBilan(b).complet), pal = s.complet ? palierDe(q, s.eq) : null;
   const radarOk = q.dimensions.length >= 3;
   return `<section class="card">
     <div class="eyebrow">Dernier bilan · ${esc(fmtLong(dern.date))}${dern.periode.trim() ? ` · ${esc(dern.periode.trim())}` : ''}</div>
     <div class="score-l"><div class="score-n"><b>${s.total}</b><span>/ ${s.max}</span></div><div>${chipPalier(admQ, s)}${ecart != null ? `<div class="small" style="margin-top:6px"><b class="delta ${clsDelta(ecart, q)}">${fmtDelta(ecart) || '='} point${Math.abs(ecart) > 1 ? 's' : ''}</b> <span class="muted">depuis le ${fmtFR(prec.date)}</span></div>` : ''}</div></div>
     ${pal?.d ? `<p class="small" style="margin:10px 0 0">${esc(pal.d)}</p>` : ''}
+    ${s.na ? `<p class="small muted" style="margin:8px 0 0">${noteNA(q, s)}</p>` : ''}
     ${nouveau}
     ${L.length > 1 ? `<button class="btn block" data-act="bilanComparer">Comparer deux bilans</button>` : ''}
   </section>
@@ -345,11 +353,12 @@ function corpsScore(b) {
     return `<h2>${titre}</h2><p class="small muted" style="margin:6px 0 0">Avancement : ${s.n} ${q.mot}${s.n > 1 ? 's' : ''} sur ${s.nb}. Le score ne s’affiche qu’une fois le questionnaire terminé, sur un appui long.</p>
       <div class="meter" role="progressbar" aria-label="Avancement" aria-valuemin="0" aria-valuemax="${s.nb}" aria-valuenow="${s.n}"><i style="width:${(s.n / s.nb * 100).toFixed(0)}%"></i></div>`;
   }
-  const p = palierDe(q, s.total);
+  const p = palierDe(q, s.eq);
   return `<h2>${titre}</h2>
     <div class="score-masque" data-masque role="button" tabindex="0" aria-label="${scoreVu ? 'Score affiché. Maintenir appuyé pour le masquer.' : 'Questionnaire terminé, score masqué. Maintenir appuyé pour l’afficher.'}">
     ${scoreVu ? `<div class="score-l"><div class="score-n"><b>${s.total}</b><span>/ ${s.max}</span></div><div>${chipPalier(b.q, s)}</div></div>
       ${p.d ? `<p class="small" style="margin:8px 0 0">${esc(p.d)}</p>` : ''}
+      ${s.na ? `<p class="small muted" style="margin:8px 0 0">${noteNA(q, s)}</p>` : ''}
       ${q.type === 'echelle' && q.dimensions ? barresDim(q, b) : ''}
       <p class="small muted" style="margin:8px 0 0">${esc(legendePaliers(q))}.</p>`
     : `<div class="score-l"><div class="score-n"><b>• • •</b></div><div><span class="palier neutre">Questionnaire terminé ✓</span></div></div>`}
@@ -372,11 +381,12 @@ document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-ma
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-masque]')) { e.preventDefault(); basculerScore(); } });   // sans écran tactile
 /* Un domaine de la fiche hygiène de vie : repères, note sur 10, constat */
 function carteDomaine(b, q, d, n, prec) {
-  return `<section class="card" data-dom="${d.k}">
+  const peutNA = q.na?.includes(d.k), na = estNA(q, b, d.k);
+  return `<section class="card${na ? ' est-na' : ''}" data-dom="${d.k}">
     <h2>${n + 1}. ${esc(d.n)}</h2>
     <p class="small muted" style="margin:3px 0 0">${esc(d.r)}</p>
-    <div class="note-chips" role="group" aria-label="Note de « ${esc(d.n)} » sur 10" style="grid-template-columns:repeat(11,1fr)">${[...Array(11).keys()].map(v => `<button type="button" class="${b.notes[d.k] === v ? 'on' : ''}" data-act="bilanNote" data-d="${d.k}" data-v="${v}" aria-pressed="${b.notes[d.k] === v}">${v}</button>`).join('')}</div>
-    <div class="small muted" style="text-align:right">${prec ? `Bilan précédent (${courtDate(prec.date)}) : ${valOK(q, prec.notes[d.k]) ? prec.notes[d.k] : '–'}` : ''}</div>
+    <div class="note-chips${peutNA ? ' avec-na' : ''}" role="group" aria-label="Note de « ${esc(d.n)} » sur 10" style="grid-template-columns:repeat(11,1fr)${peutNA ? ' 2.1fr' : ''}">${[...Array(11).keys()].map(v => `<button type="button" class="${b.notes[d.k] === v ? 'on' : ''}" data-act="bilanNote" data-d="${d.k}" data-v="${v}" aria-pressed="${b.notes[d.k] === v}">${v}</button>`).join('')}${peutNA ? `<button type="button" class="na-btn${na ? ' on' : ''}" data-act="bilanNA" data-d="${d.k}" aria-pressed="${na}" aria-label="Domaine non applicable (N/A)">N/A</button>` : ''}</div>
+    <div class="small muted" style="text-align:right">${prec ? `Bilan précédent (${courtDate(prec.date)}) : ${valOK(q, prec.notes[d.k]) ? prec.notes[d.k] : estNA(q, prec, d.k) ? 'N/A' : '–'}` : ''}</div>
     <label class="label" for="c-${d.k}" style="margin-top:6px">Mon constat</label>
     <textarea id="c-${d.k}" data-bilan="constat:${d.k}" data-auto rows="2" autocapitalize="sentences" placeholder="Ce que je constate…">${esc(b.constats[d.k] || '')}</textarea>
   </section>`;
@@ -400,7 +410,7 @@ function pageBilan() {
     <input type="date" id="bDate" data-bilan="date" value="${b.date}" max="${today()}">
     <div class="wd-hint" id="bJour">${weekday(b.date)}</div>
     <label class="label" for="bPeriode">${esc(q.periodeLabel)}</label>
-    <input type="text" id="bPeriode" data-bilan="periode" value="${esc(b.periode)}" maxlength="80" autocapitalize="sentences" placeholder="Par exemple : novembre 2026">
+    <input type="text" id="bPeriode" data-bilan="periode" value="${esc(b.periode)}" maxlength="80" autocapitalize="sentences" placeholder="Par exemple : novembre 2026, ou une remarque">
     <div class="small muted" id="bEtat" aria-live="polite" style="margin-top:8px;text-align:right">Brouillon conservé au fil de la saisie</div>
   </section>
   ${dom ? '' : `<section class="card"><h2>Consigne</h2><p class="small" style="margin:6px 0 0">${esc(q.consigne)}</p>
@@ -410,7 +420,7 @@ function pageBilan() {
   ${dom ? q.items.map((d, n) => carteDomaine(b, q, d, n, prec)).join('') : q.items.map((it, n) => carteQuestion(b, q, it, n)).join('')}
   ${dom ? `<section class="card"><h2>Mes 2 priorités concrètes pour faire monter mon score</h2>
     ${[0, 1].map(n => `<label class="label" for="pd${n}">${n + 1}. Domaine prioritaire</label>
-    <select id="pd${n}" data-bilan="pd:${n}"><option value="">—</option>${q.items.map(d => `<option value="${d.k}"${b.priorites[n].dom === d.k ? ' selected' : ''}>${esc(d.n)}</option>`).join('')}</select>
+    <select id="pd${n}" data-bilan="pd:${n}"><option value="">—</option>${q.items.filter(d => !estNA(q, b, d.k) || b.priorites[n].dom === d.k).map(d => `<option value="${d.k}"${b.priorites[n].dom === d.k ? ' selected' : ''}>${esc(d.n)}</option>`).join('')}</select>
     <label class="label" for="pa${n}">Action concrète cette semaine</label>
     ${ta('pa' + n, 'pa:' + n, b.priorites[n].action, 'Mon action…')}`).join('')}
   </section>` : ''}
@@ -433,6 +443,15 @@ function majBilanChamp(t) {
   else if (k === 'pa') { b.priorites[+x].action = t.value; ajusterHauteur(t); }
   etatBilan();
 }
+/* Une réponse changée : les boutons de la question, le libellé, le N/A, le score ; sans réafficher la page */
+function majReponse(b, q, k) {
+  document.querySelectorAll(`#view [data-dom="${k}"] .note-chips button`).forEach(x => { const on = b.notes[k] === +x.dataset.v; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+  const na = estNA(q, b, k), carte = $(`#view [data-dom="${k}"]`), bt = carte?.querySelector('.na-btn');
+  carte?.classList.toggle('est-na', na);
+  if (bt) { bt.classList.toggle('on', na); bt.setAttribute('aria-pressed', na); }
+  const lib = $(`#view [data-lib="${k}"]`); if (lib) lib.textContent = valOK(q, b.notes[k]) ? libReponse(q, b.notes[k]) : '';
+  majScoreBilan(b); save(); etatBilan();
+}
 const majScoreBilan = b => { const c = $('#bScore'); if (c) c.innerHTML = corpsScore(b); };
 
 /* La comparaison de deux bilans */
@@ -446,7 +465,7 @@ function pageCompare() {
   if (!L.some(b => b.id === cmp.a)) cmp.a = L[L.length - 2].id;
   if (!L.some(b => b.id === cmp.b)) cmp.b = L[L.length - 1].id;
   const A = bilanPar(cmp.a), B = bilanPar(cmp.b), sA = scoreBilan(A), sB = scoreBilan(B), D = q.dimensions || [], dom = q.type === 'domaines';
-  const ecart = sA.complet && sB.complet ? sB.total - sA.total : null;
+  const ecart = sA.complet && sB.complet ? sB.eq - sA.eq : null;
   const ecarts = D.map(a => ({a, e:deltaAxe(q, A, B, a)})).filter(x => x.e != null);
   const mieux = ecarts.filter(x => x.e * q.sens > 0).sort((x, y) => y.e * q.sens - x.e * q.sens)[0], pire = ecarts.filter(x => x.e * q.sens < 0).sort((x, y) => x.e * q.sens - y.e * q.sens)[0];
   const jA = journalAvant(A.date, cmp.jours), jB = journalAvant(B.date, cmp.jours);
@@ -463,9 +482,9 @@ function pageCompare() {
   return `<section class="card">
     <div class="row cmp-choix"><div style="flex:1;min-width:0"><label class="label" for="cmpA" style="margin-top:0">Bilan de départ</label>${choixBilan('cmpA', L, cmp.a)}</div>
     <div style="flex:1;min-width:0"><label class="label" for="cmpB" style="margin-top:0">Bilan comparé</label>${choixBilan('cmpB', L, cmp.b)}</div></div>
-    <div class="cmp-score"><div><div class="small muted">${fmtFR(A.date)}</div><b>${sA.total}</b>${sA.complet ? '' : '<span class="small muted"> prov.</span>'}</div>
+    <div class="cmp-score"><div><div class="small muted">${fmtFR(A.date)}</div><b>${sA.eq}</b>${sA.complet ? '' : '<span class="small muted"> prov.</span>'}</div>
       <div class="cmp-fl"><b class="delta ${clsDelta(ecart, q)}">${ecart == null ? '→' : `${fmtDelta(ecart) || '='}`}</b></div>
-      <div><div class="small muted">${fmtFR(B.date)}</div><b>${sB.total}</b>${sB.complet ? '' : '<span class="small muted"> prov.</span>'}</div></div>
+      <div><div class="small muted">${fmtFR(B.date)}</div><b>${sB.eq}</b>${sB.complet ? '' : '<span class="small muted"> prov.</span>'}</div></div>
     <div style="text-align:center">${sA.complet ? chipPalier(admQ, sA) : ''} ${sB.complet ? '→ ' + chipPalier(admQ, sB) : ''}</div>
     ${A.id === B.id ? '<p class="small muted" style="margin:8px 0 0;text-align:center">Choisissez deux bilans différents.</p>' : ''}
   </section>
@@ -476,8 +495,8 @@ function pageCompare() {
     <div class="cmp-liste">${D.map(a => { const x = scoreAxe(q, A, a), y = scoreAxe(q, B, a), e = deltaAxe(q, A, B, a);
       const pc = (s, v) => s.n ? (s.total - a.items.length * q.echelle.min) / (s.max - a.items.length * q.echelle.min) * 100 : 0;
       return `<div class="cmp-l"><div class="cmp-h"><span>${esc(a.n)}</span><b class="delta ${clsDelta(e, q)}">${fmtDelta(e)}</b></div>
-        <div class="cmp-b"><span>${courtDate(A.date)}</span><div class="meter" style="--m:var(--muted)"><i style="width:${pc(x).toFixed(0)}%"></i></div><b>${x.n ? x.total : '–'}</b></div>
-        <div class="cmp-b"><span>${courtDate(B.date)}</span><div class="meter"><i style="width:${pc(y).toFixed(0)}%"></i></div><b>${y.n ? y.total : '–'}</b></div></div>`; }).join('')}</div>
+        <div class="cmp-b"><span>${courtDate(A.date)}</span><div class="meter" style="--m:var(--muted)"><i style="width:${pc(x).toFixed(0)}%"></i></div><b>${x.na ? 'N/A' : x.n ? x.total : '–'}</b></div>
+        <div class="cmp-b"><span>${courtDate(B.date)}</span><div class="meter"><i style="width:${pc(y).toFixed(0)}%"></i></div><b>${y.na ? 'N/A' : y.n ? y.total : '–'}</b></div></div>`; }).join('')}</div>
   </section>` : ''}
   ${diffs.length ? `<section class="card"><h2>Réponse par réponse</h2><p class="small muted" style="margin:4px 0 0">Les ${diffs.length} réponse${diffs.length > 1 ? 's' : ''} qui ont changé.</p>
     ${diffs.map(({it, n, a, b}) => { const e = valOK(q, a) && valOK(q, b) ? b - a : null;
@@ -548,9 +567,15 @@ const ACT_BILANS = {
     const b = bilanPar(bilanOuvert); if (!b || lectureSeule()) return;
     const q = qDe(b), k = t.dataset.d, v = +t.dataset.v;
     if (b.notes[k] === v) delete b.notes[k]; else b.notes[k] = v;
-    document.querySelectorAll(`#view [data-dom="${k}"] .note-chips button`).forEach(x => { const on = b.notes[k] === +x.dataset.v; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
-    const lib = $(`#view [data-lib="${k}"]`); if (lib) lib.textContent = valOK(q, b.notes[k]) ? libReponse(q, b.notes[k]) : '';
-    majScoreBilan(b); save(); etatBilan();
+    majReponse(b, q, k);
+  },
+  // v51 : « N/A » (domaine non applicable) ; la même touchée une seconde fois le retire
+  bilanNA: t => {
+    const b = bilanPar(bilanOuvert); if (!b || lectureSeule()) return;
+    const q = qDe(b), k = t.dataset.d;
+    if (!q.na?.includes(k)) return;
+    if (b.notes[k] === 'na') delete b.notes[k]; else b.notes[k] = 'na';
+    majReponse(b, q, k);
   },
   bilanSuppr: async () => {
     const b = bilanPar(bilanOuvert); if (!b) return;

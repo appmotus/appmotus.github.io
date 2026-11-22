@@ -30,7 +30,7 @@ Depuis la version 39, le code est réparti en fichiers de `js/`, chargés par `i
 |---|---|
 | `repertoires.js` | Répertoires des émotions (`FAM`) et des besoins (`BES`), intensités, couleurs de la journée |
 | `utilitaires.js` | Dates, textes, phrases des émotions et des besoins |
-| `connecteurs.js` | Connecteurs (@travail) : lecture dans les notes, mise en forme |
+| `connecteurs.js` | Connecteurs (@travail) : lecture dans les notes, mise en forme ; mots des répertoires mis en gras et en couleur dans les textes affichés (v51) |
 | `constantes.js` | `APP_VERSION`, compteurs de travail, `RGPD_VERSION`, engagements de la version d'essai, `toast` |
 | `chiffrement.js` | Chiffrement du journal |
 | `donnees.js` | Ouverture et normalisation du journal, enregistrement, emplacement du stockage |

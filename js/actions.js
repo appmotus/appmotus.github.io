@@ -296,6 +296,28 @@ const ACT = {
   },
   pickFam: t => { ed.fam = t.dataset.f; renderPicker(); },
   pickInt: t => { ed.int = t.dataset.i; renderPicker(); },
+  // la pastille « + » : ouvre (ou referme) la ligne d'ajout d'un mot hors répertoire ; « Ajouter » le met dans les choisis
+  ajoutOuvrir: t => {
+    const k = t.dataset.k; ed.ajout ||= {}; ed.ajout[k] = !ed.ajout[k];
+    k === 'e' ? renderPicker() : renderBPicker();
+    if (ed.ajout[k]) $(`#${k}Ajout`)?.focus();
+  },
+  ajoutValider: t => {
+    const k = t.dataset.k, champ = $(`#${k}Ajout`);
+    let w = (champ?.value || '').trim().replace(/\s+/g, ' ');
+    if (!w) return champ?.focus();
+    w = w.charAt(0).toLocaleUpperCase('fr') + w.slice(1);   // comme les mots des répertoires
+    const meme = x => x.w.toLowerCase() === w.toLowerCase();
+    if (k === 'e') { if (!ed.emos.some(x => x.f === ed.fam && meme(x))) ed.emos.push({f:ed.fam, i:ed.int, w}); }
+    else if (!ed.bes.some(x => x.b === ed.bfam && meme(x))) ed.bes.push({b:ed.bfam, w});
+    ed.ajout[k] = false;
+    k === 'e' ? renderPicker() : renderBPicker();
+  },
+  // « … car / par / de » : le mot qui relie l'émotion à son motif (v51)
+  pickLien: t => {
+    ed.lien = t.dataset.l;
+    document.querySelectorAll('#entryDlg .seg.lien button').forEach(b => { const on = b.dataset.l === ed.lien; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  },
   toggleEmo: t => {
     const w = t.dataset.w, i = ed.emos.findIndex(x => x.f === ed.fam && x.w === w);
     if (i >= 0) ed.emos.splice(i, 1); else ed.emos.push({f:ed.fam, i:ed.int, w});
@@ -334,7 +356,8 @@ const ACT = {
     ed.taches = tachesSaisies();
     if (!ed.emos.length) { if (ed.volet !== 'e') poserVolet('e'); return $('#eErr').textContent = 'Choisissez au moins une émotion.'; }
     // les trois cartes sont enregistrées ensemble ; sans besoin ni action, la note garde sa forme d'avant
-    const d = ensureDay(cur), {fam, int, villeTouched, bfam, bgr, volet, ...entry} = ed;
+    const d = ensureDay(cur), {fam, int, villeTouched, bfam, bgr, volet, ajout, ...entry} = ed;
+    if (entry.lien === 'car' || !LIENS.includes(entry.lien)) delete entry.lien;   // « car » : la forme des notes d'avant
     if (!entry.bes.length) delete entry.bes;
     if (!entry.bdet) delete entry.bdet;
     if (!entry.piste) delete entry.piste;

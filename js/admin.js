@@ -58,16 +58,16 @@ function vAdminMenu() {
   const s = adm.stats;
   return `
   <div class="sethead"><div><div class="eyebrow">Administrateur</div><h1>Administration</h1></div></div>
+  ${groupeMenu('Mes outils', [
+    ligneMenu('importer', 'Mes notes', {page:'notes', act:'admOuvrir'}),
+  ])}
   ${groupeMenu('Application', [
     ligneMenu('courbe', 'Utilisation de l’app', {val:s ? `${s.comptes} compte${s.comptes > 1 ? 's' : ''}` : '', page:'usage', act:'admOuvrir'}),
     ligneMenu('serveur', 'Services et limites', {page:'limites', act:'admOuvrir'}),
     ligneMenu('sablier', 'Travail sur Motus', {val:`≈ ${HEURES_TRAVAIL} h`, page:'travail', act:'admOuvrir'}),
   ])}
   ${groupeMenu('Mes questionnaires (réservés à l’administrateur)', Object.entries(QUESTIONNAIRES).map(([k, q]) =>
-    ligneMenu('questionnaire', q.court, {val:resumeQuestionnaire(k), page:k, act:'admQuest'})))}
-  ${groupeMenu('Mes outils', [
-    ligneMenu('importer', 'Mes notes', {page:'notes', act:'admOuvrir'}),
-  ])}`;
+    ligneMenu('questionnaire', q.court, {val:resumeQuestionnaire(k), page:k, act:'admQuest'})))}`;
 }
 function vAdmin() {
   const page = admPage && PAGES_ADMIN[admPage];

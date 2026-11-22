@@ -248,7 +248,7 @@ function resultatsRecherche(q) {
 /* La phrase d'une émotion dans les résultats : le texte écrit (après « car ») est marqué .rq, seul endroit où surligner avec les émotions */
 function phraseRecherche(e) {
   const car = cleanCar(e);
-  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ` car <span class="rq">${avecConnecteurs(car, true)}</span>` : '') + '.';
+  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ` ${liaison(e, car)}<span class="rq">${avecConnecteurs(car, true)}</span>` : '') + '.';
 }
 /* Entoure de <mark> chaque passage de q (déjà sans accents ni majuscules) dans les textes de el. Chaque lettre est comparée
    sans son accent, une par une : les positions trouvées sont donc exactement celles du texte affiché. */

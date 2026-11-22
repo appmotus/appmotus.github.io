@@ -100,6 +100,7 @@ function openEntry(id, volet = 'e') {
   if (lectureSeule()) return toast(MSG_LECTURE);
   const e = id ? getDay(cur).entries.find(x => x.id === id) : null;
   ed = e ? structuredClone(e) : {id:null, time: cur === today() ? nowTime() : '12:00', ville: villeParDefaut(), lieu:'', emos:[], car:''};
+  ed.lien = lienDe(ed);   // car (par défaut), par ou de
   ed.fam = ed.emos[0]?.f || 'peur';
   ed.int = ed.emos[0]?.i || 'l';
   ed.bes = besoinsDe(ed);
@@ -123,7 +124,8 @@ function openEntry(id, volet = 'e') {
       <div id="picker"></div>
       <p class="label">Mes émotions</p>
       <div class="picked chips" id="picked"></div>
-      <label class="label" for="eCar">… car</label>
+      <div class="lien-ligne"><label class="label" for="eCar">…</label>
+        <div class="seg lien" role="group" aria-label="Mot de liaison">${LIENS.map(l => `<button type="button" class="${ed.lien === l ? 'on' : ''}" data-act="pickLien" data-l="${l}" aria-pressed="${ed.lien === l}">${l}</button>`).join('')}</div></div>
       <textarea id="eCar" rows="3" autocapitalize="none" placeholder="ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
       </div>
       <div class="volet" data-v="b">
@@ -232,6 +234,14 @@ function openNote(id) {
   dlg.scrollTop = 0;
   if (!n && cur === today() && data.settings.geoloc) locate(false);
 }
+/* Une émotion ou un besoin qui n'est pas dans le répertoire (v51, sa demande du 2026-11-22) : une dernière pastille « + » à la fin de la
+   rangée (aucune place de plus dans la fenêtre). Elle ouvre une ligne de saisie sous la rangée, qui se referme une fois le mot ajouté. Le
+   mot rejoint la famille et l'intensité affichées, pour cette note seulement : il n'est pas gardé pour les suivantes. k : 'e' ou 'b'. */
+const pastillePlus = (k, nom) => `<button type="button" class="chip neutre plus" data-act="ajoutOuvrir" data-k="${k}" aria-label="${nom}" aria-expanded="${!!ed.ajout?.[k]}">+</button>`;
+const ligneAjout = (k, ph) => ed.ajout?.[k] ? `<div class="ajout-mot"><input type="text" id="${k}Ajout" placeholder="${ph}" aria-label="${ph}" maxlength="40" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"><button type="button" class="btn" data-act="ajoutValider" data-k="${k}">Ajouter</button></div>` : '';
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches?.('#eAjout, #bAjout')) { e.preventDefault(); e.target.nextElementSibling?.click(); }   // Entrée ajoute le mot, sans valider la fenêtre
+});
 function renderPicker() {
   const f = FAMK[ed.fam];
   $('#entryDlg').querySelectorAll('.fam:not(.bfam)').forEach(b => b.classList.toggle('on', b.dataset.f === ed.fam));
@@ -239,7 +249,7 @@ function renderPicker() {
   $('#picker').innerHTML = `
     <div class="besoin">${f.b}</div>
     <div class="seg">${INT.map(([k,n]) => `<button type="button" class="${ed.int === k ? 'on' : ''}" data-act="pickInt" data-i="${k}" aria-pressed="${ed.int === k}">${n}</button>`).join('')}</div>
-    <div class="chips">${f[ed.int].map(w => `<button type="button" class="chip ${has(w) ? 'on' : ''}" style="--fc:${f.c}" data-act="toggleEmo" data-w="${esc(w)}" aria-pressed="${has(w)}">${esc(w)}</button>`).join('')}</div>`;
+    <div class="chips">${f[ed.int].map(w => `<button type="button" class="chip ${has(w) ? 'on' : ''}" style="--fc:${f.c}" data-act="toggleEmo" data-w="${esc(w)}" aria-pressed="${has(w)}">${esc(w)}</button>`).join('')}${pastillePlus('e', 'Ajouter une émotion qui n’est pas dans la liste')}</div>${ligneAjout('e', 'Mon émotion…')}`;
   $('#picked').innerHTML = ed.emos.length
     ? ed.emos.map((x, i) => `<button type="button" class="chip on" style="--fc:${FAMK[x.f].c}" data-act="unpick" data-n="${i}" aria-label="Retirer ${esc(x.w)}">${esc(x.w)} ×</button>`).join('')
     : '<span class="small muted">Choisissez une ou plusieurs émotions ci-dessus.</span>';
@@ -251,7 +261,7 @@ function renderBPicker() {
   $('#bPicker').innerHTML = `
     <div class="besoin">${esc(b.n)} — ${esc(b.m)}</div>
     <div class="seg">${b.g.map(([name], i) => `<button type="button" class="${ed.bgr === i ? 'on' : ''}" data-act="pickBGr" data-g="${i}" aria-pressed="${ed.bgr === i}">${esc(sansArticle(name))}</button>`).join('')}</div>
-    <div class="chips">${ws.map(w => `<button type="button" class="chip ${has(w) ? 'on' : ''}" style="--fc:${FAMK[b.f].c}" data-act="toggleBes" data-w="${esc(w)}" aria-pressed="${has(w)}">${esc(w)}</button>`).join('')}</div>`;
+    <div class="chips">${ws.map(w => `<button type="button" class="chip ${has(w) ? 'on' : ''}" style="--fc:${FAMK[b.f].c}" data-act="toggleBes" data-w="${esc(w)}" aria-pressed="${has(w)}">${esc(w)}</button>`).join('')}${pastillePlus('b', 'Ajouter un besoin qui n’est pas dans la liste')}</div>${ligneAjout('b', 'Mon besoin…')}`;
   $('#bPicked').innerHTML = ed.bes.length
     ? ed.bes.map((x, i) => `<button type="button" class="chip on" style="--fc:${coulB(x.b)}" data-act="unpickB" data-n="${i}" aria-label="Retirer ${esc(x.w)}">${esc(x.w)} ×</button>`).join('')
     : '<span class="small muted">Choisissez un ou plusieurs besoins ci-dessus (facultatif).</span>';

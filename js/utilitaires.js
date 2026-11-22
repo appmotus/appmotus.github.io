@@ -24,13 +24,18 @@ const where = e => [e.ville, e.lieu].filter(Boolean).join(' · ');
 const fmtDay = s => { const d = parse(s); return `${JOURS[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`; };
 const weekday = s => s ? JOURS[parse(s).getDay()].toLowerCase() : '';
 
+/* Le mot qui relie l'émotion à son motif (v51) : « car » (par défaut, les notes d'avant), « par » ou « de » (« d’ » devant une
+   voyelle) : « Je me sens triste de ce qu’il a dit », « Je me sens agacé par le bruit ». Choisi dans la fenêtre de saisie. */
+const LIENS = ['car', 'par', 'de'];
+const lienDe = e => LIENS.includes(e?.lien) ? e.lien : 'car';
+const liaison = (e, motif) => lienDe(e) === 'de' ? deMot(String(motif).replace(/^@/, '')) : lienDe(e) + ' ';   // avec son espace : « car », « par », « de » ou « d’ »
 function sentence(e) {
   const car = cleanCar(e);
-  return 'Je me sens ' + joinFr(e.emos.map(x => lc(x.w))) + (car ? ' car ' + car : '') + '.';
+  return 'Je me sens ' + joinFr(e.emos.map(x => lc(x.w))) + (car ? ' ' + liaison(e, car) + car : '') + '.';
 }
 function sentenceHtml(e, actif = false) {
   const car = cleanCar(e);
-  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' car ' + avecConnecteurs(car, actif) : '') + '.';
+  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' ' + liaison(e, car) + avecConnecteurs(car, actif) : '') + '.';
 }
 /* Les cartes d'une note d'émotion (v40) : l'émotion, puis la carte Besoin (besoins choisis `bes`, et `bdet`, ce besoin dit avec
    ses mots) et la carte Action (`piste` : « Je pourrais… »). Les deux dernières sont facultatives.

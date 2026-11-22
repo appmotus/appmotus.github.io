@@ -60,7 +60,7 @@ function segsConn(s, extra = {}) {
 }
 const motEmo = x => ({t:lc(x.w), b:true, sz:11, c:argb(FAMK[x.f].c)});
 const mot = (t, c) => ({t, b:true, sz:11, c:argb(c)});
-const segsPhrase = e => { const car = cleanCar(e); return [{t:'Je me sens '}, ...segsFr(e.emos.map(x => [motEmo(x)])), ...(car ? [{t:' car '}, ...segsConn(car)] : []), {t:'.'}]; };   // comme sentence(e)
+const segsPhrase = e => { const car = cleanCar(e); return [{t:'Je me sens '}, ...segsFr(e.emos.map(x => [motEmo(x)])), ...(car ? [{t:` ${liaison(e, car)}`}, ...segsConn(car)] : []), {t:'.'}]; };   // comme sentence(e)
 const segsBesoin = e => {   // comme besoinTexte(e)
   const bs = besoinsDe(e), d = detailDe(e);
   return [...(bs.length ? [{t:'J’ai besoin '}, ...segsFr(bs.map(x => [{t:deMot(x.w)}, mot(lc(x.w), coulB(x.b))])), {t:'.'}] : []),
@@ -168,7 +168,7 @@ function buildXlsx(from, to) {
       cS('G4', S.lab, 'Période :'), cS('H4', S.val, `${fmtFR(from)} – ${fmtFR(to)}`)], 22),
     xRow(6, [cS('A6', S.sect, 'CONSIGNES & CODE COULEUR DE LA JOURNÉE'), ...fill(6, S.sect)], 24),
     xRow(7, [cS('A7', S.vert, 'VERT'), cS('B7', S.legend, L.vert), cS('C7', S.jaune, 'JAUNE'), cS('D7', S.legend, L.jaune), cS('E7', S.rouge, 'ROUGE'), cS('F7', S.legend, L.rouge)], 22),
-    xRow(8, [cS('A8', S.txt, '• Au fil de la journée : heure / ville / lieu — « Je me sens [émotion du répertoire] car [ce qui l’a déclenchée]. »'
+    xRow(8, [cS('A8', S.txt, '• Au fil de la journée : heure / ville / lieu — « Je me sens [émotion du répertoire] car / par / de [ce qui l’a déclenchée]. »'
       + (ch.besoins || ch.actions ? ' Puis : « J’ai besoin de [besoin du répertoire]. Je pourrais [action concrète saine]. »' : ''))], ch.besoins || ch.actions ? 30 : 18),
     xRow(9, [cS('A9', S.txt, '• Chaque soir : une synthèse de la journée et une couleur (vert, jaune ou rouge).')], 18),
     xRow(10, [cS('A10', S.conf, 'Ce tableau est confidentiel et constitue une base de travail essentielle.')], 18),
@@ -209,7 +209,9 @@ function buildXlsx(from, to) {
         e => segsSep([...new Map(e.emos.map(x => [x.f, x])).values()].map(x => [mot(FAMK[x.f].n, FAMK[x.f].c)]), ', ')],
       ['Intensité', 11, e => [...new Set(e.emos.map(x => INTN[x.i]))].join(', ')],
       ['Je me sens…', 30, e => joinFr(e.emos.map(x => lc(x.w))), e => segsFr(e.emos.map(x => [motEmo(x)]))],
-      ['… car', 55, e => sansArobase((e.car || '').trim()), e => segsConn((e.car || '').trim())],
+      // v51 : « car », « par » ou « de », écrit devant le motif
+      ['… car / par / de', 55, e => { const m = sansArobase((e.car || '').trim()); return m ? liaison(e, m) + m : ''; },
+        e => { const m = (e.car || '').trim(); return m ? [{t:liaison(e, m)}, ...segsConn(m)] : segsConn(m); }],
       ...(ch.besoins ? [
         ['Besoin', 18, e => [...new Set(besoinsDe(e).map(x => BESK[x.b].n))].join(', '),
           e => segsSep([...new Map(besoinsDe(e).map(x => [x.b, x])).values()].map(x => [mot(BESK[x.b].n, coulB(x.b))]), ', ')],

@@ -107,7 +107,7 @@ function corpsJour() {
     <p class="label">Couleur de la journée</p>
     ${d.color ? `<div class="colors one"><div class="colbtn ${d.color} on"><span class="dot"></span>${esc(D().labels[d.color])}</div></div>` : '<p class="empty">Pas de couleur choisie.</p>'}
     <p class="label">Synthèse</p>
-    <p class="synth-ro">${d.synth?.trim() ? esc(d.synth) : '<span class="muted">Pas de synthèse ce jour-là.</span>'}</p>` : `
+    <p class="synth-ro">${d.synth?.trim() ? avecConnecteurs(d.synth, true) :'<span class="muted">Pas de synthèse ce jour-là.</span>'}</p>` : `
     <p class="label">Ma journée était…</p>
     <div class="colors">${COL.map(c => `
       <button class="colbtn ${c} ${d.color === c ? 'on' : ''}" data-act="setColor" data-c="${c}" aria-pressed="${d.color === c}">
