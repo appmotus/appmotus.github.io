@@ -13,7 +13,7 @@ const PAGES_REGLAGES = {
 };
 /* Pages de l'onglet Admin (v49) : [titre (ou fonction qui le donne), page, vrai si la page montre des données du serveur : elle se réaffiche quand elles arrivent] */
 const PAGES_ADMIN = {
-  usage:['Utilisation de l’app', pageUsage, true], limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin], sens:['Repérer mon émotion', pageSens],
+  usage:['Utilisation de l’app', pageUsage, true], limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin], sens:['Repérer mon émotion', pageSens], exportq:['Exporter mes questionnaires', pageExportQ],
   bilans:[() => QUESTIONNAIRES[admQ].court, pageBilans], bilan:[titreBilan, pageBilan], compare:['Comparer deux bilans', pageCompare],
 };
 
@@ -492,5 +492,5 @@ function ajouterOeil() {
     maj();
   });
 }
-Object.assign(ACT, ACT_BILANS, ACT_SENS);   // actions de l'onglet Admin : questionnaires (admin-bilans.js) et navigation
+Object.assign(ACT, ACT_BILANS, ACT_SENS, ACT_EXPORTQ);   // actions de l'onglet Admin : questionnaires (admin-bilans.js) et navigation
 new MutationObserver(ajouterOeil).observe(document.body, {childList:true, subtree:true});

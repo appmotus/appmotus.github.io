@@ -45,8 +45,9 @@ Depuis la version 39, le code est réparti en fichiers de `js/`, chargés par `i
 | `admin.js` | Onglet Admin : menu et pages (comptes, activité, services et limites, notes ; `LIMITES`) |
 | `admin-bilans.js` | Questionnaires de l'administrateur : registre `QUESTIONNAIRES`, saisie, comparaison, graphiques, lecture à la lumière du journal |
 | `admin-sens.js` | « Repérer mon émotion » (v52) : sensations du corps → pistes d’émotions du répertoire, `ZONES_SENS` |
+| `admin-export.js` | Export des questionnaires de l’administrateur (v54) : Excel (scores + détail) et texte |
 | `saisie.js` | Ville automatique, fenêtre d'une émotion (volets émotions et besoins), note personnelle |
-| `export-excel.js` | Exports Excel et texte (.txt), selon le choix des données |
+| `export-excel.js` | Exports Excel et texte (.txt), selon le choix des données ; feuille « Émotions de la période » avec diagramme circulaire (v54) ; `classeur()` assemble tout .xlsx |
 | `dialogue-code.js` | Fenêtre de saisie d'un mot de passe ou d'un code |
 | `actions.js` | Actions des boutons (`ACT`), registre des pages des Paramètres (`PAGES_REGLAGES`) |
 | `gestes.js` | Balayages (jour, semaine, mois, retour), cartes émotion / besoin / action, appui long (Modifier, Afficher, Supprimer), volets de la saisie |

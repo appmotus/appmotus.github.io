@@ -68,7 +68,10 @@ function vAdminMenu() {
     ligneMenu('sablier', 'Travail sur Motus', {val:`≈ ${HEURES_TRAVAIL} h`, page:'travail', act:'admOuvrir'}),
   ])}
   ${groupeMenu('Mes questionnaires (réservés à l’administrateur)', Object.entries(QUESTIONNAIRES).map(([k, q]) =>
-    ligneMenu('questionnaire', q.court, {val:resumeQuestionnaire(k), page:k, act:'admQuest'})))}`;
+    ligneMenu('questionnaire', q.court, {val:resumeQuestionnaire(k), page:k, act:'admQuest'})))}
+  ${groupeMenu('Mes exports', [
+    ligneMenu('save', 'Exporter mes questionnaires', {page:'exportq', act:'admOuvrir'}),
+  ])}`;
 }
 function vAdmin() {
   const page = admPage && PAGES_ADMIN[admPage];

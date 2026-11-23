@@ -67,7 +67,7 @@ const segsBesoin = e => {   // comme besoinTexte(e)
     ...(d ? [...(bs.length ? [{t:' '}] : []), ...segsConn(finPhrase(d))] : [])];
 };
 const xRow =(r, cells, ht) => `<row r="${r}"${ht ? ` ht="${ht}" customHeight="1"` : ''}>${cells.join('')}</row>`;
-function sheet({cols, rows, merges = [], landscape}) {
+function sheet({cols, rows, merges = [], landscape, drawing}) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`
   + `<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>`
   + `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`
@@ -77,6 +77,7 @@ function sheet({cols, rows, merges = [], landscape}) {
   + (merges.length ? `<mergeCells count="${merges.length}">${merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '')
   + `<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>`
   + `<pageSetup paperSize="9" orientation="${landscape ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>`
+  + (drawing ? `<drawing r:id="rId1"/>` : '')   // un diagramme (v54) : xl/drawings/drawing1.xml, relié par xl/worksheets/_rels
   + `</worksheet>`;
 }
 /* Styles repris du modèle « Tableau d'Observation » (couleurs, polices, bordures) */
@@ -115,7 +116,7 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <border><left/><right/><top/><bottom style="thin"><color rgb="FFC27B42"/></bottom><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="19">
+<cellXfs count="20">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
 <xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
@@ -135,10 +136,11 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="0" fontId="8" fillId="6" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="9" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="8" fillId="8" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="9" fontId="8" fillId="0" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="top"/></xf>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
-const S = {title:1, sub:2, lab:3, val:4, sect:5, vert:6, jaune:7, rouge:8, legend:9, txt:10, head:11, week:12, cell:13, cvert:14, cjaune:15, crouge:16, conf:17, off:18};
+const S = {title:1, sub:2, lab:3, val:4, sect:5, vert:6, jaune:7, rouge:8, legend:9, txt:10, head:11, week:12, cell:13, cvert:14, cjaune:15, crouge:16, conf:17, off:18, pct:19};
 const cellStyle = c => c ? S['c' + c] : S.cell;
 const estLines = (t, w) => t.split('\n').reduce((a, l) => a + Math.max(1, Math.ceil(l.length / w)), 0);
 
@@ -197,6 +199,7 @@ function buildXlsx(from, to) {
     }
     r1.push(xRow(r, cells, Math.min(409, Math.max(60, lines * 12.5 + 8))));   // les mots en gras et plus gros demandent un peu plus de place
   }
+  let graphique = null;   // le diagramme de la feuille des émotions, s'il y en a une
   const feuilles = [['Tableau d’observation', sheet({cols:[16,30,30,30,30,30,30,30], rows:r1, merges:['A1:H1','A2:H2','B4:C4','E4:F4','A6:H6','A8:H8','A9:H9','A10:H10'], landscape:true})]];
 
   /* Feuille 2 : détail de chaque émotion notée, avec ses cartes Besoin et Action (colonnes selon le choix) */
@@ -232,6 +235,9 @@ function buildXlsx(from, to) {
       }
     }
     feuilles.push(['Détail des émotions', sheet({cols:[...C2.map(([, w]) => w), ...(ch.couleur ? [18] : [])], rows:r2, landscape:true})]);
+    // v54 : le diagramme des émotions de la période (comme « Émotions du mois » du Journal)
+    const st = statsEmotions(keys, from, to);
+    if (st) { feuilles.push([NOM_STATS, st.xml]); graphique = {idx:feuilles.length, xml:st.chart, dessin:st.dessin}; }
   }
 
   /* Feuille 3 : synthèses quotidiennes et couleurs */
@@ -264,15 +270,61 @@ function buildXlsx(from, to) {
     }
     if (n4 > 2) feuilles.push(['Notes personnelles', sheet({cols:[11, 10, 7, ...(ch.lieu ? [16, 16] : []), 80], rows:r4})]);
   }
-  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', nums = feuilles.map((f, i) => i + 1);
+  return classeur(feuilles, graphique);
+}
+/* Le classeur .xlsx : ses feuilles [[nom, xml]…] et, au plus, un diagramme (v54) {idx : n° de la feuille qui le porte, xml : le diagramme,
+   dessin : sa place}. Aussi utilisé par l'export des questionnaires (admin-export.js). */
+function classeur(feuilles, graphique = null) {
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', nums = feuilles.map((f, i) => i + 1), R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   return zip([
-    {name:'[Content_Types].xml', data: X + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${nums.map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
-    {name:'_rels/.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
-    {name:'xl/workbook.xml', data: X + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${feuilles.map(([n], i) => `<sheet name="${xesc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
-    {name:'xl/_rels/workbook.xml.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${nums.map(i => `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`).join('')}<Relationship Id="rId${feuilles.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'[Content_Types].xml', data: X + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${nums.map(i => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${graphique ? '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>' : ''}</Types>`},
+    {name:'_rels/.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml', data: X + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${R}"><sheets>${feuilles.map(([n], i) => `<sheet name="${xesc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${nums.map(i => `<Relationship Id="rId${i}" Type="${R}/worksheet" Target="worksheets/sheet${i}.xml"/>`).join('')}<Relationship Id="rId${feuilles.length + 1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`},
     {name:'xl/styles.xml', data:STYLES},
     ...feuilles.map(([, data], i) => ({name:`xl/worksheets/sheet${i + 1}.xml`, data})),
+    ...(graphique ? [
+      {name:`xl/worksheets/_rels/sheet${graphique.idx}.xml.rels`, data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/drawing" Target="../drawings/drawing1.xml"/></Relationships>`},
+      {name:'xl/drawings/drawing1.xml', data: X + `<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:twoCellAnchor><xdr:from><xdr:col>${graphique.dessin.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${graphique.dessin.row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${graphique.dessin.col + graphique.dessin.larg}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${graphique.dessin.row + graphique.dessin.haut}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Diagramme"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${R}" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>`},
+      {name:'xl/drawings/_rels/drawing1.xml.rels', data: X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/chart" Target="../charts/chart1.xml"/></Relationships>`},
+      {name:'xl/charts/chart1.xml', data: X + graphique.xml},
+    ] : []),
   ]);
+}
+
+/* Feuille « Émotions de la période » (v54, sa demande) : comme « Émotions du mois » du Journal (part de chaque famille, émotions les plus
+   fréquentes), mais sur la période exportée, avec un vrai diagramme circulaire Excel aux couleurs des familles. null s'il n'y a aucune émotion. */
+const NOM_STATS = 'Émotions de la période';
+function statsEmotions(keys, from, to) {
+  const fams = {}, mots = {}; let total = 0;
+  for (const k of keys) for (const e of D().days[k]?.entries || []) for (const x of e.emos) {
+    if (!FAMK[x.f]) continue;
+    total++; fams[x.f] = (fams[x.f] || 0) + 1;
+    (mots[x.w] ||= {n:0, f:x.f}).n++;
+  }
+  if (!total) return null;
+  const fl = Object.entries(fams).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])), s = n => n > 1 ? 's' : '';
+  const top = Object.entries(mots).sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0], 'fr')).slice(0, 10);
+  const tete = (r, l) => xRow(r, l.map((h, i) => cS(colL(i) + r, S.head, h)), 22);
+  const rows = [xRow(1, [cS('A1', S.sect, 'ÉMOTIONS DE LA PÉRIODE'), cE('B1', S.sect), cE('C1', S.sect)], 24),
+    xRow(2, [cS('A2', S.txt, `Du ${fmtFR(from)} au ${fmtFR(to)} · ${total} émotion${s(total)} notée${s(total)}`), cE('B2', S.txt), cE('C2', S.txt)], 18),
+    tete(4, ['Famille', 'Nombre', 'Part'])];
+  fl.forEach(([f, n], i) => { const r = 5 + i; rows.push(xRow(r, [cR('A' + r, S.cell, [mot(FAMK[f].n, FAMK[f].c)]), cN('B' + r, S.cell, n), cN('C' + r, S.pct, n / total)], 18)); });
+  const r0 = 5 + fl.length + 1;
+  rows.push(tete(r0, ['Les plus fréquentes', 'Nombre', 'Famille']));
+  top.forEach(([w, m], i) => { const r = r0 + 1 + i; rows.push(xRow(r, [cR('A' + r, S.cell, [mot(lc(w), FAMK[m.f].c)]), cN('B' + r, S.cell, m.n), cS('C' + r, S.cell, FAMK[m.f].n)], 18)); });
+  const nom = `'${NOM_STATS}'`, fin = 4 + fl.length;
+  const hex = c => argb(c).slice(2), C = 'http://schemas.openxmlformats.org/drawingml/2006/chart', A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  const chart = `<c:chartSpace xmlns:c="${C}" xmlns:a="${A}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:chart>`
+    + `<c:title><c:tx><c:rich><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1200" b="1"/></a:pPr><a:r><a:rPr lang="fr-FR" sz="1200" b="1"/><a:t>${xesc(`Émotions du ${fmtFR(from)} au ${fmtFR(to)}`)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>`
+    + `<c:autoTitleDeleted val="0"/><c:plotArea><c:layout/><c:pieChart><c:varyColors val="1"/><c:ser><c:idx val="0"/><c:order val="0"/>`
+    + `<c:tx><c:strRef><c:f>${xesc(nom)}!$B$4</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>Nombre</c:v></c:pt></c:strCache></c:strRef></c:tx>`
+    + fl.map(([f], i) => `<c:dPt><c:idx val="${i}"/><c:bubble3D val="0"/><c:spPr><a:solidFill><a:srgbClr val="${hex(FAMK[f].c)}"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:dPt>`).join('')
+    + `<c:dLbls><c:numFmt formatCode="0%" sourceLinked="0"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr><c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1000" b="1"/></a:pPr><a:endParaRPr lang="fr-FR"/></a:p></c:txPr><c:dLblPos val="bestFit"/><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="1"/><c:showBubbleSize val="0"/><c:showLeaderLines val="1"/></c:dLbls>`
+    + `<c:cat><c:strRef><c:f>${xesc(nom)}!$A$5:$A$${fin}</c:f><c:strCache><c:ptCount val="${fl.length}"/>${fl.map(([f], i) => `<c:pt idx="${i}"><c:v>${xesc(FAMK[f].n)}</c:v></c:pt>`).join('')}</c:strCache></c:strRef></c:cat>`
+    + `<c:val><c:numRef><c:f>${xesc(nom)}!$B$5:$B$${fin}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${fl.length}"/>${fl.map(([, n], i) => `<c:pt idx="${i}"><c:v>${n}</c:v></c:pt>`).join('')}</c:numCache></c:numRef></c:val>`
+    + `</c:ser><c:firstSliceAng val="0"/></c:pieChart></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
+  return {xml:sheet({cols:[30, 12, 16, 3, 12, 12, 12, 12, 12, 12], rows, merges:['A1:C1', 'A2:C2'], drawing:true}), chart, dessin:{col:4, row:3, larg:6, haut:17}};
 }
 
 function weekLabel() {
