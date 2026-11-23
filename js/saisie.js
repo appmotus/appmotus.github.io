@@ -125,7 +125,7 @@ function openEntry(id, volet = 'e') {
       <p class="label">Mes émotions</p>
       <div class="picked chips" id="picked"></div>
       <div class="lien-ligne"><label class="label" for="eCar">…</label>
-        <div class="seg lien" role="group" aria-label="Mot de liaison">${LIENS.map(l => `<button type="button" class="${ed.lien === l ? 'on' : ''}" data-act="pickLien" data-l="${l}" aria-pressed="${ed.lien === l}">${l}</button>`).join('')}</div></div>
+        ${(ls => `<div class="seg lien" role="group" aria-label="Mot de liaison" style="grid-template-columns:repeat(${ls.length},auto)">${ls.map(l => `<button type="button" class="${ed.lien === l ? 'on' : ''}" data-act="pickLien" data-l="${esc(l)}" aria-pressed="${ed.lien === l}">${esc(l)}</button>`).join('')}</div>`)(liensDe(ed))}</div>
       <textarea id="eCar" rows="3" autocapitalize="none" placeholder="ce qui a déclenché cette émotion">${esc(ed.car)}</textarea>
       </div>
       <div class="volet" data-v="b">
@@ -237,7 +237,9 @@ function openNote(id) {
 /* Une émotion ou un besoin qui n'est pas dans le répertoire (v51, sa demande du 2026-11-22) : une dernière pastille « + » à la fin de la
    rangée (aucune place de plus dans la fenêtre). Elle ouvre une ligne de saisie sous la rangée, qui se referme une fois le mot ajouté. Le
    mot rejoint la famille et l'intensité affichées, pour cette note seulement : il n'est pas gardé pour les suivantes. k : 'e' ou 'b'. */
-const pastillePlus = (k, nom) => `<button type="button" class="chip neutre plus" data-act="ajoutOuvrir" data-k="${k}" aria-label="${nom}" aria-expanded="${!!ed.ajout?.[k]}">+</button>`;
+/* Les mots de liaison offerts pour cette note : car, par, de, les deux choisis dans les Paramètres, et le mot déjà posé sur la note s'il n'y est plus */
+const liensDe = e => { const l = liensDispo(); return l.includes(e.lien) ? l : [...l, e.lien]; };
+const pastillePlus =(k, nom) => `<button type="button" class="chip neutre plus" data-act="ajoutOuvrir" data-k="${k}" aria-label="${nom}" aria-expanded="${!!ed.ajout?.[k]}">+</button>`;
 const ligneAjout = (k, ph) => ed.ajout?.[k] ? `<div class="ajout-mot"><input type="text" id="${k}Ajout" placeholder="${ph}" aria-label="${ph}" maxlength="40" autocomplete="off" autocapitalize="sentences" enterkeyhint="done"><button type="button" class="btn" data-act="ajoutValider" data-k="${k}">Ajouter</button></div>` : '';
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.matches?.('#eAjout, #bAjout')) { e.preventDefault(); e.target.nextElementSibling?.click(); }   // Entrée ajoute le mot, sans valider la fenêtre

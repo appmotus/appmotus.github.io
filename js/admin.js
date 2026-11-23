@@ -60,6 +60,7 @@ function vAdminMenu() {
   <div class="sethead"><div><div class="eyebrow">Administrateur</div><h1>Administration</h1></div></div>
   ${groupeMenu('Mes outils', [
     ligneMenu('importer', 'Mes notes', {page:'notes', act:'admOuvrir'}),
+    ligneMenu('emotion', 'Repérer mon émotion', {page:'sens', act:'admOuvrir'}),
   ])}
   ${groupeMenu('Application', [
     ligneMenu('courbe', 'Utilisation de l’app', {val:s ? `${s.comptes} compte${s.comptes > 1 ? 's' : ''}` : '', page:'usage', act:'admOuvrir'}),

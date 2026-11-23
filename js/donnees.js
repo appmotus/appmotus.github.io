@@ -27,7 +27,7 @@ function defaults(d = {}) {
   d = depuisFichier(d);
   d.profile = Object.assign({nom:'', prenom:'', start:today()}, d.profile);
   d.labels = Object.assign({}, DEF_LABELS, d.labels);
-  d.settings = Object.assign({autolock:1, geoloc:true}, d.settings);
+  d.settings = Object.assign({autolock:1, geoloc:true, motsCouleur:true, liensPerso:['', '']}, d.settings);   // v52 : motsCouleur, les mots du répertoire en couleur dans les textes
   // données transmises au thérapeute ; les besoins (v39) accompagnent les émotions, sauf si on les retire
   d.settings.partage = Object.assign({emotions:true, besoins:true, synthese:false, notes:false, lieu:false, couleur:true}, d.settings.partage);   // v47 : la couleur de la journée se choisit aussi pour les envois
   d.settings.partage.actions ??= d.settings.partage.besoins;   // v42 : les actions se choisissent à part ; avant, elles suivaient les besoins

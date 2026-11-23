@@ -9,11 +9,11 @@ const PAGES_REGLAGES = {
   invite:['Mon lien d’invitation', pageInvite], pro:['Mon profil professionnel', pagePro],
   sauvegarde:['Sauvegarde', pageSauvegarde], effacer:['Effacer mes données', pageEffacer], supprimer:['Supprimer mon compte', pageSupprimer],
   apparence:['Apparence', pageApparence], installer:['Installer sur l’écran d’accueil', pageInstaller], apropos:['À propos', pageAPropos], contact:['Nous contacter', pageContact], importer:['Importer des notes', pageImporter],
-  connecteurs:['Connecteurs', pageConnecteurs], guide:['Guide d’utilisation', pageGuide],
+  connecteurs:['Connecteurs', pageConnecteurs], liens:['Mots de liaison', pageLiens], guide:['Guide d’utilisation', pageGuide],
 };
 /* Pages de l'onglet Admin (v49) : [titre (ou fonction qui le donne), page, vrai si la page montre des données du serveur : elle se réaffiche quand elles arrivent] */
 const PAGES_ADMIN = {
-  usage:['Utilisation de l’app', pageUsage, true], limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin],
+  usage:['Utilisation de l’app', pageUsage, true], limites:['Services et limites', pageLimites], travail:['Travail sur Motus', pageTravail], notes:['Mes notes', pageNotesAdmin], sens:['Repérer mon émotion', pageSens],
   bilans:[() => QUESTIONNAIRES[admQ].court, pageBilans], bilan:[titreBilan, pageBilan], compare:['Comparer deux bilans', pageCompare],
 };
 
@@ -357,7 +357,7 @@ const ACT = {
     if (!ed.emos.length) { if (ed.volet !== 'e') poserVolet('e'); return $('#eErr').textContent = 'Choisissez au moins une émotion.'; }
     // les trois cartes sont enregistrées ensemble ; sans besoin ni action, la note garde sa forme d'avant
     const d = ensureDay(cur), {fam, int, villeTouched, bfam, bgr, volet, ajout, ...entry} = ed;
-    if (entry.lien === 'car' || !LIENS.includes(entry.lien)) delete entry.lien;   // « car » : la forme des notes d'avant
+    if (!entry.lien || entry.lien === 'car') delete entry.lien;   // « car » : la forme des notes d'avant
     if (!entry.bes.length) delete entry.bes;
     if (!entry.bdet) delete entry.bdet;
     if (!entry.piste) delete entry.piste;
@@ -492,5 +492,5 @@ function ajouterOeil() {
     maj();
   });
 }
-Object.assign(ACT, ACT_BILANS);   // actions de l'onglet Admin : questionnaires (admin-bilans.js) et navigation
+Object.assign(ACT, ACT_BILANS, ACT_SENS);   // actions de l'onglet Admin : questionnaires (admin-bilans.js) et navigation
 new MutationObserver(ajouterOeil).observe(document.body, {childList:true, subtree:true});

@@ -37,6 +37,7 @@ function vSetMenu() {
     ligneMenu('shield', 'Choix des données', {page:'donnees'}),
     ligneMenu('col', 'Code couleur', {page:'couleurs'}),
     ligneMenu('at', 'Connecteurs', {val:connecteurs().size ? String(connecteurs().size) : '', page:'connecteurs'}),
+    ligneMenu('emotion', 'Mots de liaison', {val:liensDispo().join(' · '), page:'liens'}),
     ligneMenu('pin', 'Localisation', {val:data.settings.geoloc ? 'Activée' : 'Désactivée', page:'geo'}),
   ])}
   ${groupeMenu('Mes données', [
@@ -313,7 +314,26 @@ function pageSupprimer() {
 function pageApparence() {
   const c = themeChoisi();
   return `<section class="card" style="padding:4px 0">${Object.entries(THEME_N).map(([k, n]) => `<button class="choix ${c === k ? 'on' : ''}" data-act="setTheme" data-t="${k}" aria-pressed="${c === k}"><span>${n}</span><i></i></button>`).join('')}</section>
-  <p class="small muted" style="margin:0 2px">« Automatique » suit le réglage clair ou sombre de votre téléphone. Ce choix ne concerne que cet appareil.</p>`;
+  <p class="small muted" style="margin:0 2px">« Automatique » suit le réglage clair ou sombre de votre téléphone. Ce choix ne concerne que cet appareil.</p>
+  <section class="card">
+    <div class="setrow" style="padding-top:0">
+      <label for="motsCouleur">Mots d’émotions et de besoins en couleur</label>
+      <input type="checkbox" id="motsCouleur" ${data.settings.motsCouleur !== false ? 'checked' : ''}>
+    </div>
+    <p class="small muted" style="margin:0">Quand vous écrivez un mot des répertoires dans un texte (« … car », besoin en détail, actions, notes, synthèse), il s’affiche en gras, de la couleur de sa famille. Le texte enregistré ne change pas : désactivé, tout redevient du texte simple. Les mots très courants (sens, jeu, calme…) ne sont jamais colorés.</p>
+  </section>`;
+}
+
+/* Mots de liaison (v52) : « Je me sens triste car… » ; la liste car · par · de peut s'allonger de deux mots à soi */
+function pageLiens() {
+  const l = data.settings.liensPerso || ['', ''];
+  return `<section class="card">
+    <p class="small muted" style="margin:0">Dans « Noter une émotion », le petit choix après « Je me sens… » propose <b>car</b>, <b>par</b> et <b>de</b>. Ajoutez ici jusqu’à deux mots de plus, par exemple « pour », « malgré » ou « à cause de ».</p>
+    ${[0, 1].map(i => `<label class="label" for="lienPerso${i}">Mot ${i + 1} (facultatif)</label>
+    <input type="text" id="lienPerso${i}" value="${esc(l[i] || '')}" maxlength="20" autocomplete="off" autocapitalize="none" placeholder="${i ? 'malgré' : 'pour'}">`).join('')}
+    <p class="small muted" style="margin:10px 0 0">Liste proposée : <b id="liensApercu">${esc(liensDispo().join(' · '))}</b></p>
+    <p class="small muted" style="margin:6px 0 0">Après « de » et « que », l’app met l’apostrophe devant une voyelle : « d’avoir », « parce qu’il ». Une note garde le mot choisi, même si vous le retirez d’ici ensuite.</p>
+  </section>`;
 }
 
 function pageInstaller() {

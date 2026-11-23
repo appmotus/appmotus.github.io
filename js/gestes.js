@@ -61,7 +61,7 @@ function poserVoisine(g, cote) {
   v.setAttribute('aria-hidden', 'true');
   if (g.posP === undefined) { g.posP = p.style.position; if (getComputedStyle(p).position === 'static') p.style.position = 'relative'; }
   let top = el.offsetTop;
-  if (view === 'set' || view === 'admin') top += scrollY - (view === 'set' ? pageRetour()?.y ?? menuScroll : admScroll);   // le menu revient là où on l'avait laissé
+  if (view === 'set' || view === 'admin') top += scrollY - (view === 'set' ? pageRetour()?.y ?? menuScroll : admPos[parentAdm(admPage) || ''] || 0);   // le menu revient là où on l'avait laissé
   else if (view === 'cal' && calMode === 'list') {   // le mois voisin prend la place du nom du mois affiché, comme après le changement
     const sep = v.querySelector('.mois-sep'); if (sep) sep.style.marginTop = '0';
     top = posListe(true) - p.getBoundingClientRect().top;

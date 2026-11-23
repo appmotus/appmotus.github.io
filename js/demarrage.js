@@ -52,6 +52,11 @@ document.addEventListener('change', e => {
     if (f) f.size > 3e6 ? toast('Fichier trop volumineux (3 Mo au plus).') : f.text().then(analyserTexte);
   }
   else if (e.target.id === 'geoloc') { data.settings.geoloc = e.target.checked; save(); }
+  else if (/^lienPerso[01]$/.test(e.target.id)) {   // les deux mots de liaison en plus (Paramètres › Mots de liaison)
+    data.settings.liensPerso = [0, 1].map(i => motLien($(`#lienPerso${i}`)?.value));
+    save(); const a = $('#liensApercu'); if (a) a.textContent = liensDispo().join(' · ');
+  }
+  else if (e.target.id === 'motsCouleur') { data.settings.motsCouleur = e.target.checked; save(); }
   else if (e.target.id === 'rappelFreq') {   // rappel d'export : le premier rappel, par défaut, une période plus tard
     const r = rappelExport(), f = e.target.value, t = today();
     Object.assign(r, {freq:f, fait:'', plusTard:''});

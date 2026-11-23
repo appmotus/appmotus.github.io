@@ -116,6 +116,7 @@ function motsRepertoire() {
 }
 function avecMotsRepertoire(s) {
   if (!s) return '';
+  if (typeof data !== 'undefined' && data?.settings?.motsCouleur === false) return esc(s);   // Paramètres › Apparence (v52)
   const {couleur, re} = motsRepertoire();
   let html = '', i = 0;
   for (const x of platRep(s).matchAll(re)) {

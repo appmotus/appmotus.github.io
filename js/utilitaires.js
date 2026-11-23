@@ -27,15 +27,28 @@ const weekday = s => s ? JOURS[parse(s).getDay()].toLowerCase() : '';
 /* Le mot qui relie l'émotion à son motif (v51) : « car » (par défaut, les notes d'avant), « par » ou « de » (« d’ » devant une
    voyelle) : « Je me sens triste de ce qu’il a dit », « Je me sens agacé par le bruit ». Choisi dans la fenêtre de saisie. */
 const LIENS = ['car', 'par', 'de'];
-const lienDe = e => LIENS.includes(e?.lien) ? e.lien : 'car';
-const liaison = (e, motif) => lienDe(e) === 'de' ? deMot(String(motif).replace(/^@/, '')) : lienDe(e) + ' ';   // avec son espace : « car », « par », « de » ou « d’ »
+/* Deux mots de liaison de plus, au choix (Paramètres › Mots de liaison) : « pour », « à cause de », « malgré »… La note garde le mot
+   choisi : il s'affiche même si le réglage change ensuite. */
+const motLien = s => String(s ?? '').trim().replace(/\s+/g, ' ').toLowerCase().slice(0, 20);
+const liensPerso = () => {
+  const l = (typeof data !== 'undefined' && data?.settings?.liensPerso) || [], vus = new Set(LIENS), r = [];
+  for (const m of l.map(motLien)) if (m && !vus.has(m)) { vus.add(m); r.push(m); }
+  return r.slice(0, 2);
+};
+const liensDispo = () => [...LIENS, ...liensPerso()];
+const lienDe = e => typeof e?.lien === 'string' && motLien(e.lien) ? motLien(e.lien) : 'car';
+// « de » et « que » (aussi « parce que », « à cause de ») s'élident devant une voyelle : « d’ », « qu’ »
+const liaison = (e, motif) => {
+  const l = lienDe(e), m = String(motif).replace(/^@/, '');
+  return /(^|\s)(de|que)$/.test(l) && /^[aeiouyhàâéèêëîïôûü]/i.test(m) ? l.slice(0, -1) + '’' : l + ' ';   // avec son espace
+};
 function sentence(e) {
   const car = cleanCar(e);
   return 'Je me sens ' + joinFr(e.emos.map(x => lc(x.w))) + (car ? ' ' + liaison(e, car) + car : '') + '.';
 }
 function sentenceHtml(e, actif = false) {
   const car = cleanCar(e);
-  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' ' + liaison(e, car) + avecConnecteurs(car, actif) : '') + '.';
+  return 'Je me sens ' + joinFr(e.emos.map(x => `<b style="--fc:${FAMK[x.f].c}">${esc(lc(x.w))}</b>`)) + (car ? ' ' + esc(liaison(e, car)) + avecConnecteurs(car, actif) : '') + '.';
 }
 /* Les cartes d'une note d'émotion (v40) : l'émotion, puis la carte Besoin (besoins choisis `bes`, et `bdet`, ce besoin dit avec
    ses mots) et la carte Action (`piste` : « Je pourrais… »). Les deux dernières sont facultatives.

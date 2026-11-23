@@ -630,9 +630,15 @@ table.stats.mini td.muted{text-align:left;font-weight:500}
 .score-masque{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer;border-radius:14px;margin:4px -8px 0;padding:6px 8px;outline-offset:2px}
 .score-masque:active{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 /* v51 : le choix car / par / de, à droite des points de suspension, sur une seule ligne */
-.lien-ligne{display:flex;align-items:center;gap:10px;margin:13px 0 6px}
+.lien-ligne{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:13px 0 6px}
 .lien-ligne .label{margin:0}
-.seg.lien{width:172px;margin:0}
+.seg.lien{width:auto;min-width:172px;max-width:100%;margin:0}
+.seg.lien button{padding:7px 12px;white-space:nowrap}
+/* v52 : Repérer mon émotion (Admin) : une piste par famille, avec sa couleur */
+.sens-fam{border-left:4px solid var(--fc);padding:4px 0 4px 12px;margin:14px 0}
+.sens-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sens-h b{color:color-mix(in srgb,var(--fc) 85%,var(--text))}
+[data-theme=dark] .sens-h b{color:color-mix(in srgb,var(--fc) 45%,#fff)}
 /* v51 : la pastille « + » (mot hors répertoire) et sa ligne de saisie */
 .chip.neutre.plus{font-weight:700;padding:5px 15px;border:1.5px dashed var(--muted);background:transparent;color:var(--text)}
 .ajout-mot{display:flex;gap:8px;margin-top:8px}
